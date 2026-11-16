@@ -28,7 +28,7 @@ const FIELDS = [
   { id: 'H', key: 'H', kind: 'num' }, { id: 'L', key: 'L', kind: 'num' },
   { id: 'N', key: 'N', kind: 'int', auto: 'nAuto' }, { id: 'p', key: 'p', kind: 'num', auto: 'pAuto' },
   { id: 'n1', key: 'n1', kind: 'int', auto: 'n1Auto' }, { id: 'Lp', key: 'Lp', kind: 'num', auto: 'LpAuto' },
-  { id: 'nMeio', key: 'nMeio', kind: 'int' }, { id: 'vao', key: 'vao', kind: 'num' },
+  { id: 'nMeio', key: 'nMeio', kind: 'int' }, { id: 'nPer', key: 'nPer', kind: 'int', auto: 'nPerAuto' }, { id: 'nMeioP', key: 'nMeioP', kind: 'int', auto: 'nMeioPAuto' }, { id: 'vao', key: 'vao', kind: 'num' },
   { id: 'D', key: 'D', kind: 'num' }, { id: 'Dc', key: 'Dc', kind: 'num' },
   { id: 'hLivre', key: 'hLivre', kind: 'num' }, { id: 'espLaje', key: 'espLaje', kind: 'num' },
   { id: 'tLaje', key: 'tLaje', kind: 'num' }, { id: 'espDegrau', key: 'espDegrau', kind: 'num' },
@@ -45,11 +45,11 @@ function mount() {
     fieldNum('H', 'Desnível piso a piso', 'cm', 'Do piso de baixo ao piso de cima, acabados.') + fieldNum('L', 'Largura útil', 'cm', 'Espaço livre para passar, entre paredes ou guardas.') + '</div>' +
     '<div class="field"><label for="norma">Referência de limites</label><select id="norma">' + norm + '</select></div>' +
     '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + fieldNum('cLq', 'Ponta mínima do leque', 'cm') + '</div></div>' +
-    '<div class="field" data-for="l-patamar l-leque u-patamar u-leque helicoidal"><span class="lab" id="ladoLab">Ao subir, a escada vira para</span><div class="seg" id="lado" role="group" aria-labelledby="ladoLab"><button type="button" data-v="dir">Direita</button><button type="button" data-v="esq">Esquerda</button></div></div></section>' +
+    '<div class="field" data-for="l-patamar l-leque u-patamar u-leque c-patamar z-patamar helicoidal"><span class="lab" id="ladoLab">Ao subir, a escada vira para</span><div class="seg" id="lado" role="group" aria-labelledby="ladoLab"><button type="button" data-v="dir">Direita</button><button type="button" data-v="esq">Esquerda</button></div></div></section>' +
     '<section class="card"><h2>Degraus</h2>' +
     '<div class="field"><div class="labrow"><label for="N">Número de espelhos</label><label class="auto"><input type="checkbox" id="nAuto"> sugerido</label></div><div class="stepper"><button type="button" id="Nminus" aria-label="Menos um espelho">−</button><input id="N" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="Nplus" aria-label="Mais um espelho">+</button></div><p class="hint" id="Nhint"></p></div>' +
     '<div class="field"><div class="labrow"><label for="p" id="pLab">Piso (profundidade)</label><label class="auto"><input type="checkbox" id="pAuto"> pela fórmula</label></div><div class="inp"><input id="p" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
-    '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
+    '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
     '<section class="card" id="cardEsp"><h2>Detalhes do tipo</h2>' +
     '<div class="field" data-for="l-leque u-leque"><span class="lab" id="lqLab">Forma dos leques</span><div class="seg" id="leque" role="group" aria-labelledby="lqLab"><button type="button" data-v="bal">Balanceados</button><button type="button" data-v="conv">Convergentes</button></div><p class="hint" id="lqHint"></p></div>' +
     '<div class="field" data-for="l-leque u-leque"><label for="kLeque" id="kLab">Degraus em cada curva</label><select id="kLeque"></select><p class="hint" id="kHint"></p></div>' +
@@ -57,12 +57,14 @@ function mount() {
     '<div class="field" data-for="u-patamar"><label for="vao">Vão entre os dois lances</label><div class="inp"><input id="vao" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
     '<div class="field" data-for="reta-patamar u-patamar"><div class="labrow"><label for="Lp">Profundidade do patamar</label><label class="auto"><input type="checkbox" id="LpAuto"> igual à largura</label></div><div class="inp"><input id="Lp" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
     '<div class="grid2" data-for="helicoidal">' + fieldNum('D', 'Diâmetro externo', 'cm') + fieldNum('Dc', 'Diâmetro do pilar', 'cm') + '</div>' +
+    '<div class="field" data-for="helicoidal"><div class="labrow"><label for="nPer">Degraus por volta</label><label class="auto"><input type="checkbox" id="nPerAuto"> automático</label></div><div class="stepper"><button type="button" id="nPerMinus" aria-label="Menos um degrau por volta">−</button><input id="nPer" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="nPerPlus" aria-label="Mais um degrau por volta">+</button></div><p class="hint" id="nPerHint"></p></div>' +
+    '<div class="field" data-for="c-patamar z-patamar"><div class="labrow"><label for="nMeioP">Pisos no lance do meio</label><label class="auto"><input type="checkbox" id="nMeioPAuto"> um terço</label></div><div class="inp"><input id="nMeioP" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div></div>' +
     '<p class="hint" id="semDetalhe" data-for="reta">Esse tipo não tem detalhes extras. Ajuste só as medidas e os degraus.</p></section>' +
     '<details class="card"><summary>Altura livre e laje</summary><div class="grid2" style="margin-top:12px">' +
     fieldNum('hLivre', 'Altura livre mínima', 'cm') + fieldNum('espLaje', 'Laje do piso de cima', 'cm') +
-    '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
+    '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
     '<div data-for="helicoidal">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
-  $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Perfil'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
+  $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Cortes'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
 }
 function fieldNum(id, label, unit, hint) {
   return '<div class="field"><label for="' + id + '">' + label + '</label><div class="inp"><input id="' + id + '" type="text" inputmode="decimal" autocomplete="off"><span class="un">' + unit + '</span></div>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + '</div>';
@@ -90,17 +92,24 @@ function bind() {
   $('modoP').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.modoPlanta = b.dataset.v; render(); });
   $('showDims').addEventListener('change', e => { S.showDims = e.target.checked; render(); });
   $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
+  $('showCortes').addEventListener('change', e => { S.showCortes = e.target.checked; render(); });
+  $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
+  $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
   $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
   $('Nplus').addEventListener('click', () => { S.nAuto = false; S.N = (CUR ? CUR.N : S.N) + 1; render(); });
+  const nPerAtual = () => CUR && CUR.helix ? CUR.helix.nPer : Math.round(num(S.nPer, 13));
+  const limpaNPer = () => { delete BAD.nPer; $('nPer').classList.remove('err'); };
+  $('nPerMinus').addEventListener('click', () => { limpaNPer(); S.nPerAuto = false; S.nPer = Math.max(4, nPerAtual() - 1); render(); });
+  $('nPerPlus').addEventListener('click', () => { limpaNPer(); S.nPerAuto = false; S.nPer = Math.min(72, nPerAtual() + 1); render(); });
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; render(); });
   $('tipos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tipo = b.dataset.v; render(); });
   $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
   $('pit').addEventListener('input', e => { PIT = +e.target.value; draw3d(false); });
   $('btnResumo').addEventListener('click', () => copiar(resumo(), 'Resumo copiado'));
-  $('btnSvg').addEventListener('click', () => { if (VIEW === '3d') return; copiar(VIEW === 'corte' ? sectionSVG(CUR, { pxW: 1400 }, THEME) : planSVG(CUR, { pxW: 1400 }, THEME), 'SVG copiado'); });
+  $('btnSvg').addEventListener('click', () => { if (VIEW === '3d') return; copiar(VIEW === 'corte' ? svgCorte(CUR, { pxW: 1400 }, THEME) : planSVG(CUR, { pxW: 1400 }, THEME), 'SVG copiado'); });
   $('btnImg').addEventListener('click', gerarImagem);
   $('btnPrint').addEventListener('click', imprimir);
   $('modalClose').addEventListener('click', () => $('modal').hidden = true);
@@ -129,12 +138,13 @@ function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || 
 
 function falha(msg) {
   CUR = null;
-  ['tiles', 'memo', 'checks', 'legend'].forEach(id => { $(id).innerHTML = ''; });
+  FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
+  ['tiles', 'memo', 'checks', 'legend', 'quant'].forEach(id => { $(id).innerHTML = ''; });
   $('stage').dataset.view = 'erro';
   $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
   $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Entrada ou configuração inválida';
   ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = true; });
-  $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true;
+  $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true; $('viewCorteBar').hidden = true;
 }
 /* opções do número de degraus da curva: de 2 até pelo menos kw (o mínimo do balanceamento pode passar de 6) */
 function opcoesK(bal, kMin, kAtual) {
@@ -178,10 +188,15 @@ function render(typing) {
   FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
   setVal('H', plain(S.H)); setVal('L', plain(S.L)); setVal('hLivre', plain(S.hLivre)); setVal('espLaje', plain(S.espLaje)); setVal('tLaje', plain(S.tLaje)); setVal('espDegrau', plain(S.espDegrau));
   setVal('D', plain(S.D)); setVal('Dc', plain(S.Dc)); setVal('vao', plain(S.vao)); setVal('nMeio', String(R.nMeio));
+  if (R.helix) {
+    setVal('nPer', String(R.helix.nPer));
+    $('nPerHint').textContent = 'Cada degrau gira ' + fmt(R.helix.th, 1) + '°. Para o piso de ' + fmt(R.hel ? R.pAlvo : R.p, 1) + ' cm seriam ' + R.helix.nPref + '; para a altura livre, no mínimo ' + R.helix.nReq + '. Menos degraus por volta: piso mais largo e menos altura livre.';
+  }
+  setVal('nMeioP', String(R.nMeioP));
   setVal('N', String(R.N)); setVal('p', S.pAuto ? plain(R.hel ? R.pAlvo : R.pInput) : plain(S.p)); setVal('n1', String(R.a)); setVal('Lp', plain(R.Lp));
   $('pLab').textContent = R.hel ? 'Piso desejado (linha de caminhamento)' : 'Piso (profundidade)';
   $('Nhint').textContent = 'Sugestão: ' + R.nSug + ' espelhos (espelho de ' + fmt(S.H / R.nSug, 2) + ' cm). Atual: ' + fmt(R.e, 2) + ' cm.';
-  $('n1Un').textContent = 'de ' + Math.max(0, R.avail) + ' pisos retos';
+  $('n1Un').textContent = 'de ' + Math.max(0, R.avail - (R.tipo === 'c-patamar' || R.tipo === 'z-patamar' ? R.nMeioP : 0)) + ' pisos retos';
   $('nMeioHint').textContent = 'Vão central entre os lances: ' + fmt(R.gU || R.nMeio * R.p, 1) + ' cm.';
   /* resultados */
   const incl = R.incl;
@@ -200,6 +215,7 @@ function render(typing) {
   const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
   $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('');
   $('memo').innerHTML = R.memo.map(t => '<li>' + t + '</li>').join('');
+  $('quant').innerHTML = quantHTML(R);
   $('title').textContent = TIPOS.find(t => t.id === S.tipo).nome;
   $('desc').textContent = TIPOS.find(t => t.id === S.tipo).desc + '. ' + R.nm.nome + '.';
   /* legenda */
@@ -207,21 +223,57 @@ function render(typing) {
   if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', R.bal ? 'Degrau balanceado' : 'Leque']);
   if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
   const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
-  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">Volumes esquemáticos, só para visualizar. Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
+  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">' + (R.hel ? 'Modelo de estudo: degraus soltos em volta do pilar e corrimão do lado de fora, sem acabamentos.' : 'Modelo de estudo: degraus com o fundo real da laje e corrimãos, sem acabamentos.') + ' Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
   $('view3dBar').hidden = VIEW !== '3d';
   $('viewPlantaBar').hidden = VIEW !== 'planta';
+  $('viewCorteBar').hidden = VIEW !== 'corte';
+  document.querySelectorAll('#vistaC button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.vistaCorte || 'A')));
+  $('deslWrap').hidden = !(S.vistaCorte === 'A' || S.vistaCorte === 'B' || !S.vistaCorte);
+  if (document.activeElement !== $('desl')) $('desl').classList.remove('err');
+  setVal('desl', plain(num(S.vistaCorte === 'B' ? S.corteB : S.corteA, 0)));
+  $('showCortes').checked = S.showCortes !== false;
   $('btnSvg').hidden = VIEW === '3d' || VIEW === 'explica';
   $('btnImg').hidden = VIEW === 'explica';
   $('legend').hidden = VIEW === 'explica';
   /* palco */
   $('stage').dataset.view = VIEW;
   if (VIEW === 'planta') { $('stage').innerHTML = planSVG(R, {}, THEME); }
-  else if (VIEW === 'corte') { $('stage').innerHTML = sectionSVG(R, {}, THEME) + '<p class="cap">Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.</p>'; }
+  else if (VIEW === 'corte') { $('stage').innerHTML = svgCorte(R, {}, THEME) + '<p class="cap">' + legCorte(R, S.vistaCorte || 'A') + '</p>'; }
   else if (VIEW === 'explica') { $('stage').innerHTML = explicacao(R, S, THEME); }
   else { $('stage').innerHTML = ''; $('stage').appendChild(CV3); draw3d(true); }
   save();
 }
 
+/* quantitativos: estimativas da geometria, para orçamento preliminar e para conferir ordem de grandeza */
+function quantHTML(R) {
+  const q = R.quant, m2 = v => fmt(v / 10000, 2) + ' m²';
+  const linhas = [
+    ['Piso dos degraus e patamares', m2(q.aPisos), 'soma das superfícies em planta (revestimento de piso)'],
+  ];
+  if (R.hel) linhas[0][2] = 'soma das placas dos degraus; elas se sobrepõem em planta quando a escada dá mais de uma volta';
+  else linhas.push(['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'], ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte']);
+  if (R.hel) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm; pilar fora da conta']);
+  else {
+    linhas.push(['Concreto da escada', fmt(q.volConc / 1e6, 3) + ' m³', 'degraus + laje de ' + fmt(R.st.tLaje) + ' cm, até o chão; sem a laje do piso de cima']);
+    linhas.push(['Fôrma do fundo', m2(q.aForma), 'face de baixo da laje inclinada e dos patamares; sem as laterais']);
+  }
+  linhas.push(['Corrimão (por lado)', fmt(q.corrimao / 100, 2) + ' m', 'medido na linha de caminhamento' + (R.nm.acess ? ', com os 30 cm de prolongamento em cada ponta' : '') + '; o lado externo de curvas é mais comprido']);
+  return '<table class="tab tabq"><tbody>' + linhas.map(l => '<tr><td>' + l[0] + '<br><span class="hint">' + l[2] + '</span></td><td>' + l[1] + '</td></tr>').join('') + '</tbody></table><p class="hint" style="margin-top:8px">Contas feitas na geometria do desenho, para estudo e orçamento preliminar. Não incluem perdas, armadura, emendas nem detalhes de obra.</p>';
+}
+/* aba Cortes: corte A-A, corte B-B, perfil desenvolvido ou detalhe do degrau */
+function svgCorte(R, o, C) {
+  const v = S.vistaCorte || 'A';
+  if (v === 'perfil') return sectionSVG(R, o, C);
+  if (v === 'detalhe') return detalheSVG(R, o, C);
+  return corteSVG(R, o, C, v);
+}
+function legCorte(R, v) {
+  const fora = R.st['corte' + v] ? ' A linha foi deslocada ' + fmt(R.st['corte' + v]) + ' cm.' : '';
+  if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do pilar, marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
+  if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
+  if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
+  return R.hel ? 'Detalhe do degrau: ampliação dos degraus soltos da helicoidal (sem laje e sem espelho), com o piso medido na linha de caminhamento e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.';
+}
 function draw3d(hq) {
   if (VIEW !== '3d' || !CUR) return;
   const box = $('stage'), cw = Math.max(280, box.clientWidth || 640);
@@ -251,10 +303,14 @@ function montarRelatorio() {
   let h = '<h1>Escada ' + t.nome.toLowerCase().replace(' l ', ' L ').replace(' u ', ' U ') + '</h1>';
   h += '<p class="sub">Desnível de ' + fmt(R.H) + ' cm · ' + R.nm.nome + ' · gerado pelo Patamar em ' + hoje + '</p>';
   h += '<div class="ptiles">' + tiles.map(x => '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>').join('') + '</div>';
-  h += '<figure>' + planSVG(R, { modo: 'inf' }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso.</figcaption></figure>';
+  h += '<figure>' + planSVG(R, { modo: 'inf', cortes: true }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso e as linhas dos cortes A-A e B-B.</figcaption></figure>';
   h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
+  h += '<div class="quebra"></div><figure>' + corteSVG(R, {}, C, 'A') + '<figcaption>Corte A-A, marcado na planta.</figcaption></figure>';
+  h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
+  const det = detalheSVG(R, {}, C); if (det) h += '<figure>' + det + '<figcaption>Detalhe do degrau.</figcaption></figure>';
   h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('') + '</ul>';
   h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
+  h += '<h2>Quantitativos (estimativa)</h2>' + quantHTML(R);
   h += '<div class="quebra"></div><h2>Explicação</h2>' + explicacao(R, S, C).replace(/<details class="ex"( open)?>/g, '<details class="ex" open>');
   h += '<p class="rodape">' + $('aviso').textContent + '</p>';
   $('printArea').innerHTML = h;
@@ -271,9 +327,9 @@ function copiar(txt, msg) {
 
 function gerarImagem() {
   const T = THEME || getTheme();
-  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + VIEW + '.png'; $('modal').hidden = false; };
+  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? 'corte-' + (S.vistaCorte || 'A') : VIEW) + '.png'; $('modal').hidden = false; };
   if (VIEW === '3d') { draw3d(true); done(CV3.toDataURL('image/png')); return; }
-  const svg = VIEW === 'corte' ? sectionSVG(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
+  const svg = VIEW === 'corte' ? svgCorte(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
   const m = svg.match(/width="(\d+)" height="(\d+)"/); const w = +m[1], h = +m[2];
   const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   img.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = T.paper; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); done(c.toDataURL('image/png')); };

@@ -158,6 +158,9 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 }
 .barP{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:0 0 10px;font-size:13px}
 .barP .seg{min-width:250px}
+.barP .segC{min-width:0;flex-wrap:wrap}
+.barP .segC button{white-space:nowrap}
+@media (max-width:640px){.barP .segC{width:100%}.barP .segC button{flex:1 1 40%}}
 .barP .seg button{padding:7px 12px;font-size:13px}
 .barP label{display:flex;align-items:center;gap:7px}
 .barP input[type=checkbox]{accent-color:var(--accent)}
@@ -183,6 +186,8 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .tab th{font-weight:600;color:var(--muted);font-size:12px}
 .tab td:first-child,.tab th:first-child{text-align:left}
 .tab td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tabq td:first-child{white-space:normal;font-family:var(--body)}
+.tabq td{vertical-align:top}
 
 .inp input.err,.stepper input.err,input.err{outline:2px solid #c0392b;outline-offset:-2px}
 .errbox{padding:22px;border:1px solid #c0392b;border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
@@ -242,11 +247,16 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
           <label>Girar <input type="range" id="yaw" min="-180" max="180" value="-32"></label>
           <label>Inclinar <input type="range" id="pit" min="12" max="80" value="42"></label>
         </div>
+        <div class="barP" id="viewCorteBar" hidden>
+          <div class="seg segC" id="vistaC" role="group" aria-label="Qual desenho"><button type="button" data-v="A">Corte A-A</button><button type="button" data-v="B">Corte B-B</button><button type="button" data-v="perfil">Perfil</button><button type="button" data-v="detalhe">Detalhe</button></div>
+          <label id="deslWrap">Deslocar a linha <input class="mini" id="desl" type="text" inputmode="decimal" autocomplete="off"> cm</label>
+        </div>
         <div class="barP" id="viewPlantaBar" hidden>
           <div class="seg" id="modoP" role="group" aria-label="Pavimento"><button type="button" data-v="inf">Pav. inferior</button><button type="button" data-v="sup">Pav. superior</button></div>
           <label id="zcWrap">Corte a <input class="mini" id="zCorte" type="text" inputmode="decimal" autocomplete="off"> cm</label>
           <label><input type="checkbox" id="showDims"> cotas</label>
           <label><input type="checkbox" id="showNums"> números</label>
+          <label><input type="checkbox" id="showCortes"> cortes</label>
         </div>
         <div class="stage" id="stage"></div>
         <div class="legend" id="legend"></div>
@@ -262,6 +272,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
       <section class="card"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><ul class="checks" id="checks"></ul></section>
       <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
     </div>
+    <section class="card"><h2>Quantitativos (estimativa)</h2><div id="quant"></div></section>
     <p class="note" id="aviso">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021), conferidos no texto da norma em 16/11/2026. O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001; a edição de 2025 da NBR 9077 não foi lida. Piso mínimo de 25 cm, largura de 80 cm e desnível de 3,20 m sem patamar, no perfil Estudo, não têm norma nacional que os sustente. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
   </div>
 </main>
