@@ -1,4 +1,4 @@
-const {calc,planSVG,sectionSVG,explicacao,buildFaces}=require('./carregar.js');
+const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG}=require('./carregar.js');
 const C={paper:'#fff',ink:'#000',muted:'#666',line:'#ccc',accent:'#f60',info:'#06f',tread:'#ddd',winder:'#fdc',patamar:'#cfc',piso:'#eee',t3:'#ddd',w3:'#fdc',p3:'#cfc',f3:'#eee',ground:'#ccc'};
 let fail=0; const ok=(c,m)=>{console.log((c?'PASSA ':'FALHA ')+m); if(!c)fail++;};
 const st=(R,id)=>(R.checks.find(c=>c.id===id)||{}).status;
@@ -98,6 +98,26 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ['c-patamar','z-patamar'].forEach(t=>['dir','esq'].forEach(lado=>{const R=calc({tipo:t,lado}); ok(R.polys.length===R.T && R.rises.length===3 && R.nPat===2,t+' '+lado+': 3 lances, 2 patamares, N − 1 superfícies');}));
   const Z=calc({tipo:'z-patamar'}), Rt=calc({tipo:'reta'});
   ok(Math.abs(Z.quant.aEspelhos-Rt.quant.aEspelhos)<1e-6,'Z: área de espelhos = N × e × largura');
+}
+/* v6: cortes A-A e B-B reais, chamada na planta, quantitativos */
+{
+  const R=calc({tipo:'reta'});
+  const a=corteSVG(R,{},C,'A'), b=corteSVG(R,{},C,'B');
+  ok(/CORTE A-A/.test(a) && /CORTE B-B/.test(b),'cortes A-A e B-B têm título');
+  const polys=(sv)=>[...sv.matchAll(/<polygon points="([^"]+)" fill="url\(#hcc\d+\)"/g)].map(m=>m[1].split(' ').map(p=>p.split(',').map(Number)));
+  const pa=polys(a); ok(pa.length===1 && Math.abs(Math.min(...pa[0].map(q=>q[1]))+15*17.5)<0.01,'reta, A-A: um só contorno cortado, do 1º ao 15º degrau (topo a 262,5)');
+  const pb=polys(b), d8=R.polys[7]; const esp=d8.top-R.zBot(d8,[50,7*29+14.5]);
+  ok(pb.length===1 && Math.abs((Math.max(...pb[0].map(q=>q[1]))-Math.min(...pb[0].map(q=>q[1])))-esp)<0.01,'reta, B-B: corta o degrau 8 com a espessura real ('+esp.toFixed(1)+' cm)');
+  const pl=planSVG(R,{},C); ok((pl.match(/font-weight="700">A</g)||[]).length===2 && (pl.match(/font-weight="700">B</g)||[]).length===2,'planta: chamadas A e B nas duas pontas');
+  ok(!/font-weight="700">A</.test(planSVG(calc({showCortes:false}),{},C)),'planta: chamadas somem com "cortes" desligado');
+  ok(!/font-weight="700">A</.test(planSVG(R,{modo:'sup'},C)),'planta do pavimento superior sem chamadas');
+  const h=calc({tipo:'helicoidal'}); ok(/fill="url\(#hcc\d+\)" stroke="[^"]+" stroke-width="2"/.test(corteSVG(h,{},C,'A').replace(/<polygon[^>]+>/g,'')),'helicoidal, A-A: pilar cortado');
+  const d=calc({tipo:'reta',corteA:30}); ok(corteSVG(d,{},C,'A')!==a,'deslocar a linha muda o corte');
+  let nanC=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const lado of ['dir','esq'])for(const q of ['A','B'])for(const leque of ['bal','conv']){const X=calc({tipo:t,lado,leque});const sv=corteSVG(X,{},C,q)+planSVG(X,{},C);if(/NaN|undefined|Infinity/.test(sv))nanC++;}
+  ok(nanC===0,'cortes e chamadas sem NaN nos 9 tipos, dos dois lados');
+  const e=17.5,p=29,tl=10,L=100,sup=(15*e*p/2+15*Math.hypot(p,e)*tl)*L;
+  ok(R.quant.volConc<=sup+1 && R.quant.volConc>=0.95*sup,'reta: volume de concreto confere com a conta à mão ('+(R.quant.volConc/1e6).toFixed(3)+' m³)');
+  ok(Math.abs(R.quant.aEspelhos-16*17.5*100)<1e-6 && Math.abs(R.quant.aPisos-15*29*100)<1e-6,'reta: área de espelhos e de pisos');
 }
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}

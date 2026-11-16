@@ -157,6 +157,8 @@ function planSVG(R, o, C) {
   }
   if (clipId) s += '</g>';
   s += rotulos;
+  /* chamadas dos cortes A-A e B-B (só na planta do pavimento inferior) */
+  if (!thumb && !sup && o.cortes !== false && R.st.showCortes !== false) s += chamadaCorte(R, 'A', fs, C, bbA) + chamadaCorte(R, 'B', fs, C, bbA);
   /* ponta mais estreita dos degraus balanceados: marca no canto interno */
   if (showDims && !sup && R.bal && R.nLeque) {
     const lqs = R.polys.filter(pl => pl.kind === 'leque');
@@ -298,4 +300,177 @@ function sectionSVG(R, o, C) {
   const t2 = 'esquema ao longo da linha de caminhamento (não é corte A-A) · H ' + fmt(H) + ' · ' + R.N + ' espelhos de ' + fmt(e, 1) + ' · cotas em cm';
   s += titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
   return svgWrap(vx, vy, vw, vh, s, o, defs);
+}
+
+/* ===== CORTES A-A E B-B (plano vertical de verdade, com chamada na planta) =====
+   Um corte é um plano vertical que passa pela linha P0 + s·u da planta; quem desenha olha na direção n.
+   u é a direita de quem olha (assim o desenho não sai espelhado). O que o plano corta vira poché (hachura e traço
+   grosso); o que está além do plano aparece em vista, do mais longe para o mais perto; o que está atrás não aparece. */
+function cortesDe(R) {
+  const st = R.st, un = v => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
+  let A, B;
+  if (R.hel) {
+    A = { P0: [0, 0], n: [1, 0] };
+    B = { P0: [0, 0], n: [0, 1] };
+  } else {
+    const se = R.startEdge, mid = [(se[0][0] + se[1][0]) / 2, (se[0][1] + se[1][1]) / 2];
+    const din = un([se[1][0] - se[0][0], se[1][1] - se[0][1]]), h = [0, 1];
+    const g1 = R.polys.filter(pl => pl.kind === 'reto' && pl.grp === (R.polys[0].grp || -1)).length;
+    const d1 = Math.max(R.p / 2, g1 * R.p / 2);
+    A = { P0: mid, n: din };
+    B = { P0: [mid[0] + h[0] * d1, mid[1] + h[1] * d1], n: h };
+  }
+  const desl = (c, d) => { d = num(d, 0); return { P0: [c.P0[0] + c.n[0] * d, c.P0[1] + c.n[1] * d], n: c.n, u: [c.n[1], -c.n[0]] }; };
+  return { A: desl(A, st.corteA), B: desl(B, st.corteB) };
+}
+
+/* trechos (em s, ao longo de u) em que a reta do corte passa por dentro do polígono (regra par-ímpar) */
+function cortaPoligono(pts, P0, n, u) {
+  const sv = [], eps = 1e-7;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    const da = (a[0] - P0[0]) * n[0] + (a[1] - P0[1]) * n[1] + eps, db = (b[0] - P0[0]) * n[0] + (b[1] - P0[1]) * n[1] + eps;
+    if ((da < 0) !== (db < 0)) { const k = da / (da - db), q = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]; sv.push((q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1]); }
+  }
+  sv.sort((x, y) => x - y);
+  const out = []; for (let i = 0; i + 1 < sv.length; i += 2) if (sv[i + 1] - sv[i] > 1e-6) out.push([sv[i], sv[i + 1]]);
+  return out;
+}
+/* parte do polígono do lado de lá do plano (n·(q − P0) >= 0) */
+function ladoDeLa(pts, P0, n) {
+  const out = [], f = q => (q[0] - P0[0]) * n[0] + (q[1] - P0[1]) * n[1];
+  for (let i = 0; i < pts.length; i++) {
+    const P = pts[i], Q = pts[(i + 1) % pts.length], fp = f(P), fq = f(Q);
+    if (fp >= 0) out.push(P);
+    if ((fp > 0 && fq < 0) || (fp < 0 && fq > 0)) { const k = fp / (fp - fq); out.push([P[0] + (Q[0] - P[0]) * k, P[1] + (Q[1] - P[1]) * k]); }
+  }
+  return out;
+}
+
+function corteSVG(R, o, C, qual) {
+  o = o || {};
+  qual = qual === 'B' ? 'B' : 'A';
+  const cs = cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u, st = R.st, H = R.H, e = R.e;
+  const S = q => (q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1], Dp = q => (q[0] - P0[0]) * n[0] + (q[1] - P0[1]) * n[1];
+  const ptAt = (s, d) => [P0[0] + u[0] * s + n[0] * d, P0[1] + u[1] * s + n[1] * d];
+  /* extensão do desenho */
+  const todos = []; R.polys.forEach(pl => pl.pts.forEach(q => todos.push(S(q)))); R.arrival.pts.forEach(q => todos.push(S(q)));
+  if (R.hel) todos.push(-R.helix.R, R.helix.R);
+  const s0 = Math.min.apply(null, todos) - 70, s1 = Math.max.apply(null, todos) + 70;
+  const span = Math.max(s1 - s0, H + 60), fs = clamp(span / 46, 5, 13);
+  const hid = 'hch' + (++HCH), hid2 = 'hcc' + HCH;
+  const defs = '<defs><pattern id="' + hid + '" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="' + C.muted + '" stroke-width="1"/></pattern>' +
+    '<pattern id="' + hid2 + '" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="' + C.tread + '"/><line x1="0" y1="0" x2="0" y2="9" stroke="' + C.ink + '" stroke-width="0.9"/></pattern></defs>';
+  let s = '';
+  /* ---- elementos além do plano (em vista), do mais longe para o mais perto ---- */
+  const vistas = [];
+  R.polys.forEach(pl => {
+    const lado = ladoDeLa(pl.pts, P0, n); if (lado.length < 3) return;
+    const ss = lado.map(S), ta = Math.min.apply(null, ss), tb = Math.max.apply(null, ss);
+    if (tb - ta < 1e-6) return;
+    const prof = Math.min.apply(null, lado.map(Dp));
+    /* fundo: a cada posição s, o ponto mais baixo do intradorso na fatia do degrau */
+    const fundo = [], NS2 = 8;
+    for (let i = 0; i <= NS2; i++) {
+      const sx = Math.min(tb - 1e-6, Math.max(ta + 1e-6, ta + (tb - ta) * i / NS2));
+      let zmin = pl.top;
+      /* fatia do degrau na posição sx (reta na direção do olhar): o ponto mais baixo do intradorso nela */
+      const base = ptAt(sx, 0);
+      cortaPoligono(lado, base, u, n).forEach(iv => [iv[0], (iv[0] + iv[1]) / 2, iv[1]].forEach(d => { zmin = Math.min(zmin, R.zBot(pl, [base[0] + n[0] * d, base[1] + n[1] * d])); }));
+      fundo.push([sx, zmin]);
+    }
+    vistas.push({ pl, ta, tb, prof, fundo });
+  });
+  vistas.sort((a, b) => b.prof - a.prof);
+  vistas.forEach(v => {
+    const poly = [[v.ta, v.pl.top], [v.tb, v.pl.top]].concat(v.fundo.slice().reverse());
+    s += sPoly(poly, treadFill(v.pl.kind, C), C.ink, 0.9);
+  });
+  /* corrimão do lado de lá (borda da escada que fica além do plano), na altura do bocel + 92 */
+  if (!R.hel) {
+    const lados = [0, 1].map(j => R.polys.map(pl => pl.entry[j]).concat([R.arrival.pts[j]]));
+    const prof = lados.map(l => l.reduce((m, q) => m + Dp(q), 0) / l.length);
+    const j = prof[1] > prof[0] ? 1 : 0;
+    if (prof[j] > 1) {
+      /* só os trechos em que o corrimão está mesmo além do plano */
+      const pts = R.polys.map(pl => ({ q: pl.entry[j], z: pl.top + 92 })).concat([{ q: R.arrival.pts[j], z: H + 92 }]);
+      let tr = [];
+      const fecha = () => { if (tr.length > 1) s += sPolyline(tr, C.ink, 1.2); tr = []; };
+      pts.forEach(pt => { if (Dp(pt.q) > 1) tr.push([S(pt.q), pt.z]); else fecha(); });
+      fecha();
+    }
+  }
+  /* ---- pisos e lajes ---- */
+  const zU = H - st.espLaje;
+  /* chão cortado */
+  s += '<rect x="' + r2(s0) + '" y="0" width="' + r2(s1 - s0) + '" height="' + r2(fs * 1.6) + '" fill="url(#' + hid + ')" stroke="none"/>';
+  s += sLine([s0, 0], [s1, 0], C.ink, 2.4);
+  /* laje superior: cortada onde não há abertura; na abertura, a borda da laje do outro lado aparece em vista */
+  let furo = null;
+  if (R.opening) {
+    if (R.opening.circle) { const r = R.opening.circle, d = Dp([0, 0]), c = S([0, 0]); if (Math.abs(d) < r) { const hw = Math.sqrt(r * r - d * d); furo = [c - hw, c + hw]; } }
+    else { const b = R.opening.bbox; const box = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]; const iv = cortaPoligono(box, P0, n, u); if (iv.length) furo = iv[0]; }
+  }
+  const lajeRet = (a, b) => b - a > 1e-6 ? '<rect x="' + r2(a) + '" y="' + r2(-H) + '" width="' + r2(b - a) + '" height="' + r2(st.espLaje) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="1.8" ' + NS + '/>' : '';
+  if (furo) {
+    s += lajeRet(s0, furo[0]) + lajeRet(furo[1], s1);
+    s += sLine([furo[0], zU], [furo[1], zU], C.muted, 0.9) + sLine([furo[0], H], [furo[1], H], C.muted, 0.9);
+  } else s += lajeRet(s0, s1);
+  /* ---- o que o plano corta (poché) ---- */
+  const pecas = [];
+  R.polys.forEach(pl => {
+    cortaPoligono(pl.pts, P0, n, u).forEach(iv => {
+      const NS3 = pl.kind === 'reto' || pl.kind === 'patamar' ? 1 : 8, fundo = [];
+      for (let i = 0; i <= NS3; i++) { const sx = iv[0] + (iv[1] - iv[0]) * i / NS3; fundo.push([sx, R.zBot(pl, ptAt(sx, 0))]); }
+      pecas.push({ k: pl.k, top: pl.top, a: iv[0], b: iv[1], fundo });
+    });
+  });
+  pecas.sort((x, y) => x.a - y.a);
+  /* junta peças vizinhas de degraus consecutivos num só contorno */
+  const grupos = [];
+  pecas.forEach(pc => { const g = grupos[grupos.length - 1], ult = g && g[g.length - 1]; if (ult && Math.abs(ult.b - pc.a) < 1e-4 && Math.abs(ult.k - pc.k) === 1) g.push(pc); else grupos.push([pc]); });
+  grupos.forEach(g => {
+    const topo = [], fundo = [];
+    g.forEach(pc => { topo.push([pc.a, pc.top], [pc.b, pc.top]); pc.fundo.forEach(q => fundo.push(q)); });
+    const poly = topo.concat(fundo.reverse());
+    s += sPoly(poly, 'url(#' + hid2 + ')', C.ink, 2);
+  });
+  /* pilar da helicoidal cortado */
+  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (Math.abs(d) < R.pole.r) { const hw = Math.sqrt(R.pole.r * R.pole.r - d * d); s += '<rect x="' + r2(c - hw) + '" y="' + r2(-zU) + '" width="' + r2(2 * hw) + '" height="' + r2(zU) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="2" ' + NS + '/>'; } else if (d > 0) s += '<rect x="' + r2(c - R.pole.r) + '" y="' + r2(-zU) + '" width="' + r2(2 * R.pole.r) + '" height="' + r2(zU) + '" fill="' + C.paper + '" stroke="' + C.ink + '" stroke-width="0.9" ' + NS + '/>'; }
+  /* altura livre sobre os degraus cortados */
+  pecas.forEach(pc => { const z = pc.top + st.hLivre; if (z <= H + 1e-6) s += sLine([pc.a, z], [pc.b, z], C.accent, 1.4, '5 4'); });
+  /* números dos degraus cortados */
+  pecas.forEach(pc => { if (pc.b - pc.a >= fs * 1.2) s += sText((pc.a + pc.b) / 2, pc.top - Math.min(e, 12) / 2 - 1, String(pc.k), fs * 0.7, C.ink, 'middle', 0, 600); });
+  /* ---- níveis, cotas, título ---- */
+  s += sText(s0 + fs * 0.4, fs * 1.0, nivel(0), fs * 0.85, C.ink, 'start', 0, 600);
+  s += sText(s0 + fs * 0.4, H + fs * 1.0, nivel(H), fs * 0.85, C.ink, 'start', 0, 600);
+  s += dimLine([s1, 0], [s1, H], 1, 0, fs * 2.4, 'H ' + fmt(H, 0), fs, C);
+  s += dimLine([s1, zU], [s1, H], 1, 0, fs * 0.9, fmt(st.espLaje, 0), fs * 0.75, C);
+  if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500);
+  const t1 = 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
+  const t2 = 'hachura: cortado · traço fino: em vista · cm';
+  const ymin = -fs * 9.5;
+  s += titleBlock(s0 - fs * 2, -fs * 3, s1 - s0 + fs * 8, fs, t1, t2, C);
+  const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11, ymax = H + (R.hel ? 0 : 92) + fs * 5;
+  return svgWrap(vx, -ymax, vxw, ymax - ymin, s, o, defs);
+}
+
+/* linha de corte na planta: traço-ponto fino, pontas grossas, setas no sentido do olhar e as letras */
+function chamadaCorte(R, qual, fs, C, bbA) {
+  const cs = cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u;
+  const S = q => (q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1];
+  const cantos = [[bbA[0], bbA[1]], [bbA[2], bbA[1]], [bbA[2], bbA[3]], [bbA[0], bbA[3]]].map(S);
+  /* as pontas passam das cotas (a 5,4 fs do desenho) para as letras não caírem em cima de texto */
+  const a = Math.min.apply(null, cantos) - fs * 7.5, b = Math.max.apply(null, cantos) + fs * 7.5;
+  const P = s => [P0[0] + u[0] * s, P0[1] + u[1] * s];
+  let out = sLine(P(a), P(b), C.info, 0.9, '14 4 2 4');
+  [a, b].forEach((sx, i) => {
+    const q = P(sx), dir = i ? 1 : -1, q2 = P(sx - dir * fs * 1.6);
+    out += sLine(q, q2, C.info, 3);
+    const tip = [q[0] + n[0] * fs * 1.8, q[1] + n[1] * fs * 1.8];
+    out += sLine(q, tip, C.info, 1.6) + sPoly([[tip[0] + n[0] * fs * 0.6, tip[1] + n[1] * fs * 0.6], [tip[0] + u[0] * fs * 0.4, tip[1] + u[1] * fs * 0.4], [tip[0] - u[0] * fs * 0.4, tip[1] - u[1] * fs * 0.4]], C.info, C.info, 1);
+    const lt = [q[0] + n[0] * fs * 1.2 + u[0] * dir * fs * 1.3, q[1] + n[1] * fs * 1.2 + u[1] * dir * fs * 1.3];
+    out += sText(lt[0], lt[1], qual, fs * 1.1, C.info, 'middle', 0, 700);
+  });
+  return out;
 }

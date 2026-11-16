@@ -64,7 +64,7 @@ function mount() {
     fieldNum('hLivre', 'Altura livre mínima', 'cm') + fieldNum('espLaje', 'Laje do piso de cima', 'cm') +
     '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
     '<div data-for="helicoidal">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
-  $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Perfil'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
+  $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Cortes'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
 }
 function fieldNum(id, label, unit, hint) {
   return '<div class="field"><label for="' + id + '">' + label + '</label><div class="inp"><input id="' + id + '" type="text" inputmode="decimal" autocomplete="off"><span class="un">' + unit + '</span></div>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + '</div>';
@@ -92,6 +92,9 @@ function bind() {
   $('modoP').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.modoPlanta = b.dataset.v; render(); });
   $('showDims').addEventListener('change', e => { S.showDims = e.target.checked; render(); });
   $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
+  $('showCortes').addEventListener('change', e => { S.showCortes = e.target.checked; render(); });
+  $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
+  $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
@@ -105,7 +108,7 @@ function bind() {
   $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
   $('pit').addEventListener('input', e => { PIT = +e.target.value; draw3d(false); });
   $('btnResumo').addEventListener('click', () => copiar(resumo(), 'Resumo copiado'));
-  $('btnSvg').addEventListener('click', () => { if (VIEW === '3d') return; copiar(VIEW === 'corte' ? sectionSVG(CUR, { pxW: 1400 }, THEME) : planSVG(CUR, { pxW: 1400 }, THEME), 'SVG copiado'); });
+  $('btnSvg').addEventListener('click', () => { if (VIEW === '3d') return; copiar(VIEW === 'corte' ? svgCorte(CUR, { pxW: 1400 }, THEME) : planSVG(CUR, { pxW: 1400 }, THEME), 'SVG copiado'); });
   $('btnImg').addEventListener('click', gerarImagem);
   $('btnPrint').addEventListener('click', imprimir);
   $('modalClose').addEventListener('click', () => $('modal').hidden = true);
@@ -134,12 +137,12 @@ function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || 
 
 function falha(msg) {
   CUR = null;
-  ['tiles', 'memo', 'checks', 'legend'].forEach(id => { $(id).innerHTML = ''; });
+  ['tiles', 'memo', 'checks', 'legend', 'quant'].forEach(id => { $(id).innerHTML = ''; });
   $('stage').dataset.view = 'erro';
   $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
   $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Entrada ou configuração inválida';
   ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = true; });
-  $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true;
+  $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true; $('viewCorteBar').hidden = true;
 }
 /* opções do número de degraus da curva: de 2 até pelo menos kw (o mínimo do balanceamento pode passar de 6) */
 function opcoesK(bal, kMin, kAtual) {
@@ -210,6 +213,7 @@ function render(typing) {
   const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
   $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('');
   $('memo').innerHTML = R.memo.map(t => '<li>' + t + '</li>').join('');
+  $('quant').innerHTML = quantHTML(R);
   $('title').textContent = TIPOS.find(t => t.id === S.tipo).nome;
   $('desc').textContent = TIPOS.find(t => t.id === S.tipo).desc + '. ' + R.nm.nome + '.';
   /* legenda */
@@ -220,18 +224,52 @@ function render(typing) {
   $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">Volumes esquemáticos, só para visualizar. Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
   $('view3dBar').hidden = VIEW !== '3d';
   $('viewPlantaBar').hidden = VIEW !== 'planta';
+  $('viewCorteBar').hidden = VIEW !== 'corte';
+  document.querySelectorAll('#vistaC button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.vistaCorte || 'A')));
+  $('deslWrap').hidden = !(S.vistaCorte === 'A' || S.vistaCorte === 'B' || !S.vistaCorte);
+  setVal('desl', plain(num(S.vistaCorte === 'B' ? S.corteB : S.corteA, 0)));
+  $('showCortes').checked = S.showCortes !== false;
   $('btnSvg').hidden = VIEW === '3d' || VIEW === 'explica';
   $('btnImg').hidden = VIEW === 'explica';
   $('legend').hidden = VIEW === 'explica';
   /* palco */
   $('stage').dataset.view = VIEW;
   if (VIEW === 'planta') { $('stage').innerHTML = planSVG(R, {}, THEME); }
-  else if (VIEW === 'corte') { $('stage').innerHTML = sectionSVG(R, {}, THEME) + '<p class="cap">Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.</p>'; }
+  else if (VIEW === 'corte') { $('stage').innerHTML = svgCorte(R, {}, THEME) + '<p class="cap">' + LEG_CORTE[S.vistaCorte || 'A'] + '</p>'; }
   else if (VIEW === 'explica') { $('stage').innerHTML = explicacao(R, S, THEME); }
   else { $('stage').innerHTML = ''; $('stage').appendChild(CV3); draw3d(true); }
   save();
 }
 
+/* quantitativos: estimativas da geometria, para orçamento preliminar e para conferir ordem de grandeza */
+function quantHTML(R) {
+  const q = R.quant, m2 = v => fmt(v / 10000, 2) + ' m²';
+  const linhas = [
+    ['Piso dos degraus e patamares', m2(q.aPisos), 'soma das superfícies em planta (revestimento de piso)'],
+    ['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'],
+    ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte'],
+  ];
+  if (R.hel) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm; pilar fora da conta']);
+  else {
+    linhas.push(['Concreto da escada', fmt(q.volConc / 1e6, 3) + ' m³', 'degraus + laje de ' + fmt(R.st.tLaje) + ' cm, até o chão; sem a laje do piso de cima']);
+    linhas.push(['Fôrma do fundo', m2(q.aForma), 'face de baixo da laje inclinada e dos patamares; sem as laterais']);
+  }
+  linhas.push(['Corrimão (por lado)', fmt(q.corrimao / 100, 2) + ' m', 'medido na linha de caminhamento' + (R.nm.acess ? ', com os 30 cm de prolongamento em cada ponta' : '') + '; o lado externo de curvas é mais comprido']);
+  return '<table class="tab tabq"><tbody>' + linhas.map(l => '<tr><td>' + l[0] + '<br><span class="hint">' + l[2] + '</span></td><td>' + l[1] + '</td></tr>').join('') + '</tbody></table><p class="hint" style="margin-top:8px">Contas feitas na geometria do desenho, para estudo e orçamento preliminar. Não incluem perdas, armadura, emendas nem detalhes de obra.</p>';
+}
+/* aba Cortes: corte A-A, corte B-B, perfil desenvolvido ou detalhe do degrau */
+function svgCorte(R, o, C) {
+  const v = S.vistaCorte || 'A';
+  if (v === 'perfil') return sectionSVG(R, o, C);
+  if (v === 'detalhe') return detalheSVG(R, o, C);
+  return corteSVG(R, o, C, v);
+}
+const LEG_CORTE = {
+  A: 'Corte A-A: plano vertical marcado na planta com as letras A. O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.',
+  B: 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B. Hachura = cortado; traço fino = em vista, além do plano.',
+  perfil: 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.',
+  detalhe: 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.'
+};
 function draw3d(hq) {
   if (VIEW !== '3d' || !CUR) return;
   const box = $('stage'), cw = Math.max(280, box.clientWidth || 640);
@@ -263,8 +301,12 @@ function montarRelatorio() {
   h += '<div class="ptiles">' + tiles.map(x => '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>').join('') + '</div>';
   h += '<figure>' + planSVG(R, { modo: 'inf' }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso.</figcaption></figure>';
   h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
+  h += '<div class="quebra"></div><figure>' + corteSVG(R, {}, C, 'A') + '<figcaption>Corte A-A, marcado na planta.</figcaption></figure>';
+  h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
+  const det = detalheSVG(R, {}, C); if (det) h += '<figure>' + det + '<figcaption>Detalhe do degrau.</figcaption></figure>';
   h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('') + '</ul>';
   h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
+  h += '<h2>Quantitativos (estimativa)</h2>' + quantHTML(R);
   h += '<div class="quebra"></div><h2>Explicação</h2>' + explicacao(R, S, C).replace(/<details class="ex"( open)?>/g, '<details class="ex" open>');
   h += '<p class="rodape">' + $('aviso').textContent + '</p>';
   $('printArea').innerHTML = h;
@@ -281,9 +323,9 @@ function copiar(txt, msg) {
 
 function gerarImagem() {
   const T = THEME || getTheme();
-  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + VIEW + '.png'; $('modal').hidden = false; };
+  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? 'corte-' + (S.vistaCorte || 'A') : VIEW) + '.png'; $('modal').hidden = false; };
   if (VIEW === '3d') { draw3d(true); done(CV3.toDataURL('image/png')); return; }
-  const svg = VIEW === 'corte' ? sectionSVG(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
+  const svg = VIEW === 'corte' ? svgCorte(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
   const m = svg.match(/width="(\d+)" height="(\d+)"/); const w = +m[1], h = +m[2];
   const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   img.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = T.paper; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); done(c.toDataURL('image/png')); };

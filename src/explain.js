@@ -156,13 +156,15 @@ function explicacao(R, S, C) {
       'Escreva os níveis (' + nivel(0) + ' e ' + nivel(R.H) + '), as cotas em centímetros e a escala no carimbo.']), false);
 
   /* 8. Como ler os desenhos */
-  h += sec('Como ler a planta e o perfil',
+  h += sec('Como ler a planta, os cortes e o perfil',
     anatomiaSVG(C) +
     dl([
       ['Planta', 'Vista de cima, como se a casa fosse cortada na horizontal. Por convenção de desenho, o plano de corte fica em torno de 1,50 m do piso (a NBR 6492, norma de representação de projetos, não foi conferida para este app); se usar outra altura, informe no desenho (aqui ' + f(R.zc) + ' cm, que dá o degrau ' + R.kCut + '). O que está abaixo do corte e à vista aparece em traço cheio. O que está acima aparece como projeção tracejada. A linha em zigue-zague marca onde a escada foi cortada.'],
       ['Planta do pavimento superior', 'Mostra o piso de cima. A escada só aparece através da abertura da laje, em traço cheio; onde dois trechos se sobrepõem, aparece o de cima.'],
       ['Linha de caminhamento', 'A linha laranja com seta: o caminho que uma pessoa faz ao usar a escada. Na planta do pavimento inferior a seta aponta para onde sobe e "SOBE" fica no primeiro degrau, com o nível ' + nivel(0) + '. Na planta do pavimento superior o app marca "DESCE", com a seta no sentido da descida.' + (leq && R.bal ? ' A marca "ponta" mostra o degrau mais estreito na borda interna.' : '')],
-      ['Perfil desenvolvido', 'Não é um corte A-A da edificação: é um esquema da escada esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Serve para ver a sequência de espelhos, a laje da escada, a altura livre (tracejado laranja) e o corrimão' + (nm.acess ? ' a 92 e 70 cm, prolongado 30 cm nas pontas (NBR 9050:2020, 6.9.3.2)' : ' a 92 cm') + ', medido a partir do bocel dos degraus. Um corte A-A de verdade precisaria de uma linha de corte marcada na planta.'],
+      ['Perfil desenvolvido', 'Não é um corte A-A da edificação: é um esquema da escada esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Serve para ver a sequência de espelhos, a laje da escada, a altura livre (tracejado laranja) e o corrimão' + (nm.acess ? ' a 92 e 70 cm, prolongado 30 cm nas pontas (NBR 9050:2020, 6.9.3.2)' : ' a 92 cm') + ', medido a partir do bocel dos degraus. Para ver a escada como ela é cortada de verdade, use os cortes A-A e B-B.'],
+      ['Cortes A-A e B-B', 'Corte é um plano vertical que atravessa a edificação. Na planta ele aparece como uma linha de traço e ponto, com as letras nas pontas e setas que mostram para onde se olha. No desenho do corte, o que o plano atravessa (degraus, laje da escada, laje do piso de cima, chão) aparece hachurado e com traço grosso; o que está além do plano aparece em vista, com traço fino; o que fica atrás de quem olha não aparece. O A-A passa ao longo do 1º lance e o B-B atravessa esse lance; você pode deslocar cada linha. Repare na laje de cima: onde a escada passa, ela é interrompida pela abertura.'],
+      ['Detalhe', 'Ampliação de poucos degraus, com as medidas do espelho, do piso, do bocel e da laje, para mostrar o que a escala da planta não deixa ler.'],
       ['Cotas', 'Todas em centímetros. Níveis em metros: ' + nivel(0) + ' é o piso de baixo e ' + nivel(R.H) + ' o de cima.'],
       ['3D', 'Volumes esquemáticos, só para enxergar o conjunto. Não representa o sistema construtivo. Gire arrastando.']
     ]), false);
@@ -196,7 +198,8 @@ function explicacao(R, S, C) {
       ['Altura livre', 'Distância vertical entre a superfície de apoio (o piso do degrau) e a face de baixo do obstáculo superior mais próximo.'],
       ['Abertura (vão) na laje', 'Recorte na laje do piso superior onde a escada passa, necessário quando o teto ficaria baixo sobre os degraus.'],
       ['Guarda-corpo', 'Barreira nos lados abertos, contra quedas. Pela NBR 9077:2001 (4.8.1.2), 1,05 m nos patamares, podendo baixar para 92 cm em escadas internas, medida a partir da linha dos bocéis; se for vazada, uma esfera de 15 cm não pode passar (4.8.1.4 a).'],
-      ['Corte e planta', 'Planta é um corte horizontal visto de cima. Corte é um corte vertical, indicado na planta por uma linha com letras (A-A). O perfil desenvolvido deste app é outra coisa: um esquema do percurso esticado.'],
+      ['Corte e planta', 'Planta é um corte horizontal visto de cima. Corte é um corte vertical, indicado na planta por uma linha com letras (A-A, B-B) e setas no sentido do olhar. O perfil desenvolvido deste app é outra coisa: um esquema do percurso esticado.'],
+      ['Poché (hachura de corte)', 'Preenchimento dos elementos atravessados pelo plano de corte, para separar o que é cortado do que é visto.'],
       ['Cota', 'Número que indica uma medida ou altura no desenho.'],
       ['Desnível', 'Diferença de altura entre os dois pisos que a escada liga.']
     ]), false);
@@ -224,7 +227,8 @@ function explicacao(R, S, C) {
     ['A área em planta é a área da escada?', 'O app mostra duas coisas: o retângulo envolvente (' + f((R.bbox[2] - R.bbox[0]) / 100, 2) + ' × ' + f((R.bbox[3] - R.bbox[1]) / 100, 2) + ' m) e a área que a escada ocupa de fato (' + f(R.areaOcup / 10000, 2) + ' m²), que é a soma dos degraus e patamares.'],
     ['Por que a laje do andar de cima é aberta?', 'Para manter a altura livre. Se a laje continuasse inteira por cima dos últimos degraus, a cabeça de quem sobe bateria nela.' + (R.kc && R.opening ? ' A abertura começa no degrau ' + R.kc + ' nesta escada.' : '')],
     ['Esta escada atende às normas?', (ruins.length ? 'Não no perfil escolhido: há itens que não atendem (veja a lista).' : atencao.length ? 'Os itens conferidos não reprovam, mas há pontos em atenção que o app não valida.' : 'Nenhuma das verificações implementadas reprovou.') + ' O app confere só parte das exigências; quem decide é o texto da norma vigente e o código do município.'],
-    ['Isso é um corte A-A?', 'Não. É um perfil desenvolvido: a escada esticada ao longo da linha de caminhamento, para mostrar a sequência de espelhos e a altura livre.']
+    ['O perfil é um corte A-A?', 'Não. O perfil desenvolvido é a escada esticada ao longo da linha de caminhamento, para mostrar a sequência de espelhos e a altura livre. O corte A-A é um plano vertical de verdade, marcado na planta; em escadas com curva ele mostra partes da escada em vista, além do plano.'],
+    ['Por que no corte alguns degraus aparecem hachurados e outros não?', 'Hachurado é o que o plano de corte atravessa. Os outros degraus estão além do plano e aparecem em vista, como numa fachada. Os que ficam atrás de quem olha não aparecem.']
   ];
   h += sec('Perguntas que o professor pode fazer', '<dl>' + pergs.map(x => '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>').join('') + '</dl>', false);
 
