@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patamar Calculadora de Escadas</title>
+<meta name="theme-color" content="#13242f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Patamar">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Direção: prancheta de desenho técnico. Papel frio, tinta azul-petróleo, laranja de segurança só no que sobe e no que é ação. Layout: controles à esquerda, desenho e verificações à direita. */
+:root{
+  --paper:#eef2f4; --panel:#ffffff; --ink:#13242f; --muted:#5a6b78; --line:#cdd7dd; --accent:#d9531a; --accent-ink:#ffffff; --info:#2a6fbb;
+  --ok:#17803f; --warn:#a86a00; --bad:#c73434; --okbg:#e3f3ea; --warnbg:#fbefd5; --badbg:#fbe3e3; --infobg:#e4eef9;
+  --tread:#dbe6ec; --winder:#f6d9c4; --patamar:#cfe5d9; --piso:#e8edf0;
+  --t3:#b3c7d3; --w3:#eeaa7c; --p3:#97c7b0; --f3:#cdd5da; --ground:#dfe5e8;
+  --display:'Barlow Condensed','Arial Narrow',Arial,sans-serif; --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0e1b27; --panel:#132636; --ink:#e4edf3; --muted:#92a6b5; --line:#274055; --accent:#ff8a4c; --accent-ink:#1a1008; --info:#6cb0ff;
+    --ok:#4cc27e; --warn:#e8a63a; --bad:#ff7777; --okbg:#143a2a; --warnbg:#3b2d10; --badbg:#431d1f; --infobg:#17304d;
+    --tread:#1d3b52; --winder:#5c3a2a; --patamar:#1f4a3e; --piso:#183043;
+    --t3:#3f7396; --w3:#c0703f; --p3:#3f8f78; --f3:#3a4d5c; --ground:#1a2e3f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0e1b27; --panel:#132636; --ink:#e4edf3; --muted:#92a6b5; --line:#274055; --accent:#ff8a4c; --accent-ink:#1a1008; --info:#6cb0ff;
+  --ok:#4cc27e; --warn:#e8a63a; --bad:#ff7777; --okbg:#143a2a; --warnbg:#3b2d10; --badbg:#431d1f; --infobg:#17304d;
+  --tread:#1d3b52; --winder:#5c3a2a; --patamar:#1f4a3e; --piso:#183043;
+  --t3:#3f7396; --w3:#c0703f; --p3:#3f8f78; --f3:#3a4d5c; --ground:#1a2e3f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%}
+h1,h2,h3{margin:0;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+
+
+.top{max-width:1280px;margin:0 auto;padding:18px 16px 4px;display:flex;align-items:center;gap:12px}
+.mark{width:34px;height:34px;flex:none}
+.top h1{font:600 30px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.top p{margin:0;color:var(--muted);font-size:13px}
+.app{max-width:1280px;margin:0 auto;padding:12px 16px 32px;display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
+.ctrl{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.card h2,.sec h2{font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+summary{cursor:pointer;font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+.tipos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tipos button{display:flex;flex-direction:column;gap:6px;align-items:stretch;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px;cursor:pointer;text-align:left}
+.tipos button:hover{border-color:var(--muted)}
+.tipos button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--panel)}
+.tipos .th{display:block;height:84px;overflow:hidden}
+.tipos .th svg{width:100%;height:100%;display:block}
+.tipos .nm{font-size:13px;font-weight:600;line-height:1.2}
+
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;margin-top:12px}
+.grid2 .field{margin-top:0}
+.field>label,.lab,.labrow label:first-child{font-size:13px;font-weight:500}
+.labrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.auto{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;cursor:pointer;white-space:nowrap}
+.auto input{accent-color:var(--accent);margin:0}
+.inp{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
+.inp:focus-within,.stepper:focus-within{border-color:var(--accent)}
+.inp input,.stepper input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:9px 10px;font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;outline:none}
+.un{padding:0 10px;display:flex;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.stepper{display:flex;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
+.stepper button{width:44px;border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--ink)}
+.stepper button:hover{background:var(--line)}
+.stepper input{text-align:center}
+select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:9px 10px;font-size:14px}
+.hint{margin:0;font-size:12px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--paper);padding:9px;cursor:pointer;font-size:14px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
+
+.out{display:flex;flex-direction:column;gap:12px;min-width:0}
+.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.head h2{font:600 28px/1.1 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0}
+.head p{margin:0;color:var(--muted);font-size:13px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.tl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tv{font:500 18px/1.2 var(--mono);font-variant-numeric:tabular-nums}
+.ts{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:4px}
+.tabs button{border:1px solid var(--line);background:var(--panel);padding:8px 18px;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;border-bottom:0}
+.tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.board{background:var(--panel);border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:12px;margin-top:-13px}
+.stage{min-height:260px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;border-radius:4px;padding:6px;overflow:hidden}
+.stage svg{max-height:70vh}
+.stage canvas{display:block;touch-action:none;cursor:grab;border-radius:4px}
+.cap{margin:8px 4px 2px;font-size:12px;color:var(--muted)}
+.bar3{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0 0 10px}
+.bar3 label{display:flex;align-items:center;gap:8px;font-size:13px}
+.bar3 input{accent-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
+.lg{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block}
+.ln{width:22px;height:0;border-top:2.5px solid var(--accent);display:inline-block}
+.ln.dash{border-top:2px dashed var(--info)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{border:1px solid var(--ink);background:transparent;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500;font-size:14px}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.08);background:var(--accent);color:var(--accent-ink)}
+
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:1100px){.two{grid-template-columns:minmax(0,1fr)}}
+.cs{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;margin-bottom:10px}
+.cs.ok{background:var(--okbg);color:var(--ok)} .cs.warn{background:var(--warnbg);color:var(--warn)} .cs.bad{background:var(--badbg);color:var(--bad)}
+.checks,.memo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ck{display:flex;gap:10px;align-items:flex-start;border-left:3px solid var(--line);padding:2px 0 2px 10px}
+.ck.ok{border-color:var(--ok)} .ck.warn{border-color:var(--warn)} .ck.bad{border-color:var(--bad)} .ck.info{border-color:var(--info)}
+.pill{flex:none;width:62px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:2px 0;margin-top:2px}
+.ck.ok .pill{background:var(--okbg);color:var(--ok)} .ck.warn .pill{background:var(--warnbg);color:var(--warn)} .ck.bad .pill{background:var(--badbg);color:var(--bad)} .ck.info .pill{background:var(--infobg);color:var(--info)}
+.cn{font-size:14px;font-weight:500}
+.cv{font-size:13px;color:var(--muted)} .cv b{font-family:var(--mono);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+.cnote{font-size:13px;margin-top:2px}
+.memo{counter-reset:m;font-size:14px}
+.memo li{counter-increment:m;padding-left:30px;position:relative}
+.memo li::before{content:counter(m);position:absolute;left:0;top:1px;font:500 12px/1.6 var(--mono);color:var(--muted);width:22px;text-align:right}
+.note{font-size:12px;color:var(--muted);margin:0}
+
+.modal{position:fixed;inset:0;background:rgba(8,16,24,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal .box{background:var(--panel);border-radius:10px;padding:14px;max-width:min(1100px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.modal img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff}
+.modal .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
+.toast.on{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+@media (max-width:900px){
+  .app{display:flex;flex-direction:column;align-items:stretch}
+  .ctrl{display:contents}
+  .ctrl>*{order:4}
+  .ctrl>.o1{order:1} .ctrl>.o2{order:2} .out{order:3}
+}
+@media (max-width:640px){
+  .stage{overflow-x:auto}
+  .stage[data-view=corte] svg{min-width:640px}
+  .stage[data-view=planta] svg{min-width:560px}
+}
+.barP{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:0 0 10px;font-size:13px}
+.barP .seg{min-width:250px}
+.barP .seg button{padding:7px 12px;font-size:13px}
+.barP label{display:flex;align-items:center;gap:7px}
+.barP input[type=checkbox]{accent-color:var(--accent)}
+.barP input.mini{width:64px;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);font:inherit}
+.stage[data-view=explica]{background:none;padding:0;overflow:visible;min-height:0}
+.ex{border:1px solid var(--line);border-radius:8px;background:var(--paper);margin:0 0 8px}
+.ex>summary{cursor:pointer;padding:12px 14px;font-weight:600;list-style:none}
+.ex>summary::-webkit-details-marker{display:none}
+.ex>summary::after{content:"+";float:right;color:var(--muted);font-weight:500}
+.ex[open]>summary::after{content:"−"}
+.ex .exb{padding:2px 16px 14px;font-size:14px;line-height:1.6}
+.ex .exb p{margin:0 0 10px}
+.ex .exb ol,.ex .exb ul{margin:0 0 10px;padding-left:20px}
+.ex .exb li{margin:0 0 8px}
+.ex .exb dl{margin:0 0 6px}
+.ex .exb dt{font-weight:600;margin-top:10px}
+.ex .exb dd{margin:2px 0 0}
+.ex .exb svg{margin:4px 0 12px}
+.cn2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
+
+.inp input.err,.stepper input.err,input.err{outline:2px solid #c0392b;outline-offset:-2px}
+.errbox{padding:22px;border:1px solid #c0392b;border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
+.errbox p{margin:8px 0 0}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.stage[data-view=erro]{background:none;min-height:0}
+</style>
+</head>
+<body>
+<header class="top">
+  <svg class="mark" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="6" fill="var(--ink)"/><path d="M6 27h6v-5h6v-5h6v-5h4" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  <div><h1>Patamar</h1><p>Escadas calculadas e desenhadas: planta, corte e 3D</p></div>
+</header>
+<main class="app">
+  <div class="ctrl" id="ctrl"></div>
+  <div class="out">
+    <div class="head"><h2 id="title"></h2><p id="desc"></p></div>
+    <div class="tiles" id="tiles" aria-live="polite"></div>
+    <div>
+      <div class="tabs" id="tabs" role="tablist" aria-label="Tipo de desenho"></div>
+      <div class="board">
+        <div class="bar3" id="view3dBar" hidden>
+          <label>Girar <input type="range" id="yaw" min="-180" max="180" value="-32"></label>
+          <label>Inclinar <input type="range" id="pit" min="12" max="80" value="42"></label>
+        </div>
+        <div class="barP" id="viewPlantaBar" hidden>
+          <div class="seg" id="modoP" role="group" aria-label="Pavimento"><button type="button" data-v="inf">Pav. inferior</button><button type="button" data-v="sup">Pav. superior</button></div>
+          <label id="zcWrap">Corte a <input class="mini" id="zCorte" type="text" inputmode="decimal" autocomplete="off"> cm</label>
+          <label><input type="checkbox" id="showDims"> cotas</label>
+          <label><input type="checkbox" id="showNums"> números</label>
+        </div>
+        <div class="stage" id="stage"></div>
+        <div class="legend" id="legend"></div>
+        <div class="actions">
+          <button type="button" class="btn pri" id="btnImg">Gerar imagem</button>
+          <button type="button" class="btn" id="btnSvg">Copiar SVG</button>
+          <button type="button" class="btn" id="btnResumo">Copiar resumo</button>
+        </div>
+      </div>
+    </div>
+    <div class="two">
+      <section class="card"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><ul class="checks" id="checks"></ul></section>
+      <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
+    </div>
+    <p class="note">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os valores do item 6.8 da norma (conferidos em fontes secundárias em 16/11/2026); o perfil Estudo usa valores usuais, sem norma nacional que os sustente. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
+  </div>
+</main>
+<div hidden><canvas id="cv3" width="800" height="600" aria-label="Vista 3D da escada"></canvas></div>
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-label="Imagem gerada">
+  <div class="box">
+    <img id="modalImg" alt="Desenho gerado">
+    <div class="row"><a class="btn pri" id="modalDl" download="patamar.png" style="text-decoration:none">Baixar PNG</a><button type="button" class="btn" id="modalClose">Fechar</button><span class="note">Se o download não abrir, segure (celular) ou clique com o botão direito (PC) na imagem e salve.</span></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+/* ===== NÚCLEO DE CÁLCULO E GEOMETRIA (cm, plano x leste / y norte) ===== */
+const PI = Math.PI;
+const rad = d => d * PI / 180;
+const deg = r => r * 180 / PI;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const num = (v, d) => { v = Number(v); return isFinite(v) ? v : d; };
+const fmt = (n, d) => Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: d === undefined ? 1 : d });
+
+/* Perfis de limites (editáveis aqui), conferidos em 16/11/2026 em fontes secundárias e numa revisão externa:
+   NBR 9050:2020 (item 6.8): espelho 16-18, piso 28-32, 63 <= 2e+p <= 65, patamar a cada 3,20 m e nas mudanças de direção,
+   largura 1,20 m em rota acessível, linha de piso a 55 cm da borda interna em lances curvos (6.8.6, não conferido por mim no texto).
+   Estudo: valores usuais em apostilas e códigos de obras, sem norma única que os sustente. */
+const NORMAS = {
+  res:   { id: 'res',   nome: 'Estudo (valores usuais, sem norma específica)', curto: 'perfil de estudo', eMin: 16, eMax: 18, pMin: 25, pMax: 32, bMin: 63, bMax: 64, Lmin: 80,  hPat: 320, dw: 50, patReto: 0, acess: false },
+  acess: { id: 'acess', nome: 'NBR 9050: conferência dimensional parcial',      curto: 'NBR 9050 (parcial)', eMin: 16, eMax: 18, pMin: 28, pMax: 32, bMin: 63, bMax: 65, Lmin: 120, hPat: 320, dw: 55, patReto: 120, acess: true },
+};
+const NMAX = 300; /* limite do aplicativo (capacidade de cálculo), não é norma */
+Object.keys(NORMAS).forEach(k => { NORMAS[k].bMid = (NORMAS[k].bMin + NORMAS[k].bMax) / 2; });
+
+const TIPOS = [
+  { id: 'reta',         nome: 'Reta',              desc: 'Um lance, sem mudança de direção' },
+  { id: 'reta-patamar', nome: 'Reta com patamar',  desc: 'Dois lances alinhados, com descanso no meio' },
+  { id: 'l-patamar',    nome: 'Em L com patamar',  desc: 'Curva de 90° com patamar quadrado' },
+  { id: 'l-leque',      nome: 'Em L com leques',   desc: 'Curva de 90° com degraus em leque' },
+  { id: 'u-patamar',    nome: 'Em U com patamar',  desc: 'Retorno de 180° com patamar' },
+  { id: 'u-leque',      nome: 'Em U com leques',   desc: 'Retorno de 180° com degraus em leque' },
+  { id: 'helicoidal',   nome: 'Helicoidal',        desc: 'Caracol: degraus em volta de um pilar' },
+];
+
+const DEFAULTS = {
+  tipo: 'l-patamar', norma: 'res',
+  H: 280, L: 100,
+  nAuto: true, N: 16, pAuto: true, p: 29, n1Auto: true, n1: 7,
+  lado: 'dir', kLeque: 3, nMeio: 1, vao: 10, LpAuto: true, Lp: 100,
+  D: 220, Dc: 20,
+  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5,
+  zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true,
+  cEmin: 16, cEmax: 18, cPmin: 25, cPmax: 32, cBmin: 63, cBmax: 64, cLmin: 80, cHpat: 320, cDw: 50,
+};
+
+/* Quadro local: origem O, direção h, direita r. map(t,s): t = lateral (0 = esquerda), s = ao longo. */
+function mkF(ox, oy, hx, hy) {
+  const F = { ox, oy, hx, hy, rx: hy, ry: -hx };
+  F.map = (t, s) => [F.ox + t * F.rx + s * F.hx, F.oy + t * F.ry + s * F.hy];
+  return F;
+}
+
+/* faixa de piso que atende ao mesmo tempo os limites de piso e de Blondel */
+function faixaP(e, nm) { return [Math.max(nm.pMin, nm.bMin - 2 * e), Math.min(nm.pMax, nm.bMax - 2 * e)]; }
+function escolherN(H, nm, hel) {
+  const nMin = Math.max(2, Math.ceil(H / nm.eMax - 1e-9));
+  const nMax = Math.min(NMAX, Math.max(nMin, Math.floor(H / nm.eMin + 1e-9)));
+  let best = null;
+  for (let n = nMin; n <= nMax; n++) {
+    const e = H / n, f = faixaP(e, nm);
+    if (!hel && f[0] > f[1] + 1e-9) continue;
+    const sc = Math.abs(e - 17.5);
+    if (!best || sc < best.sc - 1e-9) best = { n, sc };
+  }
+  if (best) return best.n;
+  let alt = nMin, sc = Infinity;
+  for (let n = nMin; n <= nMax; n++) { const s = Math.abs(H / n - 17.5); if (s < sc) { sc = s; alt = n; } }
+  return alt;
+}
+
+function bboxOf(list) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  list.forEach(q => { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); });
+  return [x0, y0, x1, y1];
+}
+
+/* erro de entrada: o app para e mostra a mensagem, em vez de desenhar algo que não corresponde ao pedido */
+function erro(msg) { const x = new RangeError(msg); x.patamar = true; throw x; }
+function calc(inp) {
+  const st = Object.assign({}, DEFAULTS, inp || {});
+  const pos = (k, nome, min, max) => { const v = Number(st[k]); if (!isFinite(v)) erro(nome + ': valor inválido.'); if (v < min || v > max) erro(nome + ' precisa estar entre ' + fmt(min) + ' e ' + fmt(max) + ' cm (você digitou ' + fmt(v) + ').'); st[k] = v; };
+  pos('H', 'Desnível', 1, 3000); pos('L', 'Largura útil', 30, 1000);
+  pos('hLivre', 'Altura livre', 100, 500); pos('espLaje', 'Laje do piso de cima', 0, 100);
+  pos('tLaje', 'Laje da escada', 0, 100); pos('espDegrau', 'Espessura do degrau', 1, 50);
+  pos('vao', 'Vão entre lances', 0, 500); pos('Lp', 'Profundidade do patamar', 30, 1000);
+  pos('D', 'Diâmetro externo', 60, 1000); pos('Dc', 'Diâmetro do pilar', 4, 200);
+  pos('zCorte', 'Altura do corte', 20, 3000);
+  if (!st.pAuto) pos('p', 'Piso', 10, 100);
+  let nm = NORMAS[st.norma] || NORMAS.res;
+  if (st.norma === 'custom') {
+    nm = { id: 'custom', nome: 'Personalizada (limites digitados)', curto: 'perfil personalizado', eMin: Number(st.cEmin), eMax: Number(st.cEmax), pMin: Number(st.cPmin), pMax: Number(st.cPmax), bMin: Number(st.cBmin), bMax: Number(st.cBmax), Lmin: Number(st.cLmin), hPat: Number(st.cHpat), dw: Number(st.cDw), patReto: 0, acess: false };
+    const nomes = { eMin: 'Espelho mínimo', eMax: 'Espelho máximo', pMin: 'Piso mínimo', pMax: 'Piso máximo', bMin: 'Blondel mínimo', bMax: 'Blondel máximo', Lmin: 'Largura mínima', hPat: 'Desnível máximo sem patamar', dw: 'Linha de caminhamento' };
+    Object.keys(nomes).forEach(k => { if (!isFinite(nm[k]) || nm[k] <= 0) erro('Limite personalizado inválido: ' + nomes[k] + ' precisa ser um número maior que zero.'); });
+    [['eMin', 'eMax'], ['pMin', 'pMax'], ['bMin', 'bMax']].forEach(q => { if (nm[q[0]] > nm[q[1]]) erro('Limite personalizado invertido: ' + nomes[q[0]] + ' maior que ' + nomes[q[1]] + '.'); });
+    nm.bMid = (nm.bMin + nm.bMax) / 2;
+  }
+  const tipo = TIPOS.some(t => t.id === st.tipo) ? st.tipo : 'reta';
+  const hel = tipo === 'helicoidal';
+  const H = st.H;
+  if (H / nm.eMax > NMAX) erro('Desnível grande demais para o app (mais de ' + NMAX + ' espelhos).');
+  const nSug = escolherN(H, nm, hel);
+  let N = nSug;
+  if (!st.nAuto) { N = Math.round(Number(st.N)); if (!isFinite(N) || N < 2 || N > NMAX) erro('Número de espelhos precisa estar entre 2 e ' + NMAX + '.'); }
+  const e = H / N, T = N - 1;
+  const fP = faixaP(e, nm), temFaixa = fP[0] <= fP[1] + 1e-9;
+  /* piso automático: o inteiro mais perto do centro de Blondel que cabe na faixa; se nenhum inteiro cabe, o decimal mais perto */
+  let pAlvo;
+  if (temFaixa) { const lo = Math.ceil(fP[0] - 1e-9), hi = Math.floor(fP[1] + 1e-9); pAlvo = lo <= hi ? clamp(Math.round(nm.bMid - 2 * e), lo, hi) : clamp(nm.bMid - 2 * e, fP[0], fP[1]); }
+  else pAlvo = clamp(nm.bMid - 2 * e, nm.pMin, nm.pMax);
+  const thk = hel ? st.espDegrau : e + st.tLaje;
+  const mirror = st.lado === 'esq' && !hel;
+
+  const polys = [], walk = [], checks = [], memo = [];
+  let kk = 0, grpN = 0;
+  const add = (pts, kind, wlen, extra) => { kk++; polys.push(Object.assign({ k: kk, pts, kind, wlen }, extra || {})); };
+  const chk = (id, nome, valor, regra, status, nota) => checks.push({ id, nome, valor, regra, status, nota: nota || '' });
+
+  let L = st.L;
+  let p = st.pAuto ? pAlvo : st.p;
+  let dw = Math.min(nm.dw, L / 2);
+  const kw = clamp(Math.round(num(st.kLeque, 3)), 2, 4);
+  const nMeio = clamp(Math.round(num(st.nMeio, 1)), 0, 6);
+  const g = Math.max(0, st.vao);
+  const Lp = st.LpAuto ? Math.max(L, nm.patReto || 0) : st.Lp;
+
+  let a = 0, b = 0, avail = 0, endF = null, endS = 0;
+  let arrival = null, slab = null, pole = null, startEdge = null, rises = [], helix = null, lancesTxt = [];
+  let pReal = p;
+
+  const rectPts = (F, t0, t1, s0, s1) => [F.map(t0, s0), F.map(t1, s0), F.map(t1, s1), F.map(t0, s1)];
+  const flight = (F, s0, m) => {
+    const gid = ++grpN;
+    for (let j = 0; j < m; j++) { const aa = s0 + j * p; add(rectPts(F, 0, L, aa, aa + p), 'reto', p, { grp: gid, entry: [F.map(0, aa), F.map(L, aa)] }); }
+    if (m > 0) walk.push([F.map(L - dw, s0), F.map(L - dw, s0 + m * p)]);
+    return s0 + m * p;
+  };
+  const arcWalk = (F, s0) => {
+    const arc = [];
+    for (let i = 0; i <= 24; i++) { const ph = i / 24 * PI / 2; arc.push(F.map(L - dw * Math.cos(ph), s0 + dw * Math.sin(ph))); }
+    walk.push(arc);
+  };
+  const winders = (F, s0, k) => {
+    const piv = F.map(L, s0);
+    const bpt = d => {
+      if (d >= 89.999) return F.map(L, s0 + L);
+      const t = Math.tan(rad(d));
+      return d <= 45 ? F.map(0, s0 + L * t) : F.map(L - L / t, s0 + L);
+    };
+    for (let i = 1; i <= k; i++) {
+      const da = (i - 1) * 90 / k, db = i * 90 / k;
+      const pts = [piv, bpt(da)];
+      if (da < 45 - 1e-9 && db > 45 + 1e-9) pts.push(F.map(0, s0 + L));
+      pts.push(bpt(db));
+      add(pts, 'leque', dw * rad(db - da), { entry: [piv, bpt(da)] });
+    }
+    arcWalk(F, s0);
+  };
+  const turn = (F, s0) => { const o = F.map(L, s0 + L); return mkF(o[0], o[1], F.rx, F.ry); };
+  const split = av => {
+    av = Math.max(0, av);
+    const aa = st.n1Auto ? Math.ceil(av / 2) : clamp(Math.round(num(st.n1, 1)), 0, av);
+    return [aa, av - aa];
+  };
+
+  const F1 = mkF(0, 0, 0, 1);
+  const need = x => { if (x < 0) erro('Desnível pequeno demais para este tipo: faltam ' + (-x) + ' espelho(s). Aumente o desnível ou o número de espelhos, reduza os leques ou os pisos do meio, ou escolha outro tipo.'); };
+
+  if (!hel) {
+    switch (tipo) {
+      case 'reta': {
+        avail = T; a = T; b = 0;
+        flight(F1, 0, T); endF = F1; endS = T * p;
+        rises = [H];
+        lancesTxt.push('Lance único com ' + T + ' pisos de ' + fmt(p) + ' cm e ' + N + ' espelhos.');
+        break;
+      }
+      case 'reta-patamar': {
+        avail = T - 1; need(avail);
+        [a, b] = split(avail);
+        let s = flight(F1, 0, a);
+        add(rectPts(F1, 0, L, s, s + Lp), 'patamar', Lp, { entry: [F1.map(0, s), F1.map(L, s)] });
+        walk.push([F1.map(L - dw, s), F1.map(L - dw, s + Lp)]);
+        s += Lp;
+        s = flight(F1, s, b);
+        endF = F1; endS = s;
+        rises = [(a + 1) * e, H - (a + 1) * e];
+        lancesTxt.push('1º lance: ' + a + ' pisos + patamar (' + fmt(L) + ' × ' + fmt(Lp) + ' cm) no degrau ' + (a + 1) + ', a ' + fmt((a + 1) * e, 1) + ' cm do piso.');
+        lancesTxt.push('2º lance: ' + b + ' pisos até o piso superior.');
+        break;
+      }
+      case 'l-patamar': {
+        avail = T - 1; need(avail);
+        [a, b] = split(avail);
+        let s = flight(F1, 0, a);
+        add(rectPts(F1, 0, L, s, s + L), 'patamar', dw * PI / 2, { entry: [F1.map(0, s), F1.map(L, s)] });
+        arcWalk(F1, s);
+        const F2 = turn(F1, s);
+        flight(F2, 0, b);
+        endF = F2; endS = b * p;
+        rises = [(a + 1) * e, H - (a + 1) * e];
+        lancesTxt.push('1º lance: ' + a + ' pisos; patamar quadrado de ' + fmt(L) + ' × ' + fmt(L) + ' cm no degrau ' + (a + 1) + ', a ' + fmt((a + 1) * e, 1) + ' cm do piso.');
+        lancesTxt.push('2º lance (virado 90°): ' + b + ' pisos até o piso superior.');
+        break;
+      }
+      case 'l-leque': {
+        avail = T - kw; need(avail);
+        [a, b] = split(avail);
+        let s = flight(F1, 0, a);
+        winders(F1, s, kw);
+        const F2 = turn(F1, s);
+        flight(F2, 0, b);
+        endF = F2; endS = b * p;
+        rises = [H];
+        lancesTxt.push('1º lance: ' + a + ' pisos retos; curva de 90° com ' + kw + ' degraus em leque (' + fmt(90 / kw, 1) + '° cada); 2º lance: ' + b + ' pisos retos.');
+        break;
+      }
+      case 'u-patamar': {
+        avail = T - 1; need(avail);
+        [a, b] = split(avail);
+        let s = flight(F1, 0, a);
+        const W = 2 * L + g;
+        add(rectPts(F1, 0, W, s, s + Lp), 'patamar', Lp + g + 2 * dw, { entry: [F1.map(0, s), F1.map(L, s)] });
+        walk.push([F1.map(L - dw, s), F1.map(L - dw, s + Lp / 2), F1.map(L + g + dw, s + Lp / 2), F1.map(L + g + dw, s)]);
+        const o = F1.map(W, s);
+        const F3 = mkF(o[0], o[1], 0, -1);
+        flight(F3, 0, b);
+        endF = F3; endS = b * p;
+        rises = [(a + 1) * e, H - (a + 1) * e];
+        lancesTxt.push('1º lance: ' + a + ' pisos; patamar de ' + fmt(W) + ' × ' + fmt(Lp) + ' cm no degrau ' + (a + 1) + ', a ' + fmt((a + 1) * e, 1) + ' cm do piso.');
+        lancesTxt.push('2º lance (retorno 180°): ' + b + ' pisos; vão central entre os lances de ' + fmt(g) + ' cm.');
+        break;
+      }
+      case 'u-leque': {
+        avail = T - 2 * kw - nMeio; need(avail);
+        [a, b] = split(avail);
+        let s = flight(F1, 0, a);
+        winders(F1, s, kw);
+        const F2 = turn(F1, s);
+        flight(F2, 0, nMeio);
+        winders(F2, nMeio * p, kw);
+        const F3 = turn(F2, nMeio * p);
+        flight(F3, 0, b);
+        endF = F3; endS = b * p;
+        rises = [H];
+        lancesTxt.push('1º lance: ' + a + ' pisos; 1ª curva com ' + kw + ' leques; trecho do meio com ' + nMeio + ' piso(s); 2ª curva com ' + kw + ' leques; último lance: ' + b + ' pisos.');
+        lancesTxt.push('Vão central entre os lances: ' + fmt(nMeio * p) + ' cm.');
+        break;
+      }
+    }
+    pReal = p;
+    arrival = rectPts(endF, 0, L, endS, endS + 60);
+    slab = rectPts(endF, -10, L + 10, endS, endS + 70);
+    startEdge = [F1.map(0, 0), F1.map(L, 0)];
+  } else {
+    /* helicoidal */
+    const R = st.D / 2, rc = st.Dc / 2;
+    if (R - rc < 30) erro('Na helicoidal, o raio externo menos o raio do pilar precisa dar pelo menos 30 cm de largura (hoje dá ' + fmt(R - rc) + ' cm).');
+    const Leff = R - rc; L = Leff;
+    dw = Math.min(nm.dw, Leff / 2);
+    const rw = rc + dw; /* linha de caminhamento medida a partir da borda interna (o pilar) */
+    const pT = st.pAuto ? pAlvo : st.p;
+    const nPref = Math.max(6, Math.round(2 * PI * rw / pT));
+    const nReq = Math.ceil((st.hLivre + thk) / e - 1e-9);
+    const nPer = Math.max(nPref, nReq);
+    const th = 360 / nPer;
+    const dir = st.lado === 'esq' ? 1 : -1;
+    const phi0 = -90;
+    const segs = Math.max(2, Math.ceil(th / 8));
+    for (let j = 0; j < T; j++) {
+      const A = phi0 + dir * j * th, B = phi0 + dir * (j + 1) * th;
+      const outer = [], inner = [];
+      for (let s = 0; s <= segs; s++) {
+        const ph = rad(A + (B - A) * s / segs);
+        outer.push([R * Math.cos(ph), R * Math.sin(ph)]);
+        inner.push([rc * Math.cos(ph), rc * Math.sin(ph)]);
+      }
+      add(outer.concat(inner.slice().reverse()), 'helice', rw * rad(th), { arc: { outer, inner }, entry: [inner[0], outer[0]] });
+    }
+    const wl = [];
+    const phiEnd = phi0 + dir * T * th;
+    for (let ang = phi0; dir > 0 ? ang <= phiEnd + 1e-6 : ang >= phiEnd - 1e-6; ang += dir * 4) wl.push([rw * Math.cos(rad(ang)), rw * Math.sin(rad(ang))]);
+    walk.push(wl);
+    const aSpan = th; /* chegada = uma posição de degrau, no nível do piso superior */
+    const mkSector = (r0, r1, A, B) => {
+      const outer = [], inner = [];
+      for (let s = 0; s <= 8; s++) { const ph = rad(A + (B - A) * s / 8); outer.push([r1 * Math.cos(ph), r1 * Math.sin(ph)]); inner.push([r0 * Math.cos(ph), r0 * Math.sin(ph)]); }
+      return { pts: outer.concat(inner.slice().reverse()), arc: { outer, inner } };
+    };
+    arrival = mkSector(rc, R, phiEnd, phiEnd + dir * aSpan);
+    slab = mkSector(R / Math.cos(rad(90 / 16)), R + 50, phiEnd, phiEnd + dir * 90); /* laje fora do furo: o raio interno compensa as cordas do polígono */
+    pole = { r: rc, h: H };
+    pReal = rw * rad(th);
+    helix = { R, rc, rw, th, nPer, dir, phi0, phiEnd, turns: T * th / 360, clearance: nPer * e - thk, Leff, dw };
+    rises = [H];
+    avail = 0;
+    endF = null;
+    lancesTxt.push(T + ' degraus em ' + fmt(T * th / 360, 2) + ' volta(s), ' + fmt(th, 1) + '° por degrau, ' + nPer + ' degraus por volta.');
+    lancesTxt.push('Piso medido na linha de caminhamento (raio ' + fmt(rw) + ' cm): ' + fmt(pReal, 1) + ' cm.');
+  }
+
+  /* espelho */
+  const bl = 2 * e + pReal;
+  const mx = q => mirror ? [-q[0], q[1]] : q;
+  if (mirror) {
+    polys.forEach(pl => { pl.pts = pl.pts.map(mx); if (pl.entry) pl.entry = pl.entry.map(mx); });
+    walk.forEach((w, i) => { walk[i] = w.map(mx); });
+    arrival = arrival.map(mx);
+    slab = slab.map(mx);
+    startEdge = startEdge.map(mx);
+  }
+  const arrivalPts = hel ? arrival.pts : arrival;
+  const slabPts = hel ? slab.pts : slab;
+
+  const zc = Math.max(20, num(st.zCorte, 150));
+  const kCut = Math.floor(zc / e + 1e-9);
+  const person = hel ? [0, -helix.R - 30] : [(startEdge[0][0] + startEdge[1][0]) / 2, (startEdge[0][1] + startEdge[1][1]) / 2 - 45];
+  /* distância acumulada na linha de caminhamento (corte desenvolvido) */
+  let cum = 0;
+  polys.forEach(pl => { pl.x0 = cum; cum += pl.wlen; pl.x1 = cum; });
+  const Wtot = cum;
+
+  /* vão mínimo na laje */
+  const limite = H - st.espLaje - st.hLivre;
+  const kc = limite < 0 ? 1 : Math.floor(limite / e + 1e-9) + 1;
+  let opening = null;
+  if (kc <= T) {
+    if (hel) opening = { circle: helix.R, kc };
+    else {
+      const pts = [];
+      polys.filter(pl => pl.k >= kc).forEach(pl => pl.pts.forEach(q => pts.push(q)));
+      if (pts.length) { const bb = bboxOf(pts); opening = { bbox: bb, kc, w: bb[2] - bb[0], h: bb[3] - bb[1] }; }
+    }
+  }
+
+  const allPts = [];
+  polys.forEach(pl => pl.pts.forEach(q => allPts.push(q)));
+  const bbox = bboxOf(allPts);
+  const allPts2 = allPts.concat(arrivalPts);
+  if (hel) { allPts2.push([-helix.R, -helix.R], [helix.R, helix.R]); }
+  const bboxAll = bboxOf(allPts2);
+
+  const nReto = polys.filter(q => q.kind === 'reto' || q.kind === 'helice').length;
+  const nLeque = polys.filter(q => q.kind === 'leque').length;
+  const nPat = polys.filter(q => q.kind === 'patamar').length;
+  if (polys.length !== T) erro('Geometria inconsistente: ' + polys.length + ' superfícies para ' + N + ' espelhos. Avise quem fez o app.');
+  const areaPoly = pts => { let s = 0; for (let i = 0; i < pts.length; i++) { const a2 = pts[i], b2 = pts[(i + 1) % pts.length]; s += a2[0] * b2[1] - b2[0] * a2[1]; } return Math.abs(s) / 2; };
+  const areaOcup = hel ? PI * helix.R * helix.R : polys.reduce((s, q) => s + areaPoly(q.pts), 0);
+  const contagem = [nReto + (hel ? ' degraus' : ' pisos comuns'), nLeque ? nLeque + ' leques' : '', nPat ? nPat + ' patamar' + (nPat > 1 ? 'es' : '') : ''].filter(Boolean).join(' + ');
+  /* ---- verificações ---- */
+  const TOL = 1e-6; /* só erro de arredondamento do computador; não é tolerância de obra */
+  const fora = (v, a, b2) => v < a - TOL || v > b2 + TOL;
+  const trecho = hel ? '' : nLeque ? ' (trechos retos)' : '';
+  const eOk = fora(e, nm.eMin, nm.eMax) ? 'bad' : 'ok';
+  chk('e', 'Espelho (altura do degrau)', fmt(e, 2) + ' cm', nm.eMin + ' a ' + nm.eMax + ' cm', eOk, eOk === 'bad' ? (e > nm.eMax ? 'Não atende: espelho alto. Aumente o nº de espelhos.' : 'Não atende: espelho baixo. Diminua o nº de espelhos.') : '');
+  const pOk = fora(pReal, nm.pMin, nm.pMax) ? 'bad' : 'ok';
+  chk('p', (hel ? 'Piso na linha de caminhamento' : 'Piso (profundidade)') + trecho, fmt(pReal, 1) + ' cm', nm.pMin + ' a ' + nm.pMax + ' cm', pOk, pOk === 'bad' ? (pReal < nm.pMin ? 'Não atende: piso curto.' + (hel ? ' Aumente o diâmetro ou o espelho.' : '') : 'Não atende: piso longo.') : '');
+  const bOk = fora(bl, nm.bMin, nm.bMax) ? 'bad' : 'ok';
+  chk('blondel', 'Fórmula de Blondel (2e + p)' + trecho, fmt(bl, 1) + ' cm', nm.bMin + ' a ' + nm.bMax + ' cm', bOk, bOk === 'bad' ? 'Não atende: ajuste espelho ou piso.' + (!temFaixa ? ' Com este espelho nenhum piso atende piso e Blondel ao mesmo tempo.' : '') : '');
+  const Lval = L;
+  const lOk = Lval < nm.Lmin - 1e-6 ? 'bad' : 'ok';
+  chk('L', hel ? 'Largura útil (raio − pilar)' : 'Largura útil', fmt(Lval) + ' cm', 'mín. ' + nm.Lmin + ' cm', lOk, lOk !== 'ok' ? (hel ? 'Não atende: abaixo do mínimo do perfil. Alguns códigos de obras têm regra própria para caracol; se for o caso, use "Personalizada".' : 'Não atende: abaixo do mínimo do perfil.') : '');
+  const maxRise = Math.max.apply(null, rises);
+  chk('patamar', 'Desnível sem patamar', fmt(maxRise, 1) + ' cm', 'até ' + nm.hPat + ' cm', maxRise > nm.hPat + 1e-6 ? 'bad' : 'ok', maxRise > nm.hPat + 1e-6 ? 'Passou do máximo sem patamar: use um tipo com patamar.' : '');
+  if (tipo === 'reta-patamar') {
+    const mn = Math.max(L, nm.patReto || 0);
+    chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn) + ' cm' + (nm.patReto ? ' (perfil NBR)' : ' (= largura)'), Lp < mn - 1e-6 ? 'bad' : 'ok', Lp < mn - 1e-6 ? 'Não atende: patamar curto.' : '');
+  }
+  if (tipo === 'u-patamar') chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', 'mín. = largura (' + fmt(L) + ' cm)', Lp < L - 1e-6 ? 'bad' : 'ok', Lp < L - 1e-6 ? 'Não atende: na mudança de direção o patamar deve ter ao menos a largura da escada.' : '');
+  if (tipo === 'l-patamar') chk('patprof', 'Patamar de canto', fmt(L) + ' × ' + fmt(L) + ' cm', 'lados = largura', 'ok', 'Quadrado com lado igual à largura, por construção.');
+  if (nm.acess && (nLeque || hel)) chk('mudanca', 'Mudança de direção sem patamar', hel ? 'helicoidal' : nLeque + ' leques', 'patamar obrigatório', 'bad', 'Não atende ao perfil NBR 9050: a norma pede patamar nas mudanças de direção. Use um tipo com patamar.');
+  if (tipo === 'l-leque' || tipo === 'u-leque') {
+    const pL = dw * rad(90 / kw), bL = 2 * e + pL;
+    chk('leque', 'Piso do leque na linha de caminhamento', fmt(pL, 1) + ' cm', nm.pMin + ' a ' + nm.pMax + ' cm', fora(pL, nm.pMin, nm.pMax) ? 'bad' : 'ok', fora(pL, nm.pMin, nm.pMax) ? (pL < nm.pMin ? 'Não atende: leque apertado. Aumente a largura ou use menos leques.' : 'Não atende: leque longo. Use mais leques por curva.') : '');
+    chk('blondel-leque', 'Blondel nos leques', fmt(bL, 1) + ' cm', nm.bMin + ' a ' + nm.bMax + ' cm', fora(bL, nm.bMin, nm.bMax) ? 'bad' : 'ok', fora(bL, nm.bMin, nm.bMax) ? 'Não atende: o passo na curva fica diferente do passo nos trechos retos (' + fmt(bl, 1) + ' cm).' : '');
+    chk('colo', 'Forma dos leques', 'ponta de 0 cm no canto', 'NBR 9077: balanceados, ponta ≥ 15 cm', 'warn', 'Os leques convergem num ponto do lado interno. A NBR 9077 (4.7.3.1 c) pede leques balanceados, com a parte mais estreita de pelo menos 15 cm. O app não faz balanceamento: trate a forma como estudo geométrico.');
+  }
+  if (hel) {
+    chk('altura', 'Altura livre sob a volta de cima e a chegada', fmt(helix.clearance, 0) + ' cm', 'mín. ' + fmt(st.hLivre, 0) + ' cm', helix.clearance < st.hLivre - 1e-6 ? 'bad' : 'ok', 'Degraus por volta × espelho − espessura do degrau = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk) + '. A laje do piso de cima fica fora do furo, então não passa sobre os degraus.');
+  }
+  if (dw < nm.dw - 1e-9) chk('dw', 'Linha de caminhamento', fmt(dw) + ' cm do lado interno', fmt(nm.dw) + ' cm no perfil', 'warn', 'A escada é estreita: a linha foi posta no meio da largura, mais perto do lado interno que o perfil pede.');
+  if (opening && !hel) chk('laje', 'Vão mínimo na laje superior', fmt(opening.w, 0) + ' × ' + fmt(opening.h, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Cobre os degraus ' + kc + ' a ' + T + ' (a partir do degrau ' + kc + ' o teto ficaria baixo).');
+  if (opening && hel) chk('laje', 'Furo mínimo na laje superior', 'Ø ' + fmt(helix.R * 2, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Furo circular na laje, com a chegada no degrau ' + T + '.');
+  if (!opening) chk('laje', 'Vão na laje superior', 'não precisa', '', 'info', 'A altura livre fica atendida sem abrir a laje.');
+
+  /* ---- memória de cálculo ---- */
+  const incl = deg(Math.atan(e / pReal));
+  memo.push('Desnível a vencer (piso a piso): H = ' + fmt(H) + ' cm.');
+  memo.push('Número de espelhos: N = ' + N + (st.nAuto ? ' (sugerido para ficar perto de 17,5 cm)' : ' (definido por você)') + '. Altura do espelho: e = H ÷ N = ' + fmt(H) + ' ÷ ' + N + ' = ' + fmt(e, 2) + ' cm.');
+  if (!hel) memo.push('Piso (Blondel): p = ' + fmt(nm.bMid, 1) + ' − 2e = ' + fmt(nm.bMid, 1) + ' − ' + fmt(2 * e, 1) + ' = ' + fmt(nm.bMid - 2 * e, 1) + (st.pAuto ? ' → ' + fmt(p) + ' cm (arredondado e dentro de ' + nm.pMin + '–' + nm.pMax + ').' : '. Você definiu p = ' + fmt(p) + ' cm.'));
+  else memo.push('Piso na linha de caminhamento (raio ' + fmt(helix.rw) + ' cm): p = r × ângulo = ' + fmt(helix.rw) + ' × ' + fmt(rad(helix.th), 3) + ' rad = ' + fmt(pReal, 1) + ' cm.');
+  memo.push('Conferência de Blondel: 2e + p = ' + fmt(bl, 1) + ' cm (referência ' + nm.bMin + '–' + nm.bMax + ' cm).');
+  memo.push('Superfícies entre espelhos: N − 1 = ' + T + ' (' + contagem + '). O último espelho chega ao piso superior, que não conta como degrau.');
+  lancesTxt.forEach(t => memo.push(t));
+  memo.push('Inclinação do lance: arctg(e ÷ p) = ' + fmt(incl, 1) + '° (' + fmt(e / pReal * 100, 0) + '%).');
+  if (hel) memo.push('Em planta: círculo envolvente de Ø ' + fmt(helix.R * 2, 0) + ' cm (' + fmt(areaOcup / 10000, 2) + ' m²), dentro de um quadrado de ' + fmt(helix.R * 2, 0) + ' × ' + fmt(helix.R * 2, 0) + ' cm.');
+  else memo.push('Em planta: retângulo envolvente de ' + fmt(bbox[2] - bbox[0], 0) + ' × ' + fmt(bbox[3] - bbox[1], 0) + ' cm; a escada ocupa ' + fmt(areaOcup / 10000, 2) + ' m² (soma das superfícies, sem o piso de chegada).');
+  memo.push('Altura livre pedida: ' + fmt(st.hLivre, 0) + ' cm; laje superior com ' + fmt(st.espLaje, 0) + ' cm. ' + (opening ? 'A laje precisa de abertura a partir do degrau ' + kc + '.' : 'Não precisa abrir a laje.'));
+  memo.push('Linha de caminhamento: ' + fmt(dw) + ' cm do lado interno' + (hel ? ' (raio ' + fmt(helix.rw) + ' cm a partir do centro)' : '') + '; percurso de ' + fmt(Wtot / 100, 2) + ' m.');
+
+  return {
+    st, nm, tipo, hel, H, N, e, T, p: pReal, pInput: p, pAlvo, bl, incl, L, Lp, g, kw, nMeio, dw, thk,
+    a, b, avail, nSug, rises, polys, walk, arrival: hel ? arrival : { pts: arrivalPts }, slab: hel ? slab : { pts: slabPts },
+    pole, helix, opening, kc, kCut, zc, person, lances: lancesTxt, nReto, nLeque, nPat, contagem, areaOcup, temFaixa, fP, bbox, bboxAll, startEdge, Wtot, checks, memo, mirror,
+  };
+}
+
+
+/* ===== DESENHOS EM SVG: PLANTA E CORTE (convenções de projeto) ===== */
+const r2 = v => Math.round(v * 100) / 100;
+const escXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const NS = 'vector-effect="non-scaling-stroke"';
+const FONT = "'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace";
+
+function sLine(a, b, col, w, dash) {
+  return '<line x1="' + r2(a[0]) + '" y1="' + r2(-a[1]) + '" x2="' + r2(b[0]) + '" y2="' + r2(-b[1]) + '" stroke="' + col + '" stroke-width="' + w + '" ' + NS + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
+}
+function sPolyline(pts, col, w, dash) {
+  return '<polyline points="' + pts.map(q => r2(q[0]) + ',' + r2(-q[1])).join(' ') + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linejoin="round" stroke-linecap="round" ' + NS + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
+}
+function sText(x, y, s, size, fill, anchor, rot, weight) {
+  const tr = rot ? ' transform="rotate(' + r2(rot) + ' ' + r2(x) + ' ' + r2(-y) + ')"' : '';
+  return '<text x="' + r2(x) + '" y="' + r2(-y) + '" font-size="' + r2(size) + '" fill="' + fill + '" text-anchor="' + (anchor || 'middle') + '" dominant-baseline="central" font-family="' + FONT + '"' + (weight ? ' font-weight="' + weight + '"' : '') + tr + '>' + escXml(s) + '</text>';
+}
+function sPoly(pts, fill, stroke, w, dash, fop) {
+  return '<polygon points="' + pts.map(q => r2(q[0]) + ',' + r2(-q[1])).join(' ') + '" fill="' + fill + '"' + (fop !== undefined ? ' fill-opacity="' + fop + '"' : '') + ' stroke="' + stroke + '" stroke-width="' + w + '" stroke-linejoin="round" ' + NS + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
+}
+function sCircle(x, y, r, fill, stroke, w) {
+  return '<circle cx="' + r2(x) + '" cy="' + r2(-y) + '" r="' + r2(r) + '" fill="' + fill + '"' + (stroke ? ' stroke="' + stroke + '" stroke-width="' + (w || 1.2) + '" ' + NS : '') + '/>';
+}
+
+/* cota linear: a,b pontos; (ux,uy) direção para onde a cota se afasta; dist em cm */
+function dimLine(a, b, ux, uy, dist, label, fs, C) {
+  const A = [a[0] + ux * dist, a[1] + uy * dist], B = [b[0] + ux * dist, b[1] + uy * dist];
+  const ext = fs * 0.6, gap = fs * 0.35;
+  const dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy) || 1;
+  const ax = dx / len, ay = dy / len;
+  let tx = ax + ux, ty = ay + uy; const tl = Math.hypot(tx, ty) || 1; tx = tx / tl * fs * 0.5; ty = ty / tl * fs * 0.5;
+  let s = '';
+  s += sLine([a[0] + ux * gap, a[1] + uy * gap], [A[0] + ux * ext, A[1] + uy * ext], C.muted, 0.9);
+  s += sLine([b[0] + ux * gap, b[1] + uy * gap], [B[0] + ux * ext, B[1] + uy * ext], C.muted, 0.9);
+  s += sLine(A, B, C.ink, 1);
+  s += sLine([A[0] - tx, A[1] - ty], [A[0] + tx, A[1] + ty], C.ink, 1.3);
+  s += sLine([B[0] - tx, B[1] - ty], [B[0] + tx, B[1] + ty], C.ink, 1.3);
+  let ang = deg(Math.atan2(-dy, dx)); if (ang > 90) ang -= 180; if (ang <= -90) ang += 180;
+  const mxp = (A[0] + B[0]) / 2 + ux * fs * 0.95, myp = (A[1] + B[1]) / 2 + uy * fs * 0.95;
+  s += sText(mxp, myp, label, fs * 0.95, C.ink, 'middle', ang, 500);
+  return s;
+}
+
+function treadFill(kind, C) { return kind === 'leque' ? C.winder : kind === 'patamar' ? C.patamar : C.tread; }
+function centroid(pts) { let x = 0, y = 0; pts.forEach(q => { x += q[0]; y += q[1]; }); return [x / pts.length, y / pts.length]; }
+const nivel = cm => (cm === 0 ? '±0,00' : '+' + (cm / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+function svgWrap(vx, vy, vw, vh, body, o, extraDefs) {
+  const size = o && o.pxW ? ' width="' + Math.round(o.pxW) + '" height="' + Math.round(o.pxW * vh / vw) + '"' : o && o.thumb ? ' preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block"' : ' style="width:100%;height:auto;display:block"';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + r2(vx) + ' ' + r2(vy) + ' ' + r2(vw) + ' ' + r2(vh) + '"' + size + ' role="img">' + (extraDefs || '') + body + '</svg>';
+}
+
+/* linha de ruptura (zigue-zague) ao longo de um segmento */
+function breakLine(e0, e1, fs, C) {
+  const dx = e1[0] - e0[0], dy = e1[1] - e0[1], len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+  const ext = fs * 0.9, A = [e0[0] - ux * ext, e0[1] - uy * ext], L2 = len + 2 * ext;
+  const pt = (t, off) => [A[0] + ux * L2 * t + nx * off, A[1] + uy * L2 * t + ny * off];
+  const pts = [pt(0, 0), pt(0.4, 0), pt(0.46, fs * 0.9), pt(0.54, -fs * 0.9), pt(0.6, 0), pt(1, 0)];
+  return sPolyline(pts, C.paper, 4.5) + sPolyline(pts, C.ink, 1.9);
+}
+
+/* bloco de título + escala gráfica */
+function titleBlock(vx, ymin, vw, fs, l1, l2, C) {
+  let s = sLine([vx + fs * 0.5, ymin], [vx + vw - fs * 0.5, ymin], C.ink, 1.2);
+  s += sText(vx + fs, ymin - fs * 1.4, l1, fs * 0.9, C.ink, 'start', 0, 600);
+  s += sText(vx + fs, ymin - fs * 2.9, l2, fs * 0.8, C.muted, 'start', 0, 400);
+  /* escala gráfica: 0 - 50 - 100 cm, em tamanho real do desenho */
+  const x0 = vx + fs, y0 = ymin - fs * 5.2, h = fs * 0.55;
+  [0, 1].forEach(i => { s += '<rect x="' + r2(x0 + i * 50) + '" y="' + r2(-y0 - h) + '" width="50" height="' + r2(h) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
+  [0, 50, 100].forEach(v => { s += sText(x0 + v, y0 - fs * 0.9, String(v), fs * 0.7, C.muted, 'middle'); });
+  s += sText(x0 + 108, y0 - fs * 0.15, 'cm', fs * 0.7, C.muted, 'start');
+  return s;
+}
+
+function planSVG(R, o, C) {
+  o = o || {};
+  const thumb = !!o.thumb;
+  const modo = thumb ? 'inf' : (o.modo || R.st.modoPlanta || 'inf');
+  const sup = modo === 'sup';
+  const bbA = thumb ? R.bbox : R.bboxAll, bb = R.bbox;
+  const w = bbA[2] - bbA[0], h = bbA[3] - bbA[1], span = Math.max(w, h);
+  const fs = thumb ? span / 14 : clamp(span / 40, 5, 14);
+  const m = thumb ? span * 0.07 : fs * 10, tb = thumb ? 0 : fs * 7.5;
+  const vx = bbA[0] - m, vy = -(bbA[3] + m), vw = w + 2 * m, vh = h + 2 * m + tb;
+  const showDims = !thumb && o.dims !== false && R.st.showDims !== false;
+  const showNums = !thumb && o.nums !== false && R.st.showNums !== false;
+  const kCut = R.kCut, T = R.T;
+  const op = R.opening;
+  const visible = pl => sup ? (!op || pl.k >= op.kc) : pl.k <= kCut;
+  const useCut = !thumb && o.cut !== false;
+  let s = '';
+  if (!thumb) {
+    const arr = R.arrival, ac = centroid(arr.pts);
+    s += sSolidArrival(arr.pts, sup, C);
+    if (!sup) {
+      s += sText(ac[0], ac[1] + fs * 0.6, R.hel ? 'PISO SUP.' : 'PISO SUPERIOR', fs * 0.72, C.muted, 'middle', 0, 500);
+      s += sText(ac[0], ac[1] - fs * 0.7, nivel(R.H), fs * 0.8, C.ink, 'middle', 0, 600);
+    }
+  }
+  let clipId = null;
+  if (sup && !thumb && op) {
+    /* pavimento superior: só se vê a escada pela abertura da laje; o que está mais alto cobre o que está embaixo */
+    const cid = clipId = 'cl' + Math.random().toString(36).slice(2, 8);
+    const shape = op.circle ? '<circle cx="0" cy="0" r="' + r2(op.circle) + '"/>' : '<rect x="' + r2(op.bbox[0]) + '" y="' + r2(-op.bbox[3]) + '" width="' + r2(op.bbox[2] - op.bbox[0]) + '" height="' + r2(op.bbox[3] - op.bbox[1]) + '"/>';
+    s += '<defs><clipPath id="' + cid + '">' + shape + '</clipPath></defs><g clip-path="url(#' + cid + ')">';
+    R.polys.forEach(pl => { s += sPoly(pl.pts, treadFill(pl.kind, C), C.ink, 1.5); });
+    s += '</g>';
+  } else {
+    /* pavimento inferior: primeiro o que está abaixo do corte (traço cheio), depois a projeção do que está acima (tracejado, por cima) */
+    const on = pl => !useCut ? true : visible(pl);
+    R.polys.forEach(pl => { if (on(pl)) s += sPoly(pl.pts, treadFill(pl.kind, C), C.ink, thumb ? 1 : 1.5); });
+    R.polys.forEach(pl => { if (!on(pl)) s += sPoly(pl.pts, treadFill(pl.kind, C), C.muted, 1.1, '6 4', R.hel ? 0 : 0.28); });
+  }
+  if (R.hel) s += sCircle(0, 0, R.helix.rc, C.ink, C.ink, 1);
+  if (!thumb && !sup && useCut && kCut >= 1 && kCut < T) {
+    const nx = R.polys[kCut];
+    if (nx && nx.entry) s += breakLine(nx.entry[0], nx.entry[1], fs, C);
+  }
+  /* vão na laje */
+  if (!thumb && o.opening !== false && op) {
+    const dash = sup ? null : '7 5', col = sup ? C.ink : C.info, wd = sup ? 2.8 : 1.8;
+    if (op.circle) s += '<circle cx="0" cy="0" r="' + r2(op.circle) + '" fill="none" stroke="' + col + '" stroke-width="' + wd + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' ' + NS + '/>';
+    else { const q = op.bbox; s += sPoly([[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]], 'none', col, wd, dash); }
+  }
+  /* linha de caminhamento + seta (na planta superior, recortadas pela abertura junto com os números) */
+  let rotulos = '';
+  if (clipId) s += '<g clip-path="url(#' + clipId + ')">';
+  if (o.walk !== false && R.walk.length) {
+    R.walk.forEach(wl => { s += sPolyline(wl, C.accent, thumb ? 1.6 : 2.3); });
+    const all = [].concat.apply([], R.walk);
+    const first = all[0], f2 = all.find(q => Math.hypot(q[0] - first[0], q[1] - first[1]) > 1) || first;
+    const end = all[all.length - 1], pre = all.slice().reverse().find(q => Math.hypot(q[0] - end[0], q[1] - end[1]) > 1) || end;
+    const head = sup ? first : end, hpre = sup ? f2 : pre, tail = sup ? end : first, tnext = sup ? pre : f2;
+    let ux = head[0] - hpre[0], uy = head[1] - hpre[1]; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+    const hs = fs * (thumb ? 1.3 : 1.2), base = [head[0] - ux * hs, head[1] - uy * hs];
+    s += sPoly([[head[0] + ux * hs * 0.2, head[1] + uy * hs * 0.2], [base[0] - uy * hs * 0.5, base[1] + ux * hs * 0.5], [base[0] + uy * hs * 0.5, base[1] - ux * hs * 0.5]], C.accent, C.accent, 1);
+    s += sCircle(tail[0], tail[1], fs * 0.5, C.accent);
+    if (!thumb) {
+      let fx = tail[0] - tnext[0], fy = tail[1] - tnext[1]; const fl = Math.hypot(fx, fy) || 1; fx /= fl; fy /= fl;
+      let d1 = fs * 2.6, d2 = fs * 4.4;
+      if (R.hel) { const tl = Math.hypot(tail[0], tail[1]) || 1; fx = tail[0] / tl; fy = tail[1] / tl; d1 += R.dw; d2 += R.dw; }
+      rotulos += sText(tail[0] + fx * d1, tail[1] + fy * d1, sup ? 'DESCE' : 'SOBE', fs * 0.95, C.accent, 'middle', 0, 600);
+      rotulos += sText(tail[0] + fx * d2, tail[1] + fy * d2, sup ? nivel(R.H) : nivel(0), fs * 0.85, C.ink, 'middle', 0, 600);
+    }
+  }
+  /* numeração dos degraus */
+  if (showNums) {
+    const nP = R.hel ? R.helix.nPer : 0;
+    R.polys.forEach(pl => {
+      if (R.hel && (sup ? pl.k <= T - nP : pl.k > nP)) return;
+      let cx, cy;
+      if (R.hel) { const mid = pl.arc.outer.length >> 1; const ph = Math.atan2(pl.arc.outer[mid][1], pl.arc.outer[mid][0]); cx = R.helix.rw * Math.cos(ph); cy = R.helix.rw * Math.sin(ph); }
+      else { const c = centroid(pl.pts); cx = c[0]; cy = c[1]; }
+      const on = !useCut && !sup ? true : visible(pl);
+      s += '<g stroke="' + treadFill(pl.kind, C) + '" stroke-width="' + r2(fs * 0.45) + '" stroke-linejoin="round" paint-order="stroke">' + sText(cx, cy, String(pl.k), fs * 0.85, on ? C.ink : C.muted, 'middle', 0, 500) + '</g>';
+    });
+  }
+  if (clipId) s += '</g>';
+  s += rotulos;
+  /* cotas */
+  if (showDims) {
+    const topGap = (bbA[3] - bb[3]) + fs * 5.4, rightGap = (bbA[2] - bb[2]) + fs * 5.4;
+    if (R.hel) {
+      s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, 'Ø ' + fmt(R.helix.R * 2, 0), fs, C);
+      s += sText(0, -R.helix.R - fs * 7.2, 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau', fs * 0.85, C.muted, 'middle');
+    } else {
+      s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, fmt(bb[2] - bb[0], 0), fs, C);
+      s += dimLine([bb[2], bb[1]], [bb[2], bb[3]], 1, 0, rightGap, fmt(bb[3] - bb[1], 0), fs, C);
+      const se = R.startEdge;
+      s += dimLine(se[0], se[1], 0, -1, fs * 7, 'L ' + fmt(R.L, 0), fs, C);
+      const groups = {};
+      R.polys.forEach(pl => { if (pl.kind === 'reto' && pl.grp) (groups[pl.grp] = groups[pl.grp] || []).push(pl); });
+      Object.keys(groups).forEach(k => {
+        const g = groups[k], f = g[0], l = g[g.length - 1];
+        const ux = f.pts[0][0] - f.pts[1][0], uy = f.pts[0][1] - f.pts[1][1], ul = Math.hypot(ux, uy) || 1;
+        s += dimLine(f.pts[0], l.pts[3], ux / ul, uy / ul, fs * 1.7, g.length + ' × ' + fmt(R.pInput, 1) + ' = ' + fmt(g.length * R.pInput, 0), fs * 0.9, C);
+      });
+    }
+  }
+  if (!thumb) {
+    const ymin = bbA[1] - m;
+    const t1 = (R.hel ? 'ESCADA HELICOIDAL' : 'ESCADA ' + TIPOS.find(t => t.id === R.tipo).nome.toUpperCase()) + ' · PLANTA ' + (sup ? 'DO PAV. SUPERIOR' : 'DO PAV. INFERIOR');
+    const t2 = 'H ' + fmt(R.H, 0) + ' · ' + R.N + ' espelhos de ' + fmt(R.e, 1) + ' · ' + R.contagem + (R.nReto ? ' (piso ' + fmt(R.p, 1) + ')' : '') + ' · cotas em cm' + (sup ? '' : ' · corte a ' + fmt(R.zc, 0));
+    s += titleBlock(vx, ymin, vw, fs, t1, t2, C);
+  }
+  return svgWrap(vx, vy, vw, vh, s, o);
+}
+function sSolidArrival(pts, sup, C) {
+  return sup ? sPoly(pts, C.piso, C.ink, 1.6) : sPoly(pts, C.piso, C.muted, 1, '5 4');
+}
+
+function sectionSVG(R, o, C) {
+  o = o || {};
+  const H = R.H, e = R.e, X = R.Wtot, st = R.st;
+  const left = -70, slabR = 110, right = X + slabR;
+  const span = Math.max(right - left, H + 90);
+  const fs = clamp(span / 46, 5, 13);
+  const xmin = left - fs * 4, xmax = right + fs * 8;
+  const ymin = -fs * 15.5, ymax = H + 92 + fs * 3;
+  const vx = xmin, vy = -ymax, vw = xmax - xmin, vh = ymax - ymin;
+  const defs = '<defs><pattern id="hch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="' + C.muted + '" stroke-width="1"/></pattern></defs>';
+  let s = '';
+  /* terreno */
+  s += '<rect x="' + left + '" y="0" width="' + (0 - left) + '" height="' + r2(fs * 2.2) + '" fill="url(#hch)" stroke="none"/>';
+  s += sLine([left, 0], [0, 0], C.ink, 2.4);
+  /* degraus */
+  if (R.hel) {
+    R.polys.forEach(pl => {
+      const top = pl.k * e, bot = Math.max(top - R.thk, 0);
+      s += '<rect x="' + r2(pl.x0) + '" y="' + r2(-top) + '" width="' + r2(pl.x1 - pl.x0) + '" height="' + r2(top - bot) + '" fill="' + treadFill(pl.kind, C) + '" stroke="' + C.ink + '" stroke-width="1.3" ' + NS + '/>';
+    });
+  } else {
+    /* laje da escada: dentes dos degraus sobre uma laje inclinada de espessura constante (horizontal nos patamares) */
+    const tl = st.tLaje;
+    const top = [[0, 0]], und = [];
+    R.polys.forEach(pl => {
+      const z0 = (pl.k - 1) * e, z1 = pl.k * e;
+      top.push([pl.x0, z1], [pl.x1, z1]);
+      if (pl.kind === 'patamar') und.push([pl.x0, z1 - tl], [pl.x1, z1 - tl]);
+      else { const w = (pl.x1 - pl.x0) || 1, dv = tl * Math.hypot(w, e) / w; und.push([pl.x0, z0 - dv], [pl.x1, z1 - dv]); }
+    });
+    top.push([X, H]);
+    const U = und.map(q => [q[0], Math.max(0, q[1])]);
+    const lastZ = U.length ? U[U.length - 1][1] : 0;
+    const poly = top.concat([[X, Math.min(lastZ, H)]]).concat(U.slice().reverse()).concat([[0, 0]]);
+    s += sPoly(poly, C.tread, C.ink, 1.4);
+    R.polys.forEach(pl => { if (pl.kind !== 'reto') { const z1 = pl.k * e; s += '<rect x="' + r2(pl.x0) + '" y="' + r2(-z1) + '" width="' + r2(pl.x1 - pl.x0) + '" height="' + r2(Math.min(pl.kind === 'patamar' ? st.tLaje : e, z1)) + '" fill="' + treadFill(pl.kind, C) + '" stroke="none"/>'; } });
+    s += sPolyline(top, C.ink, 1.4);
+  }
+  /* laje superior */
+  const kcPoly = R.opening ? R.polys.find(pl => pl.k === R.opening.kc) : null;
+  const xo = kcPoly ? kcPoly.x0 : X;
+  const slabBox = (x0, x1) => '<rect x="' + r2(x0) + '" y="' + r2(-H) + '" width="' + r2(x1 - x0) + '" height="' + r2(st.espLaje) + '" fill="url(#hch)" stroke="' + C.ink + '" stroke-width="1.5" ' + NS + '/>';
+  if (!R.hel && xo > left + 1) s += slabBox(left, xo); /* na helicoidal a laje fica fora do furo, longe do percurso */
+  s += slabBox(X, X + slabR);
+  /* linha dos narizes e corrimão */
+  const nos = [];
+  /* no patamar o corrimão fica horizontal até encontrar a inclinação do lance seguinte (um piso antes da borda), sem degrau */
+  R.polys.forEach(pl => { nos.push([pl.x0, pl.k * e]); if (pl.kind === 'patamar') nos.push([Math.max(pl.x0, pl.x1 - R.pInput), pl.k * e]); });
+  if (nos.length) {
+    const alturas = R.nm.acess ? [92, 70] : [92];
+    alturas.forEach(hR => { s += sPolyline(nos.concat([[X, H]]).map(q => [q[0], q[1] + hR]), C.ink, 1.1); });
+    s += sLine([nos[0][0], nos[0][1] + 92], [nos[0][0], nos[0][1]], C.muted, 0.8, '3 3');
+    s += sText(nos[Math.min(1, nos.length - 1)][0] - fs * 0.6, nos[Math.min(1, nos.length - 1)][1] + 92 + fs * 1.2, 'corrimão ' + alturas.join(' e '), fs * 0.8, C.muted, 'start', -R.incl);
+  }
+  /* linha de altura livre */
+  const hp = [];
+  R.polys.forEach(pl => { const z = pl.k * e + st.hLivre; if (z <= H - st.espLaje + 0.01) hp.push([pl.x0, z]); });
+  if (hp.length && kcPoly) {
+    const zU = H - st.espLaje, z1 = kcPoly.k * e + st.hLivre, last = hp[hp.length - 1];
+    if (z1 > zU && last[1] < zU) { const t = (zU - last[1]) / (z1 - last[1]); hp.push([last[0] + (kcPoly.x0 - last[0]) * t, zU]); }
+  }
+  if (hp.length > 1) {
+    s += sPolyline(hp, C.accent, 1.7, '6 4');
+    const lp = hp[Math.max(0, hp.length - 2)];
+    s += sText(lp[0] + fs * 0.8, lp[1] - fs * 1.6, 'altura livre ' + fmt(st.hLivre, 0), fs * 0.85, C.accent, 'start', 0, 500);
+  }
+  /* números dos degraus e rótulos */
+  R.polys.forEach(pl => {
+    const wmid = (pl.x0 + pl.x1) / 2, top = pl.k * e;
+    if (pl.x1 - pl.x0 >= fs * 1.4) s += sText(wmid, top - e / 2, String(pl.k), fs * 0.75, C.ink, 'middle', 0, 500);
+  });
+  const groups = [];
+  R.polys.forEach(pl => { if (pl.kind === 'patamar' || pl.kind === 'leque') { const g = groups[groups.length - 1]; if (g && g.kind === pl.kind && g.last === pl.k - 1) { g.x1 = pl.x1; g.last = pl.k; g.top = pl.k * e; } else groups.push({ kind: pl.kind, x0: pl.x0, x1: pl.x1, last: pl.k, top: pl.k * e }); } });
+  groups.forEach(g => {
+    s += sText((g.x0 + g.x1) / 2, g.top + fs * 2.2, g.kind === 'leque' ? 'leques' : 'patamar ' + nivel(g.top), fs * 0.78, C.muted, 'middle', 0, 500);
+  });
+  /* níveis */
+  s += sText(left + fs * 0.5, fs * 1.1, nivel(0), fs * 0.9, C.ink, 'start', 0, 600);
+  s += sText(X + slabR, H + fs * 1.1, nivel(H), fs * 0.9, C.ink, 'end', 0, 600);
+  /* cotas */
+  s += dimLine([X + slabR, 0], [X + slabR, H], 1, 0, fs * 2.6, 'H ' + fmt(H, 0), fs, C);
+  s += dimLine([0, 0], [X, 0], 0, -1, fs * 2.8, fmt(X, 0) + ' (desenvolvido)', fs, C);
+  s += dimLine([left, H - st.espLaje], [left, H], -1, 0, fs * 1.0, 'laje ' + fmt(st.espLaje, 0), fs * 0.8, C);
+  s += sText(left + fs * 0.5, -fs * 5.6, 'degrau: espelho ' + fmt(e, 1) + ' × piso ' + fmt(R.p, 1) + ' cm  ·  ' + fmt(R.incl, 1) + '°' + (R.hel ? '' : '  ·  laje da escada ' + fmt(st.tLaje) + ' cm'), fs * 0.9, C.ink, 'start', 0, 500);
+  const t1 = 'PERFIL DESENVOLVIDO · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
+  const t2 = 'esquema ao longo da linha de caminhamento (não é corte A-A) · H ' + fmt(H) + ' · ' + R.N + ' espelhos de ' + fmt(e, 1) + ' · cotas em cm';
+  s += titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
+  return svgWrap(vx, vy, vw, vh, s, o, defs);
+}
+
+/* ===== VISTA 3D: z-buffer simples em canvas 2D ===== */
+function hexRGB(h) {
+  h = String(h).trim();
+  if (h[0] === '#') { if (h.length === 4) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3]; return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
+  const m = h.match(/(\d+)[ ,]+(\d+)[ ,]+(\d+)/); return m ? [+m[1], +m[2], +m[3]] : [128, 128, 128];
+}
+
+function triOf(pl) {
+  const t = [];
+  if (pl.arc) { const o = pl.arc.outer, i = pl.arc.inner; for (let s = 0; s < o.length - 1; s++) { t.push([o[s], o[s + 1], i[s + 1]]); t.push([o[s], i[s + 1], i[s]]); } return t; }
+  const q = pl.pts; for (let i = 1; i < q.length - 1; i++) t.push([q[0], q[i], q[i + 1]]); return t;
+}
+
+function buildFaces(R, C) {
+  const faces = []; let id = 0;
+  const col3 = { reto: hexRGB(C.t3), helice: hexRGB(C.t3), leque: hexRGB(C.w3), patamar: hexRGB(C.p3) };
+  function prism(loop, tris, z0, z1, col) {
+    faces.push({ id: id++, kind: 'top', col, tris: tris.map(t => t.map(v => [v[0], v[1], z1])) });
+    const cen = centroid(loop), n = loop.length; let prev = null, cur = -1;
+    for (let i = 0; i < n; i++) {
+      const A = loop[i], B = loop[(i + 1) % n];
+      const dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy);
+      if (len < 1e-6) continue;
+      let nx = dy / len, ny = -dx / len;
+      if (nx * ((A[0] + B[0]) / 2 - cen[0]) + ny * ((A[1] + B[1]) / 2 - cen[1]) < 0) { nx = -nx; ny = -ny; }
+      if (!(prev && prev[0] * nx + prev[1] * ny > 0.966)) cur = id++;
+      prev = [nx, ny];
+      faces.push({ id: cur, kind: 'side', n: [nx, ny], col, tris: [[[A[0], A[1], z0], [B[0], B[1], z0], [B[0], B[1], z1]], [[A[0], A[1], z0], [B[0], B[1], z1], [A[0], A[1], z1]]] });
+    }
+  }
+  const fan = q => { const t = []; for (let i = 1; i < q.length - 1; i++) t.push([q[0], q[i], q[i + 1]]); return t; };
+  /* chão */
+  const all = []; R.polys.forEach(pl => pl.pts.forEach(q => all.push(q))); R.slab.pts.forEach(q => all.push(q));
+  const gb = bboxOf(all), pad = 35;
+  const g = [[gb[0] - pad, gb[1] - pad], [gb[2] + pad, gb[1] - pad], [gb[2] + pad, gb[3] + pad], [gb[0] - pad, gb[3] + pad]];
+  prism(g, fan(g), -4, 0, hexRGB(C.ground));
+  /* laje superior */
+  const sl = R.slab;
+  prism(sl.pts, sl.arc ? triOf({ arc: sl.arc, pts: sl.pts }) : fan(sl.pts), R.H - R.st.espLaje, R.H, hexRGB(C.f3));
+  /* chegada da helicoidal: placa no nível do piso de cima, com a espessura do degrau */
+  if (R.hel && R.arrival && R.arrival.arc) prism(R.arrival.pts, triOf({ arc: R.arrival.arc, pts: R.arrival.pts }), R.H - R.thk, R.H, col3.patamar || col3.reto);
+  /* pilar */
+  if (R.pole) { const ring = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 2 * PI; ring.push([R.pole.r * Math.cos(a), R.pole.r * Math.sin(a)]); } prism(ring, fan(ring), 0, R.H - R.st.espLaje, [88, 98, 108]); }
+  /* degraus */
+  R.polys.forEach(pl => { const top = pl.k * R.e; prism(pl.pts, triOf(pl), Math.max(top - R.thk, 0), top, col3[pl.kind] || col3.reto); });
+  return faces;
+}
+
+function render3D(cv, R, view, C) {
+  const W = cv.width, Hh = cv.height, ctx = cv.getContext('2d');
+  const faces = buildFaces(R, C);
+  const yaw = rad(view.yaw), pit = rad(view.pitch);
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pit), sp = Math.sin(pit);
+  const proj = v => { const X = v[0] * cy - v[1] * sy, Y = v[0] * sy + v[1] * cy, Z = v[2]; return [X, Z * cp + Y * sp, Y * cp - Z * sp]; };
+  let x0 = Infinity, x1 = -Infinity, u0 = Infinity, u1 = -Infinity;
+  faces.forEach(f => f.tris.forEach(t => t.forEach(v => { const q = proj(v); x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); u0 = Math.min(u0, q[1]); u1 = Math.max(u1, q[1]); })));
+  const mg = Math.min(W, Hh) * 0.06;
+  const sc = Math.min((W - 2 * mg) / (x1 - x0), (Hh - 2 * mg) / (u1 - u0));
+  const cx = (x0 + x1) / 2, cu = (u0 + u1) / 2;
+  const P = v => { const q = proj(v); return { x: (q[0] - cx) * sc + W / 2, y: Hh / 2 - (q[1] - cu) * sc, z: q[2] }; };
+  const bg = hexRGB(C.paper), ink = hexRGB(C.ink);
+  const img = ctx.createImageData(W, Hh), d = img.data;
+  const zb = new Float32Array(W * Hh).fill(1e30), ib = new Int32Array(W * Hh).fill(-1);
+  for (let i = 0; i < W * Hh; i++) { d[i * 4] = bg[0]; d[i * 4 + 1] = bg[1]; d[i * 4 + 2] = bg[2]; d[i * 4 + 3] = 255; }
+  const toL = [-0.5, -0.85];
+  faces.forEach(f => {
+    let sh = 1;
+    if (f.kind === 'side') { const nX = f.n[0] * cy - f.n[1] * sy, nY = f.n[0] * sy + f.n[1] * cy; sh = 0.56 + 0.4 * clamp(nX * toL[0] + nY * toL[1], 0, 1); }
+    const r = f.col[0] * sh, g = f.col[1] * sh, b = f.col[2] * sh;
+    f.tris.forEach(t => {
+      const A = P(t[0]), B = P(t[1]), Q = P(t[2]);
+      const area = (B.x - A.x) * (Q.y - A.y) - (B.y - A.y) * (Q.x - A.x);
+      if (Math.abs(area) < 1e-9) return;
+      const inv = 1 / area;
+      const minX = Math.max(0, Math.floor(Math.min(A.x, B.x, Q.x))), maxX = Math.min(W - 1, Math.ceil(Math.max(A.x, B.x, Q.x)));
+      const minY = Math.max(0, Math.floor(Math.min(A.y, B.y, Q.y))), maxY = Math.min(Hh - 1, Math.ceil(Math.max(A.y, B.y, Q.y)));
+      for (let y = minY; y <= maxY; y++) {
+        const py = y + 0.5;
+        for (let x = minX; x <= maxX; x++) {
+          const px = x + 0.5;
+          const w0 = ((B.x - px) * (Q.y - py) - (B.y - py) * (Q.x - px)) * inv;
+          const w1 = ((Q.x - px) * (A.y - py) - (Q.y - py) * (A.x - px)) * inv;
+          const w2 = 1 - w0 - w1;
+          if (w0 < -1e-4 || w1 < -1e-4 || w2 < -1e-4) continue;
+          const z = w0 * A.z + w1 * B.z + w2 * Q.z, i = y * W + x;
+          if (z < zb[i] - 1e-3) { zb[i] = z; ib[i] = f.id; const k = i * 4; d[k] = r; d[k + 1] = g; d[k + 2] = b; }
+        }
+      }
+    });
+  });
+  /* contornos entre faces diferentes */
+  const ed = new Uint8Array(W * Hh);
+  for (let y = 0; y < Hh - 1; y++) for (let x = 0; x < W - 1; x++) {
+    const i = y * W + x, a = ib[i];
+    if (a !== ib[i + 1]) { ed[i] = 1; ed[i + 1] = 1; }
+    if (a !== ib[i + W]) { ed[i] = 1; ed[i + W] = 1; }
+  }
+  for (let i = 0; i < W * Hh; i++) if (ed[i] && ib[i] >= 0) { const k = i * 4; d[k] = d[k] * 0.35 + ink[0] * 0.65; d[k + 1] = d[k + 1] * 0.35 + ink[1] * 0.65; d[k + 2] = d[k + 2] * 0.35 + ink[2] * 0.65; }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* ===== ABA EXPLICAÇÃO: texto que acompanha os números ===== */
+function anatomiaSVG(C) {
+  const t = (x, y, s, a, w) => '<text x="' + x + '" y="' + y + '" font-size="12" fill="' + C.ink + '" text-anchor="' + (a || 'start') + '" dominant-baseline="central" font-family="' + FONT + '"' + (w ? ' font-weight="600"' : '') + '>' + s + '</text>';
+  const ln = (x1, y1, x2, y2, col, d) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + (col || C.ink) + '" stroke-width="1.2"' + (d ? ' stroke-dasharray="3 3"' : '') + '/>';
+  let s = '<path d="M30,170 L30,130 L128,130 L128,138 L120,138 L120,90 L208,90 L208,98 L200,98 L200,50 L290,50 L290,170 Z" fill="' + C.tread + '" stroke="' + C.ink + '" stroke-width="1.8" stroke-linejoin="round"/>';
+  s += ln(110, 90, 110, 130) + ln(106, 90, 114, 90) + ln(106, 130, 114, 130) + t(104, 110, 'espelho (e)', 'end', 1);
+  s += ln(120, 76, 200, 76) + ln(120, 72, 120, 80) + ln(200, 72, 200, 80) + t(160, 62, 'piso (p)', 'middle', 1);
+  s += ln(128, 134, 78, 104, C.accent) + '<circle cx="128" cy="134" r="3" fill="' + C.accent + '"/>' + t(30, 98, 'bocel (nariz)', 'start', 1);
+  s += ln(120, 90, 120, 138, C.muted, 1) + t(46, 152, 'degrau 1', 'start') + t(136, 112, '', 'start');
+  s += t(215, 40, 'o piso é medido de nariz a nariz', 'start');
+  return '<svg viewBox="0 0 330 185" style="width:100%;max-width:440px;height:auto;display:block" role="img" aria-label="Perfil de três degraus com espelho, piso e bocel">' + s + '</svg>';
+}
+
+function explicacao(R, S, C) {
+  const nm = R.nm, f = fmt, hel = R.hel, tp = TIPOS.find(x => x.id === R.tipo);
+  const nMin = Math.ceil(R.H / nm.eMax - 1e-9), nMax = Math.floor(R.H / nm.eMin + 1e-9);
+  const sec = (titulo, corpo, aberto) => '<details class="ex"' + (aberto ? ' open' : '') + '><summary>' + titulo + '</summary><div class="exb">' + corpo + '</div></details>';
+  const p = x => '<p>' + x + '</p>';
+  const ul = a => '<ul>' + a.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+  const dl = a => '<dl>' + a.map(x => '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>').join('') + '</dl>';
+  const ol = a => '<ol>' + a.map(x => '<li>' + x + '</li>').join('') + '</ol>';
+  let h = '';
+
+  /* 1. Resumo para falar */
+  const comp = !hel && R.tipo === 'reta' ? ' Em linha reta ela ocupa ' + f(R.T * R.p / 100, 2) + ' m de comprimento.' : '';
+  h += sec('Resumo para abrir a apresentação',
+    p('Esta é uma <b>' + tp.nome.toLowerCase().replace(' l ', ' L ').replace(' u ', ' U ') + '</b> que vence um desnível de <b>' + f(R.H) + ' cm</b> entre um piso e o outro, com <b>' + f(R.L) + ' cm</b> de largura útil. Ela tem <b>' + R.N + ' espelhos de ' + f(R.e, 2) + ' cm</b> e, entre eles, <b>' + R.contagem + '</b>' + (R.nReto ? ', com piso de <b>' + f(R.p, 1) + ' cm</b>' + (R.nLeque ? ' nos trechos retos' : '') : '') + '. A conta de conforto de Blondel dá <b>' + f(R.bl, 1) + ' cm</b> (referência de ' + nm.bMin + ' a ' + nm.bMax + ' cm) e a inclinação fica em <b>' + f(R.incl, 1) + '°</b>.' + comp) +
+    p('Na lista de verificações ao lado, ' + (R.checks.some(c => c.status === 'bad') ? 'há itens que <b>não atendem</b> ao perfil escolhido: vale explicar quais são e o que ajustaria para corrigir.' : R.checks.some(c => c.status === 'warn') ? 'nenhuma das verificações implementadas reprovou, mas há itens em <b>atenção</b> que o app não consegue validar: vale explicar cada um.' : 'os itens que o app confere atendem ao perfil escolhido (' + nm.curto + ').') + ' Lembre que o app confere só parte das exigências de uma escada.'), true);
+
+  /* 2. Passo a passo */
+  const passos = [];
+  passos.push('<b>Desnível (H).</b> É a altura de um piso acabado até o outro piso acabado: <b>' + f(R.H) + ' cm</b>. Toda a escada existe para vencer essa altura em degraus iguais.');
+  passos.push('<b>Número de espelhos (N).</b> O espelho é a parte vertical do degrau. Como a norma de referência limita o espelho entre ' + nm.eMin + ' e ' + nm.eMax + ' cm, o número de espelhos precisa estar entre H ÷ ' + nm.eMax + ' = ' + f(R.H / nm.eMax, 1) + ' (arredonda para cima: ' + nMin + ') e H ÷ ' + nm.eMin + ' = ' + f(R.H / nm.eMin, 1) + ' (arredonda para baixo: ' + nMax + '). O app testa cada número dessa faixa e escolhe o que deixa o espelho mais perto de 17,5 cm' + (hel ? '' : ', desde que exista um piso que atenda ao mesmo tempo o limite de piso e o de Blondel') + ': <b>' + R.nSug + '</b>' + (S.nAuto ? '.' : '; você definiu <b>' + R.N + '</b>.'));
+  passos.push('<b>Altura do espelho (e).</b> e = H ÷ N = ' + f(R.H) + ' ÷ ' + R.N + ' = <b>' + f(R.e, 2) + ' cm</b>. Dividir o desnível por um número inteiro garante que todos os espelhos sejam iguais, que é o que evita tropeço. Na obra, a igualdade depende também dos níveis acabados e dos revestimentos.');
+  passos.push(hel
+    ? '<b>Piso (p) na linha de caminhamento.</b> Na helicoidal o degrau é um setor de círculo, então a profundidade muda conforme o raio. O app mede o piso na linha de caminhamento, que fica a ' + f(R.dw) + ' cm da borda do pilar, no raio de ' + f(R.helix.rw) + ' cm. Cada degrau gira ' + f(R.helix.th, 1) + '°, então p = raio × ângulo (em radianos) = ' + f(R.helix.rw) + ' × ' + f(rad(R.helix.th), 3) + ' = <b>' + f(R.p, 1) + ' cm</b>.'
+    : '<b>Piso (p) pela fórmula de Blondel.</b> O piso precisa caber em duas faixas ao mesmo tempo: a do piso (' + nm.pMin + ' a ' + nm.pMax + ' cm) e a de Blondel, que com este espelho dá ' + nm.bMin + ' − 2 × ' + f(R.e, 2) + ' = ' + f(nm.bMin - 2 * R.e, 1) + ' até ' + nm.bMax + ' − 2 × ' + f(R.e, 2) + ' = ' + f(nm.bMax - 2 * R.e, 1) + ' cm. ' + (R.temFaixa ? 'As duas juntas deixam de ' + f(R.fP[0], 1) + ' a ' + f(R.fP[1], 1) + ' cm. ' : 'Elas não se cruzam: nenhum piso atende as duas, por isso aparece "não atende". ') + (S.pAuto ? 'O app pega o valor mais perto do meio de Blondel (' + f(nm.bMid, 1) + ' − 2e = ' + f(nm.bMid - 2 * R.e, 1) + ' cm), arredondado para centímetro inteiro quando possível: <b>' + f(R.p, 2) + ' cm</b>.' : 'Você definiu <b>' + f(R.p) + ' cm</b>.'));
+  passos.push('<b>Superfícies entre espelhos.</b> N − 1 = ' + R.N + ' − 1 = <b>' + R.T + '</b>. O último espelho chega ao piso superior, que não é degrau da escada. ' + (R.nPat || R.nLeque ? 'Nesta escada essas ' + R.T + ' superfícies são: <b>' + R.contagem + '</b>. O patamar também fica entre dois espelhos, por isso entra na conta, mas não é um piso comum.' : 'Aqui todas são pisos comuns.'));
+  if (!hel) passos.push('<b>Conferência de Blondel.</b> 2e + p = 2 × ' + f(R.e, 2) + ' + ' + f(R.p, 1) + ' = <b>' + f(R.bl, 1) + ' cm</b>, contra a referência de ' + nm.bMin + ' a ' + nm.bMax + ' cm.');
+  passos.push('<b>Inclinação.</b> tangente do ângulo = e ÷ p = ' + f(R.e, 2) + ' ÷ ' + f(R.p, 1) + ' = ' + f(R.e / R.p, 3) + ', então o ângulo é <b>' + f(R.incl, 1) + '°</b> (' + f(R.e / R.p * 100, 0) + '%).');
+  R.lances.forEach(t => passos.push('<b>Divisão do tipo.</b> ' + t));
+  passos.push('<b>Altura livre e laje.</b> Altura livre é a distância vertical entre a superfície onde se pisa e a face de baixo do obstáculo mais próximo acima (laje, viga). Aqui foi pedido ' + f(S.hLivre) + ' cm, valor usual; confira qual exigência vale para o seu caso. A laje do piso de cima tem ' + f(S.espLaje) + ' cm; ' + (R.opening ? 'a partir do degrau ' + R.kc + ' a laje ficaria baixa demais sobre a escada (a altura do degrau mais ' + f(S.hLivre) + ' cm de altura livre passaria da face de baixo da laje, que fica a ' + f(R.H - S.espLaje) + ' cm). Por isso a laje precisa de uma <b>abertura</b>' + (R.opening.circle ? ' circular de Ø ' + f(R.opening.circle * 2) + ' cm.' : ' de aproximadamente ' + f(R.opening.w) + ' × ' + f(R.opening.h) + ' cm.') : 'não precisa ser aberta, a altura livre já é atendida.'));
+  h += sec('Passo a passo da conta, com os seus números', ol(passos) + p('<i>Mudou algum número nas medidas? Esta aba se refaz sozinha.</i>'), true);
+
+  /* 3. Tipo escolhido */
+  const T = {
+    'reta': ['Um lance único, sem mudança de direção.', 'Geometria simples: todos os degraus são iguais e o passo não muda ao longo da escada.', 'Exige comprimento em linha reta: aqui seriam ' + f(R.T * R.p / 100, 2) + ' m. Se o desnível passar do máximo sem patamar, não serve sozinha.'],
+    'reta-patamar': ['Dois lances na mesma direção, separados por um patamar.', 'O patamar interrompe o lance e oferece uma superfície para descanso e circulação. Permite vencer desníveis acima do máximo sem patamar.', 'Continua precisando de comprimento em linha reta, e o patamar é área a mais. O comprimento mínimo depende do perfil: aqui ' + (nm.patReto ? fmt(nm.patReto) + ' cm (NBR 9050)' : 'igual à largura') + '.'],
+    'l-patamar': ['Dois lances em ângulo reto, ligados por um patamar quadrado de lado igual à largura.', 'A curva acontece num piso plano, sem degraus de forma diferente. Cabe em cantos de parede.', 'O patamar ocupa um quadrado de ' + f(R.L) + ' × ' + f(R.L) + ' cm que não é degrau.'],
+    'l-leque': ['Dois lances em ângulo reto, com a curva feita por degraus em leque no lugar do patamar.', 'Ocupa menos área que a versão com patamar, porque a curva já sobe.', 'Os leques convergem num ponto do lado interno, onde a largura do degrau é zero. O piso é medido na linha de caminhamento e conferido à parte, com Blondel próprio. O app não faz balanceamento de leques. A NBR 9050 pede patamar nas mudanças de direção, então essa solução não serve no perfil acessível.'],
+    'u-patamar': ['Dois lances paralelos, de sentidos opostos, ligados por um patamar retangular (volta de 180°).', 'Ocupa menos comprimento: a escada dobra em vez de se esticar. A volta acontece num piso plano.', 'O patamar tem (2 × largura + vão) de comprimento. O vão entre os lances ocupa área e exige guarda-corpo seguro.'],
+    'u-leque': ['Volta de 180° feita por duas curvas em leque, com pisos retos entre elas.', 'Ocupa menos área que a versão com patamar, porque a volta também sobe.', 'Os leques convergem no lado interno, sem balanceamento. O vão central é igual ao número de pisos retos do meio × ' + f(R.p, 1) + ' cm. Não serve no perfil NBR 9050, que pede patamar nas mudanças de direção.'],
+    'helicoidal': ['Escada em caracol: os degraus são setores de círculo em volta de um pilar central.', 'Ocupa pouca área em planta: aqui um círculo de ' + f(R.helix ? R.helix.R * 2 : 0) + ' cm de diâmetro.', 'O piso depende do raio: junto ao pilar ele é muito curto, e a medida vale na linha de caminhamento. A altura livre depende do número de degraus por volta (aqui ' + (R.helix ? R.helix.nPer : '') + '), e a largura costuma ficar abaixo do mínimo de escadas comuns. Por isso muitos códigos tratam a helicoidal como exceção ou de uso restrito. Confirme no código do seu município.'],
+  }[R.tipo];
+  h += sec('Sobre o tipo escolhido: ' + tp.nome, dl([['O que é', T[0]], ['Por que usar', T[1]], ['Cuidados', T[2]]]) + (R.tipo === 'l-leque' || R.tipo === 'u-leque' ? p('<b>Por que o piso do leque é medido a ' + f(R.dw) + ' cm do lado interno?</b> Num degrau em leque o piso é diferente em cada ponto: zero junto ao canto interno e largo na parte externa. Por isso ele é medido numa linha definida, a linha de caminhamento. O perfil escolhido usa ' + f(nm.dw) + ' cm a partir do lado interno' + (nm.acess ? ' (a NBR 9050 indica 55 cm da borda interna em lances curvos)' : '') + (R.dw < nm.dw ? '; como a escada é estreita, o app usou ' + f(R.dw) + ' cm, o meio da largura' : '') + '. Confirme qual distância o seu professor ou o código adota.') : '') + (hel ? p('<b>Por que o piso é ' + f(R.p, 1) + ' cm?</b> Cada degrau gira ' + f(R.helix.th, 1) + '° (360° ÷ ' + R.helix.nPer + ' degraus por volta). A linha de caminhamento fica a ' + f(R.dw) + ' cm da borda do pilar, ou seja, no raio de ' + f(R.helix.rc) + ' + ' + f(R.dw) + ' = ' + f(R.helix.rw) + ' cm. O arco nesse raio mede raio × ângulo = ' + f(R.p, 1) + ' cm. O número de degraus por volta é o maior entre o que dá o piso desejado e o que dá a altura livre: ' + f(R.helix.nPer) + ' × ' + f(R.e, 2) + ' − ' + f(S.espDegrau) + ' = ' + f(R.helix.clearance) + ' cm de altura livre sob a volta de cima. A laje do piso superior fica fora do furo circular, e a chegada ocupa só uma posição de degrau, então essa é a folga calculada entre voltas na linha de caminhamento. O app não verifica outros obstáculos (vigas, guarda-corpo, forro).') : ''), false);
+
+  /* 4. Como ler os desenhos */
+  h += sec('Como ler a planta e o corte',
+    anatomiaSVG(C) +
+    dl([
+      ['Planta', 'Vista de cima, como se a casa fosse cortada na horizontal. A NBR 6492 recomenda o plano a 1,50 m do piso, admitindo outra altura se for informada (aqui ' + f(R.zc) + ' cm, que dá o degrau ' + R.kCut + '). O que está abaixo do corte e à vista aparece em traço cheio. O que está acima aparece como projeção tracejada. A linha em zigue-zague marca onde a escada foi cortada.'],
+      ['Planta do pavimento superior', 'Mostra o piso de cima. A escada só aparece através da abertura da laje, em traço cheio; onde dois trechos se sobrepõem, aparece o de cima.'],
+      ['Linha de caminhamento', 'A linha laranja com seta: o caminho que uma pessoa faz ao usar a escada. Na planta do pavimento inferior a seta aponta para onde sobe e "SOBE" fica no primeiro degrau, com o nível ' + nivel(0) + '. Na planta do pavimento superior o app marca "DESCE", com a seta no sentido da descida.'],
+      ['Perfil desenvolvido', 'Não é um corte A-A da edificação: é um esquema da escada esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Serve para ver a sequência de espelhos, a laje da escada, a altura livre (tracejado laranja) e o corrimão' + (nm.acess ? ' a 92 e 70 cm (a NBR 9050 pede os dois, dos dois lados)' : ' a 92 cm') + ', medido a partir do nariz dos degraus. Um corte A-A de verdade precisaria de uma linha de corte marcada na planta.'],
+      ['Cotas', 'Todas em centímetros. Níveis em metros: ' + nivel(0) + ' é o piso de baixo e ' + nivel(R.H) + ' o de cima.'],
+      ['3D', 'Volumes esquemáticos, só para enxergar o conjunto. Não representa o sistema construtivo. Gire arrastando.']
+    ]), false);
+
+  /* 5. Vocabulário */
+  h += sec('Vocabulário',
+    dl([
+      ['Espelho', 'Parte vertical do degrau. Seu tamanho é a altura de cada passo (e).'],
+      ['Piso', 'Parte horizontal onde se pisa. A profundidade p é medida entre as projeções de duas arestas (narizes) seguidas.'],
+      ['Bocel (nariz)', 'Projeção da borda do degrau além do espelho. O avanço do bocel não se soma à profundidade p.'],
+      ['Lance', 'Trecho contínuo de degraus entre dois patamares, ou entre um piso e um patamar.'],
+      ['Patamar', 'Piso plano no início, no fim ou entre lances. Interrompe a continuidade do lance e oferece uma superfície para circulação e descanso; também é onde a escada pode mudar de direção.'],
+      ['Degrau em leque', 'Degrau de forma trapezoidal ou triangular, mais estreito de um lado, usado para fazer a escada virar sem patamar.'],
+      ['Linha de caminhamento', 'Linha imaginária por onde a pessoa anda. É nela que se mede o piso de degraus que não são retangulares.'],
+      ['Fórmula de Blondel', '2e + p = ' + nm.bMin + ' a ' + nm.bMax + ' cm. Relação empírica entre a altura do espelho e a profundidade do piso, usada para avaliar a passada. Leva o nome de François Blondel, arquiteto e engenheiro francês do século XVII.'],
+      ['Altura livre', 'Distância vertical entre a superfície de apoio (o piso do degrau) e a face de baixo do obstáculo superior mais próximo.'],
+      ['Abertura (vão) na laje', 'Recorte na laje do piso superior onde a escada passa, necessário quando o teto ficaria baixo sobre os degraus.'],
+      ['Corte e planta', 'Planta é um corte horizontal visto de cima. Corte é um corte vertical, indicado na planta por uma linha com letras (A-A). O perfil desenvolvido deste app é outra coisa: um esquema do percurso esticado.'],
+      ['Cota', 'Número que indica uma medida ou altura no desenho.'],
+      ['Desnível', 'Diferença de altura entre os dois pisos que a escada liga.']
+    ]), false);
+
+  /* 6. Normas */
+  h += sec('Sobre as normas e limites deste app',
+    p('Perfil usado agora: <b>' + nm.nome + '</b>. Espelho ' + nm.eMin + ' a ' + nm.eMax + ' cm, piso ' + nm.pMin + ' a ' + nm.pMax + ' cm, Blondel ' + nm.bMin + ' a ' + nm.bMax + ' cm, largura mínima ' + nm.Lmin + ' cm, desnível máximo sem patamar ' + nm.hPat + ' cm, linha de caminhamento a ' + nm.dw + ' cm do lado interno.') +
+    p('<b>Perfil NBR 9050.</b> Usa os valores do item 6.8 da ABNT NBR 9050:2020 (versão corrigida de 2021): espelho 16 a 18 cm, piso 28 a 32 cm, 2e + p de 63 a 65 cm, patamar a cada 3,20 m de desnível e nas mudanças de direção, largura de 1,20 m em rota acessível, corrimãos a 0,92 e 0,70 m. Conferi esses valores em fontes secundárias em 16/11/2026; uma revisão externa diz ter conferido no texto da norma, inclusive os 55 cm da linha em lances curvos (6.8.6), que eu não conferi. O app faz só uma <b>conferência dimensional parcial</b>: passar nele não quer dizer que a escada é acessível.') +
+    p('<b>Perfil Estudo.</b> Piso a partir de 25 cm, Blondel 63 a 64 cm e largura de 80 cm são valores comuns em apostilas e códigos de obras, mas <b>não há uma norma nacional</b> que os sustente para uso residencial. Use como hipótese de estudo e troque pelos valores que o professor ou o código da cidade indicarem, em "Personalizada".') +
+    p('<b>Saídas de emergência.</b> Escadas de rota de fuga seguem a NBR 9077 e a norma técnica do Corpo de Bombeiros de cada estado. Segundo a revisão externa (eu não conferi no texto oficial), a NBR 9077 veda leques e escada em espiral nessas rotas. O app não valida escada de emergência.') +
+    p('O app calcula geometria e confere parte dos limites. Ele não faz dimensionamento estrutural, guarda-corpo, sinalização, piso tátil nem escolha de material.'), false);
+
+  /* 7. Perguntas */
+  const pergs = [
+    ['Por que há um piso a menos que espelhos?', 'Porque o último espelho termina no piso do andar de cima. Esse piso já existe e não é degrau da escada. Aqui são ' + R.N + ' espelhos e ' + R.T + ' superfícies entre eles: ' + R.contagem + '.'],
+    ['Por que dividir o desnível por um número inteiro?', 'Para todos os espelhos serem iguais. Uma diferença de poucos milímetros entre degraus já faz as pessoas tropeçarem, porque o corpo se acostuma com o ritmo.'],
+    ['De onde vem a fórmula 2e + p?', 'É associada ao arquiteto François Blondel, do século XVII. É uma relação empírica entre espelho e piso, usada para avaliar se a passada na escada fica confortável. Evite dizer que ela prova que subir custa o dobro de andar: isso é uma leitura comum, não uma lei demonstrada.'],
+    ['Por que não fazer o piso maior para a escada ficar mais suave?', 'Porque a escada fica comprida e o passo passa do conforto: com piso grande demais a pessoa precisa esticar o passo. O Blondel fecha os dois lados.'],
+    ['Quando uso patamar?', 'Quando o desnível passa do máximo sem patamar (no perfil atual, ' + nm.hPat + ' cm) e, pela NBR 9050, também nas mudanças de direção. Aqui o desnível é ' + f(R.H) + ' cm' + (R.H > nm.hPat ? ', maior que o limite, então o patamar é obrigatório.' : ', menor que o limite, então o patamar não é obrigatório por essa regra.')],
+    ['Qual a vantagem do leque sobre o patamar?', 'Ocupa menos área em planta. A desvantagem é o piso estreito perto do lado interno. Por isso o piso e o Blondel dos leques são conferidos na linha de caminhamento, à parte dos trechos retos. A NBR 9050 pede patamar nas mudanças de direção.'],
+    ['Por que os leques terminam em ponta?', 'Porque o app usa leques convergentes, todos saindo do mesmo canto interno. Existe a técnica de balanceamento, que distribui os leques para não ficarem com ponta zero; o app não faz isso, e mostra esse item como "atenção".'],
+    ['A área em planta é a área da escada?', 'O app mostra duas coisas: o retângulo envolvente (' + f((R.bbox[2] - R.bbox[0]) / 100, 2) + ' × ' + f((R.bbox[3] - R.bbox[1]) / 100, 2) + ' m) e a área que a escada ocupa de fato (' + f(R.areaOcup / 10000, 2) + ' m²), que é a soma dos degraus e patamares.'],
+    ['Por que a laje do andar de cima é aberta?', 'Para manter a altura livre. Se a laje continuasse inteira por cima dos últimos degraus, a cabeça de quem sobe bateria nela. A abertura começa no degrau ' + (R.kc || '—') + ' nesta escada.'],
+    ['Esta escada atende às normas?', (R.checks.some(c => c.status === 'bad') ? 'Não no perfil escolhido: há itens que não atendem (veja a lista).' : R.checks.some(c => c.status === 'warn') ? 'Os itens conferidos não reprovam, mas há pontos em atenção que o app não valida.' : 'Nenhuma das verificações implementadas reprovou.') + ' O app confere só parte das exigências; quem decide é o texto da norma vigente e o código do município.'],
+    ['Isso é um corte A-A?', 'Não. É um perfil desenvolvido: a escada esticada ao longo da linha de caminhamento, para mostrar a sequência de espelhos e a altura livre.']
+  ];
+  h += sec('Perguntas que o professor pode fazer', '<dl>' + pergs.map(x => '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>').join('') + '</dl>', false);
+
+  return h;
+}
+
+/* ===== INTERFACE ===== */
+const $ = id => document.getElementById(id);
+const LS_KEY = 'patamar-v1';
+let S = Object.assign({}, DEFAULTS);
+let VIEW = 'planta', YAW = -32, PIT = 42, CUR = null, THEME = null, CV3 = null;
+
+function getTheme() {
+  const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
+  return { paper: g('--paper'), ink: g('--ink'), muted: g('--muted'), line: g('--line'), accent: g('--accent'), info: g('--info'), tread: g('--tread'), winder: g('--winder'), patamar: g('--patamar'), piso: g('--piso'), t3: g('--t3'), w3: g('--w3'), p3: g('--p3'), f3: g('--f3'), ground: g('--ground') };
+}
+const plain = v => String(Math.round(v * 100) / 100).replace('.', ',');
+/* leitura estrita: aceita 280, 17,5 ou 17.5; recusa vazio, letras e separador de milhar */
+const parseNum = s => { const t = String(s).trim(); if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(t) || /^[+-]?\d{1,3}\.\d{3}$/.test(t)) return NaN; /* "1.000" é ambíguo (milhar?), então é recusado */ const v = Number(t.replace(',', '.')); return isFinite(v) ? v : NaN; };
+const BAD = {};
+
+function load() {
+  try { const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (j && j.S) S = Object.assign(S, j.S); } catch (e) { }
+  const h = (location.hash || '').slice(1);
+  const m = h.match(/^(.*?)(?:-(planta|corte|3d|explica))?$/);
+  if (m && TIPOS.some(t => t.id === m[1])) { S.tipo = m[1]; VIEW = m[2] || 'planta'; }
+}
+function save() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ S })); } catch (e) { }
+  try { history.replaceState(null, '', '#' + S.tipo + (VIEW === 'planta' ? '' : '-' + VIEW)); } catch (e) { }
+}
+
+const FIELDS = [
+  { id: 'H', key: 'H', kind: 'num' }, { id: 'L', key: 'L', kind: 'num' },
+  { id: 'N', key: 'N', kind: 'int', auto: 'nAuto' }, { id: 'p', key: 'p', kind: 'num', auto: 'pAuto' },
+  { id: 'n1', key: 'n1', kind: 'int', auto: 'n1Auto' }, { id: 'Lp', key: 'Lp', kind: 'num', auto: 'LpAuto' },
+  { id: 'nMeio', key: 'nMeio', kind: 'int' }, { id: 'vao', key: 'vao', kind: 'num' },
+  { id: 'D', key: 'D', kind: 'num' }, { id: 'Dc', key: 'Dc', kind: 'num' },
+  { id: 'hLivre', key: 'hLivre', kind: 'num' }, { id: 'espLaje', key: 'espLaje', kind: 'num' },
+  { id: 'tLaje', key: 'tLaje', kind: 'num' }, { id: 'espDegrau', key: 'espDegrau', kind: 'num' },
+  { id: 'zCorte', key: 'zCorte', kind: 'num' },
+  { id: 'cEmin', key: 'cEmin', kind: 'num' }, { id: 'cEmax', key: 'cEmax', kind: 'num' }, { id: 'cPmin', key: 'cPmin', kind: 'num' }, { id: 'cPmax', key: 'cPmax', kind: 'num' },
+  { id: 'cBmin', key: 'cBmin', kind: 'num' }, { id: 'cBmax', key: 'cBmax', kind: 'num' }, { id: 'cLmin', key: 'cLmin', kind: 'num' }, { id: 'cHpat', key: 'cHpat', kind: 'num' }, { id: 'cDw', key: 'cDw', kind: 'num' },
+];
+
+function mount() {
+  const norm = Object.keys(NORMAS).map(k => '<option value="' + k + '">' + NORMAS[k].nome + '</option>').join('') + '<option value="custom">Personalizada (digite os limites)</option>';
+  $('ctrl').innerHTML =
+    '<section class="card o1"><h2>Tipo de escada</h2><div id="tipos" class="tipos" role="radiogroup" aria-label="Tipo de escada"></div></section>' +
+    '<section class="card o2"><h2>Medidas</h2><div class="grid2">' +
+    fieldNum('H', 'Desnível piso a piso', 'cm', 'Do piso de baixo ao piso de cima, acabados.') + fieldNum('L', 'Largura útil', 'cm', 'Espaço livre para passar, entre paredes ou guardas.') + '</div>' +
+    '<div class="field"><label for="norma">Referência de limites</label><select id="norma">' + norm + '</select></div>' +
+    '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + '</div></div>' +
+    '<div class="field" data-for="l-patamar l-leque u-patamar u-leque helicoidal"><span class="lab" id="ladoLab">Ao subir, a escada vira para</span><div class="seg" id="lado" role="group" aria-labelledby="ladoLab"><button type="button" data-v="dir">Direita</button><button type="button" data-v="esq">Esquerda</button></div></div></section>' +
+    '<section class="card"><h2>Degraus</h2>' +
+    '<div class="field"><div class="labrow"><label for="N">Número de espelhos</label><label class="auto"><input type="checkbox" id="nAuto"> sugerido</label></div><div class="stepper"><button type="button" id="Nminus" aria-label="Menos um espelho">−</button><input id="N" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="Nplus" aria-label="Mais um espelho">+</button></div><p class="hint" id="Nhint"></p></div>' +
+    '<div class="field"><div class="labrow"><label for="p" id="pLab">Piso (profundidade)</label><label class="auto"><input type="checkbox" id="pAuto"> pela fórmula</label></div><div class="inp"><input id="p" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
+    '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
+    '<section class="card" id="cardEsp"><h2>Detalhes do tipo</h2>' +
+    '<div class="field" data-for="l-leque u-leque"><label for="kLeque">Leques em cada curva</label><select id="kLeque"><option value="2">2 leques (45° cada)</option><option value="3">3 leques (30° cada)</option><option value="4">4 leques (22,5° cada)</option></select></div>' +
+    '<div class="field" data-for="u-leque"><label for="nMeio">Pisos retos entre as duas curvas</label><div class="inp"><input id="nMeio" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div><p class="hint" id="nMeioHint"></p></div>' +
+    '<div class="field" data-for="u-patamar"><label for="vao">Vão entre os dois lances</label><div class="inp"><input id="vao" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
+    '<div class="field" data-for="reta-patamar u-patamar"><div class="labrow"><label for="Lp">Profundidade do patamar</label><label class="auto"><input type="checkbox" id="LpAuto"> igual à largura</label></div><div class="inp"><input id="Lp" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
+    '<div class="grid2" data-for="helicoidal">' + fieldNum('D', 'Diâmetro externo', 'cm') + fieldNum('Dc', 'Diâmetro do pilar', 'cm') + '</div>' +
+    '<p class="hint" id="semDetalhe" data-for="reta">Esse tipo não tem detalhes extras. Ajuste só as medidas e os degraus.</p></section>' +
+    '<details class="card"><summary>Altura livre e laje</summary><div class="grid2" style="margin-top:12px">' +
+    fieldNum('hLivre', 'Altura livre mínima', 'cm') + fieldNum('espLaje', 'Laje do piso de cima', 'cm') +
+    '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
+    '<div data-for="helicoidal">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
+  $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Perfil'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
+}
+function fieldNum(id, label, unit, hint) {
+  return '<div class="field"><label for="' + id + '">' + label + '</label><div class="inp"><input id="' + id + '" type="text" inputmode="decimal" autocomplete="off"><span class="un">' + unit + '</span></div>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + '</div>';
+}
+
+function bind() {
+  FIELDS.forEach(f => {
+    const el = $(f.id); if (!el) return;
+    el.addEventListener('input', () => {
+      const v = parseNum(el.value);
+      if (isNaN(v) || (f.kind === 'int' && Math.round(v) !== v)) { BAD[f.id] = true; el.classList.add('err'); render(true); return; }
+      delete BAD[f.id]; el.classList.remove('err');
+      S[f.key] = v;
+      if (f.auto) { S[f.auto] = false; $(f.auto).checked = false; }
+      render(true);
+    });
+    el.addEventListener('blur', () => render());
+    if (f.auto) $(f.auto).addEventListener('change', e => { S[f.auto] = e.target.checked; render(); });
+  });
+  $('norma').addEventListener('change', e => {
+    const v = e.target.value;
+    if (v === 'custom' && S.norma !== 'custom') { const b = NORMAS[S.norma] || NORMAS.res; Object.assign(S, { cEmin: b.eMin, cEmax: b.eMax, cPmin: b.pMin, cPmax: b.pMax, cBmin: b.bMin, cBmax: b.bMax, cLmin: b.Lmin, cHpat: b.hPat, cDw: b.dw }); }
+    S.norma = v; render();
+  });
+  $('modoP').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.modoPlanta = b.dataset.v; render(); });
+  $('showDims').addEventListener('change', e => { S.showDims = e.target.checked; render(); });
+  $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
+  $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
+  $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
+  $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
+  $('Nplus').addEventListener('click', () => { S.nAuto = false; S.N = (CUR ? CUR.N : S.N) + 1; render(); });
+  $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; render(); });
+  $('tipos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tipo = b.dataset.v; render(); });
+  $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
+  $('pit').addEventListener('input', e => { PIT = +e.target.value; draw3d(false); });
+  $('btnResumo').addEventListener('click', () => copiar(resumo(), 'Resumo copiado'));
+  $('btnSvg').addEventListener('click', () => { if (VIEW === '3d') return; copiar(VIEW === 'corte' ? sectionSVG(CUR, { pxW: 1400 }, THEME) : planSVG(CUR, { pxW: 1400 }, THEME), 'SVG copiado'); });
+  $('btnImg').addEventListener('click', gerarImagem);
+  $('modalClose').addEventListener('click', () => $('modal').hidden = true);
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('modal').hidden = true; });
+  CV3 = $('cv3');
+  let drag = null;
+  CV3.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: YAW, pit: PIT }; CV3.setPointerCapture(e.pointerId); });
+  CV3.addEventListener('pointermove', e => { if (!drag) return; YAW = ((drag.yaw + (e.clientX - drag.x) * 0.5) % 360 + 540) % 360 - 180; PIT = clamp(drag.pit + (e.clientY - drag.y) * 0.3, 12, 80); $('yaw').value = Math.round(YAW); $('pit').value = Math.round(PIT); draw3d(false); });
+  const end = () => { if (drag) { drag = null; draw3d(true); } };
+  CV3.addEventListener('pointerup', end); CV3.addEventListener('pointercancel', end);
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', () => { THEME = null; renderTypes(); render(); });
+  new MutationObserver(() => { THEME = null; renderTypes(); render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+function renderTypes() {
+  THEME = THEME || getTheme();
+  $('tipos').innerHTML = TIPOS.map(t => {
+    const R = calc({ tipo: t.id, H: 280, L: 90, norma: 'res', D: 220 });
+    return '<button type="button" role="radio" data-v="' + t.id + '" aria-checked="false" title="' + t.desc + '"><span class="th">' + planSVG(R, { thumb: true }, THEME) + '</span><span class="nm">' + t.nome + '</span></button>';
+  }).join('');
+}
+
+function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) el.value = v; }
+
+function falha(msg) {
+  CUR = null;
+  ['tiles', 'memo', 'checks', 'legend'].forEach(id => { $(id).innerHTML = ''; });
+  $('stage').dataset.view = 'erro';
+  $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
+  $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Entrada ou configuração inválida';
+  ['btnImg', 'btnSvg', 'btnResumo'].forEach(id => { $(id).disabled = true; });
+  $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true;
+}
+function render(typing) {
+  THEME = THEME || getTheme();
+  document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
+  document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  $('customNorm').hidden = S.norma !== 'custom';
+  /* só conta campo inválido que está à vista e em uso (não oculto, não no automático) */
+  const bad = Object.keys(BAD).filter(id => { const el = $(id); if (!el || el.closest('[hidden]')) return false; const f = FIELDS.find(x => x.id === id); return !(f && f.auto && S[f.auto]); });
+  if (bad.length) { const lab = bad.map(id => { const l = document.querySelector('label[for="' + id + '"]'); return l ? l.textContent : id; }); falha('Campo com valor que não é número: ' + lab.join(', ') + '. Use só algarismos, com vírgula para decimal (ex.: 17,5), sem ponto de milhar (escreva 1000, não 1.000).'); return; }
+  let R;
+  try { R = calc(S); } catch (err) { if (!err.patamar) console.error(err); falha(err.message); return; }
+  CUR = R;
+  ['btnImg', 'btnSvg', 'btnResumo'].forEach(id => { $(id).disabled = false; });
+  /* controles */
+  document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
+  document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  document.querySelectorAll('#lado button').forEach(b => b.classList.toggle('on', b.dataset.v === S.lado));
+  document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  $('norma').value = S.norma; $('customNorm').hidden = S.norma !== 'custom';
+  ['cEmin','cEmax','cPmin','cPmax','cBmin','cBmax','cLmin','cHpat','cDw'].forEach(k => setVal(k, plain(S[k])));
+  setVal('zCorte', plain(S.zCorte)); $('showDims').checked = S.showDims !== false; $('showNums').checked = S.showNums !== false;
+  document.querySelectorAll('#modoP button').forEach(b => b.classList.toggle('on', b.dataset.v === S.modoPlanta));
+  $('zcWrap').hidden = S.modoPlanta === 'sup';
+  $('kLeque').value = String(R.kw);
+  FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
+  setVal('H', plain(S.H)); setVal('L', plain(S.L)); setVal('hLivre', plain(S.hLivre)); setVal('espLaje', plain(S.espLaje)); setVal('tLaje', plain(S.tLaje)); setVal('espDegrau', plain(S.espDegrau));
+  setVal('D', plain(S.D)); setVal('Dc', plain(S.Dc)); setVal('vao', plain(S.vao)); setVal('nMeio', String(R.nMeio));
+  setVal('N', String(R.N)); setVal('p', S.pAuto ? plain(R.hel ? R.pAlvo : R.pInput) : plain(S.p)); setVal('n1', String(R.a)); setVal('Lp', plain(R.Lp));
+  $('pLab').textContent = R.hel ? 'Piso desejado (linha de caminhamento)' : 'Piso (profundidade)';
+  $('Nhint').textContent = 'Sugestão: ' + R.nSug + ' espelhos (espelho de ' + fmt(S.H / R.nSug, 2) + ' cm). Atual: ' + fmt(R.e, 2) + ' cm.';
+  $('n1Un').textContent = 'de ' + Math.max(0, R.avail) + ' pisos retos';
+  $('nMeioHint').textContent = 'Vão central entre os lances: ' + fmt(R.nMeio * R.p) + ' cm.';
+  /* resultados */
+  const incl = R.incl;
+  $('tiles').innerHTML = [
+    ['Espelhos', R.N, 'altura ' + fmt(R.e, 2) + ' cm'],
+    ['Pisos', R.nReto + R.nLeque, R.hel ? 'degraus' : [R.nLeque ? R.nReto + ' retos + ' + R.nLeque + ' leques' : 'pisos comuns', R.nPat ? '+ ' + R.nPat + ' patamar' : ''].filter(Boolean).join(' ')],
+    ['Piso', fmt(R.p, 1) + ' cm', R.hel ? 'na linha de caminhamento' : 'profundidade'],
+    ['Blondel', fmt(R.bl, 1) + ' cm', '2e + p'],
+    ['Inclinação', fmt(incl, 1) + '°', fmt(R.e / R.p * 100, 0) + '%'],
+    ['Em planta', fmt((R.bbox[2] - R.bbox[0]) / 100, 2) + ' × ' + fmt((R.bbox[3] - R.bbox[1]) / 100, 2), R.hel ? 'm · círculo de ' + fmt(R.areaOcup / 10000, 2) + ' m²' : 'm (retângulo) · ocupa ' + fmt(R.areaOcup / 10000, 2) + ' m²'],
+  ].map(t => '<div class="tile"><span class="tl">' + t[0] + '</span><span class="tv">' + t[1] + '</span><span class="ts">' + t[2] + '</span></div>').join('');
+  const cnt = { ok: 0, warn: 0, bad: 0 }; R.checks.forEach(c => { if (cnt[c.status] !== undefined) cnt[c.status]++; });
+  const sev = cnt.bad ? 'bad' : cnt.warn ? 'warn' : 'ok';
+  $('checkSum').className = 'cs ' + sev;
+  $('checkSum').textContent = cnt.bad ? cnt.bad + ' fora da referência' + (cnt.warn ? ' e ' + cnt.warn + ' em atenção' : '') : cnt.warn ? cnt.warn + ' em atenção' : 'Tudo dentro da referência';
+  const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
+  $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('');
+  $('memo').innerHTML = R.memo.map(t => '<li>' + t + '</li>').join('');
+  $('title').textContent = TIPOS.find(t => t.id === S.tipo).nome;
+  $('desc').textContent = TIPOS.find(t => t.id === S.tipo).desc + '. ' + R.nm.nome + '.';
+  /* legenda */
+  const lg = [['sw', 'var(--tread)', 'Degrau reto']];
+  if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', 'Leque']);
+  if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
+  const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
+  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">Volumes esquemáticos, só para visualizar. Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
+  $('view3dBar').hidden = VIEW !== '3d';
+  $('viewPlantaBar').hidden = VIEW !== 'planta';
+  $('btnSvg').hidden = VIEW === '3d' || VIEW === 'explica';
+  $('btnImg').hidden = VIEW === 'explica';
+  $('legend').hidden = VIEW === 'explica';
+  /* palco */
+  $('stage').dataset.view = VIEW;
+  if (VIEW === 'planta') { $('stage').innerHTML = planSVG(R, {}, THEME); }
+  else if (VIEW === 'corte') { $('stage').innerHTML = sectionSVG(R, {}, THEME) + '<p class="cap">Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.</p>'; }
+  else if (VIEW === 'explica') { $('stage').innerHTML = explicacao(R, S, THEME); }
+  else { $('stage').innerHTML = ''; $('stage').appendChild(CV3); draw3d(true); }
+  save();
+}
+
+function draw3d(hq) {
+  if (VIEW !== '3d' || !CUR) return;
+  const box = $('stage'), cw = Math.max(280, box.clientWidth || 640);
+  const k = hq ? 2 : 1;
+  CV3.width = Math.round(cw * k); CV3.height = Math.round(Math.min(cw * 0.78, 620) * k);
+  CV3.style.width = '100%'; CV3.style.height = 'auto';
+  render3D(CV3, CUR, { yaw: YAW, pitch: PIT }, THEME || getTheme());
+}
+
+function resumo() {
+  const R = CUR, t = TIPOS.find(x => x.id === S.tipo);
+  return 'Escada ' + t.nome.toLowerCase() + ' (' + R.nm.nome + ')\n' +
+    'Desnível ' + fmt(R.H) + ' cm · largura ' + fmt(R.L) + ' cm\n' +
+    R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm · ' + R.contagem + ' · piso ' + fmt(R.p, 1) + ' cm · Blondel ' + fmt(R.bl, 1) + ' cm\n' +
+    'Inclinação ' + fmt(R.incl, 1) + '°\n\n' + R.memo.join('\n') + '\n\nVerificações:\n' + R.checks.map(c => '- ' + c.nome + ': ' + c.valor + (c.regra ? ' (ref. ' + c.regra + ')' : '') + ' [' + c.status + ']').join('\n');
+}
+
+let toastT = null;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
+function copiar(txt, msg) {
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { } ta.remove(); toast(ok ? msg : 'Não consegui copiar'); };
+  try { navigator.clipboard.writeText(txt).then(() => toast(msg), fallback); } catch (e) { fallback(); }
+}
+
+function gerarImagem() {
+  const T = THEME || getTheme();
+  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + VIEW + '.png'; $('modal').hidden = false; };
+  if (VIEW === '3d') { draw3d(true); done(CV3.toDataURL('image/png')); return; }
+  const svg = VIEW === 'corte' ? sectionSVG(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
+  const m = svg.match(/width="(\d+)" height="(\d+)"/); const w = +m[1], h = +m[2];
+  const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  img.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = T.paper; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); done(c.toDataURL('image/png')); };
+  img.onerror = () => toast('Não consegui gerar a imagem');
+  img.src = url;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  load(); mount(); bind(); renderTypes(); render();
+  let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => draw3d(true), 120); });
+  window.addEventListener('hashchange', () => { const before = S.tipo + VIEW; load(); if (S.tipo + VIEW !== before) render(); });
+});
+
+</script>
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { }); });
+}
+</script>
+</body>
+</html>
