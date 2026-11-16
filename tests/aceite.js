@@ -176,6 +176,15 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ok(/bocel 2,5/.test(dB) && /quina 1,5/.test(dI) && /sem saliência/.test(dS),'detalhe desenha e cota cada tipo de borda');
   ok(/espelho reto, sem saliência/.test(explicacao(calc({bocel:'sem'}),calc({bocel:'sem'}).st,C)),'explicação cita a borda escolhida');
 }
+/* revisão da borda do degrau */
+{
+  ok(/1,45/.test(calc({avanco:1.45}).checks.find(c=>c.id==='bocel').valor),'avanço 1,45 aparece como 1,45 (não arredonda para 1,5 ao lado do mínimo)');
+  let e1=false; try{calc({bocel:'xyz'});}catch(e){e1=!!e.patamar;} ok(e1,'modo de borda inválido dá erro (não vira bocel em silêncio)');
+  let e2=false; try{calc({tipo:'helicoidal',bocel:'inclinado'});}catch(e){e2=!!e.patamar&&/placas soltas/.test(e.message);} ok(e2,'helicoidal não aceita espelho inclinado');
+  const hs=calc({tipo:'helicoidal',bocel:'sem'}).checks.find(c=>c.id==='bocel'); ok(/placas/.test(hs.valor) && !/espelho inclinado/.test(hs.nota),'helicoidal: borda descrita como placas, sem falar de espelho inclinado');
+  let e3=''; try{calc({bocel:'inclinado',avanco:0});}catch(e){e3=e.message;} ok(/Avanço sobre o degrau de baixo/.test(e3) && /Sem saliência/.test(e3),'avanço zero: mensagem com o nome do campo e a sugestão de "Sem saliência"');
+  ok(/nota do 3\.10/.test(calc({bocel:'sem'}).checks.find(c=>c.id==='bocel').nota),'espelho inclinado citado pela nota do 3.10 da NBR 9077:2001');
+}
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');

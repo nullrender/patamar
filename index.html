@@ -380,8 +380,14 @@ function calc(inp) {
   pos('D', 'Diâmetro externo', 60, 1000); pos('Dc', 'Diâmetro do pilar', 4, 200);
   pos('zCorte', 'Altura do corte', 20, 3000);
   /* borda do degrau: bocel (nariz saliente), espelho inclinado (a quina avança) ou sem saliência */
-  const bocelModo = ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) >= 0 ? st.bocel : 'bocel';
-  if (bocelModo !== 'sem') pos('avanco', 'Avanço do bocel', 0.1, 10);
+  if (st.bocel !== undefined && st.bocel !== null && ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) < 0) erro('Borda do degrau: opção inválida. Escolha Bocel, Espelho inclinado ou Sem saliência.');
+  const bocelModo = st.bocel || 'bocel';
+  if (bocelModo === 'inclinado' && st.tipo === 'helicoidal') erro('Na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar. Em "Borda do degrau", escolha Bocel (as placas se sobrepõem) ou Sem saliência.');
+  if (bocelModo !== 'sem') {
+    const av = Number(st.avanco);
+    if (isFinite(av) && av <= 0) erro('Avanço sobre o degrau de baixo precisa ser maior que zero (você digitou ' + fmt(av, 2) + '). Para uma borda sem saliência, escolha "Sem saliência".');
+    pos('avanco', 'Avanço sobre o degrau de baixo', 0.1, 10);
+  }
   const avanco = bocelModo === 'sem' ? 0 : st.avanco;
   if (!st.pAuto) pos('p', 'Piso', 10, 100);
   let nm = NORMAS[st.norma] || NORMAS.res;
@@ -939,10 +945,13 @@ function calc(inp) {
      NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou, sem bocel, balanço da quina sobre o degrau de baixo com o mesmo mínimo;
      NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a projeção da aresta avança no máximo 1,5 cm. */
   {
-    const nomeB = bocelModo === 'bocel' ? 'bocel de ' + fmt(avanco, 1) + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + fmt(avanco, 1) + ' cm' : 'sem saliência (espelho reto)';
-    if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
+    /* avanço com até 2 casas: 1,45 não pode aparecer como "1,5" ao lado de "mínimo 1,5" */
+    const av2 = fmt(avanco, 2);
+    const nomeB = hel ? (bocelModo === 'sem' ? 'placas sem sobreposição' : 'cada placa avança ' + av2 + ' cm sobre a de baixo')
+      : bocelModo === 'bocel' ? 'bocel de ' + av2 + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + av2 + ' cm' : 'sem saliência (espelho reto)';
+    if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm de bocel ou de balanço da quina; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
     else if (nm.acess) { const ruim = avanco > 1.5 + TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço máx. 1,5 cm', ruim ? 'bad' : 'ok', ruim ? 'Não atende: a NBR 9050:2020 (6.7.1) limita a projeção do bocel ou da quina a 1,5 cm. (Na prática, uma borda muito saliente pode prender a ponta do pé de quem sobe.)' : 'NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a aresta avança no máximo 1,5 cm; degrau sem saliência também atende.'); }
-    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, um espelho inclinado cuja quina avance esse mesmo tanto sobre o degrau de baixo. ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou quina do espelho inclinado avançando o mesmo tanto. ') + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, balanço da quina do degrau sobre o de baixo com esse mesmo mínimo' + (hel ? '.' : ' (pela nota do 3.10, sem bocel o espelho é obrigatoriamente inclinado).') + ' ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou balanço da quina com o mesmo mínimo' + (hel ? '. ' : ' (nota do 3.10: sem bocel, espelho inclinado). ')) + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
   }
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));
@@ -1633,7 +1642,7 @@ function detalheSVG(R, o, C) {
     /* avanço da borda, no degrau 1 */
     if (b > 1e-9) {
       const zb = (modo === 'inclinado' ? 0 : e - tn) - fs * 1.2;
-      s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 1), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
+      s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 2), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
     } else { const tx = 'espelho reto, sem saliência'; s += halo(sText(-fs * 0.6, e * 0.5, tx, fs * 0.8, C.muted, 'end', 0, 500)); B(-fs * 0.6 - tW(tx, fs * 0.8), e * 0.5); }
   } else {
     /* helicoidal: degraus soltos (placas) de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
@@ -1647,7 +1656,7 @@ function detalheSVG(R, o, C) {
     /* espessura do degrau, no degrau 3 */
     s += vDim(3 * p + b + fs * 1.6, 3 * e - tD, 3 * e, 'degrau ' + fmt(tD), 1, 0, 3 * p + b, 3 * p + b);
     /* bocel = sobreposição em planta do degrau 2 sobre o 1 */
-    if (b > 1e-9) s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'avanço ' + fmt(b, 1), 2 * e - tD, e, 'right');
+    if (b > 1e-9) s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'avanço ' + fmt(b, 2), 2 * e - tD, e, 'right');
   }
   /* espelho e, no degrau 2 (à esquerda do espelho) */
   const xr2 = p + b, dE = Math.min(p * 0.32, fs * 3.5);
@@ -1712,7 +1721,8 @@ function detalheSVG(R, o, C) {
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
-    (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 1) + ' cm'),
+    hel ? (modo === 'sem' ? 'borda: placas sem sobreposição' : 'borda: cada placa avança ' + fmt(b, 2) + ' cm sobre a de baixo')
+      : (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 2) + ' cm'),
     '  NBR 9077:2001, 4.7.3.1 e: mín. 1,5 cm; NBR 9050:2020, 6.7.1: máx. 1,5 cm',
     R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
     'afastamento da parede ≥ 4 cm (NBR 9077:2001, 4.8.2.4' + (R.nm.acess ? '; NBR 9050:2020, 4.6.5)' : ')'),
@@ -2216,7 +2226,7 @@ function explicacao(R, S, C) {
     dl([
       ['Espelho', 'Parte vertical do degrau. Seu tamanho é a altura de cada passo (e). A NBR 9077 chama de altura h.'],
       ['Piso', 'Parte horizontal onde se pisa. A profundidade p é medida entre as projeções de dois bocéis seguidos. A NBR 9077 chama de largura do degrau (b).'],
-      ['Bocel (nariz)', 'Borda do degrau que avança sobre o espelho de baixo. O avanço não se soma ao piso p. A NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm, ou, sem bocel, um espelho inclinado cuja quina avance esse mesmo tanto; a NBR 9050:2020 (6.7.1) limita o avanço a no máximo 1,5 cm. As duas juntas dão exatamente 1,5 cm. Nesta escada: ' + (R.bocel === 'sem' ? 'espelho reto, sem saliência' : (R.bocel === 'inclinado' ? 'espelho inclinado, com a quina avançando ' : 'bocel de ') + f(R.avanco, 1) + ' cm') + '.'],
+      ['Bocel (nariz)', 'Borda do degrau que avança sobre o espelho de baixo. O avanço não se soma ao piso p. A NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm, ou, sem bocel, balanço da quina do degrau sobre o de baixo com esse mesmo mínimo; pela nota do item 3.10, sem bocel o espelho é obrigatoriamente inclinado. A NBR 9050:2020 (6.7.1) limita o avanço a no máximo 1,5 cm. As duas juntas dão exatamente 1,5 cm. Nesta escada: ' + (R.hel ? (R.bocel === 'sem' ? 'placas sem sobreposição' : 'cada placa avança ' + f(R.avanco, 2) + ' cm sobre a de baixo') : R.bocel === 'sem' ? 'espelho reto, sem saliência' : (R.bocel === 'inclinado' ? 'espelho inclinado, com a quina avançando ' : 'bocel de ') + f(R.avanco, 2) + ' cm') + '.'],
       ['Lance (lanço)', 'Trecho contínuo de degraus entre dois patamares, ou entre um piso e um patamar. Pela NBR 9077:2001 (3.30), um lance tem no mínimo três degraus e sobe no máximo 3,70 m.'],
       ['Patamar', 'Piso plano no início, no fim ou entre lances. Interrompe a continuidade do lance e oferece uma superfície para circulação e descanso; também é onde a escada pode mudar de direção.'],
       ['Degrau em leque (ingrauxido)', 'Degrau mais estreito de um lado, usado para fazer a escada virar sem patamar. "Ingrauxido" é o termo da NBR 9077.'],
@@ -2402,7 +2412,9 @@ function renderTypes() {
   }).join('');
 }
 
-function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) el.value = v; }
+/* escreve o valor num campo que não está sendo digitado; o valor escrito é válido, então o campo sai do estado de erro
+   (sem isso, um erro antigo de um campo escondido voltava a travar o app quando o campo reaparecia) */
+function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) { el.value = v; delete BAD[id]; el.classList.remove('err'); } }
 
 function falha(msg) {
   CUR = null;
@@ -2428,8 +2440,13 @@ function render(typing) {
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
   const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
   document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
+  const helB = S.tipo === 'helicoidal';
   $('avancoWrap').hidden = bocM === 'sem';
-  $('bocHint').textContent = (bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 pede pelo menos 1,5 cm; a NBR 9050:2020, no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
+  /* na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar */
+  document.querySelector('#bocel button[data-v="inclinado"]').hidden = helB;
+  document.querySelector('#bocel button[data-v="bocel"]').textContent = helB ? 'Placas sobrepostas' : 'Bocel';
+  document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
+  $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1), no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });

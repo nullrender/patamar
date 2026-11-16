@@ -137,7 +137,9 @@ function renderTypes() {
   }).join('');
 }
 
-function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) el.value = v; }
+/* escreve o valor num campo que não está sendo digitado; o valor escrito é válido, então o campo sai do estado de erro
+   (sem isso, um erro antigo de um campo escondido voltava a travar o app quando o campo reaparecia) */
+function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) { el.value = v; delete BAD[id]; el.classList.remove('err'); } }
 
 function falha(msg) {
   CUR = null;
@@ -163,8 +165,13 @@ function render(typing) {
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
   const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
   document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
+  const helB = S.tipo === 'helicoidal';
   $('avancoWrap').hidden = bocM === 'sem';
-  $('bocHint').textContent = (bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 pede pelo menos 1,5 cm; a NBR 9050:2020, no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
+  /* na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar */
+  document.querySelector('#bocel button[data-v="inclinado"]').hidden = helB;
+  document.querySelector('#bocel button[data-v="bocel"]').textContent = helB ? 'Placas sobrepostas' : 'Bocel';
+  document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
+  $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1), no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });

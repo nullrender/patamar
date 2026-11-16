@@ -91,8 +91,14 @@ function calc(inp) {
   pos('D', 'Diâmetro externo', 60, 1000); pos('Dc', 'Diâmetro do pilar', 4, 200);
   pos('zCorte', 'Altura do corte', 20, 3000);
   /* borda do degrau: bocel (nariz saliente), espelho inclinado (a quina avança) ou sem saliência */
-  const bocelModo = ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) >= 0 ? st.bocel : 'bocel';
-  if (bocelModo !== 'sem') pos('avanco', 'Avanço do bocel', 0.1, 10);
+  if (st.bocel !== undefined && st.bocel !== null && ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) < 0) erro('Borda do degrau: opção inválida. Escolha Bocel, Espelho inclinado ou Sem saliência.');
+  const bocelModo = st.bocel || 'bocel';
+  if (bocelModo === 'inclinado' && st.tipo === 'helicoidal') erro('Na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar. Em "Borda do degrau", escolha Bocel (as placas se sobrepõem) ou Sem saliência.');
+  if (bocelModo !== 'sem') {
+    const av = Number(st.avanco);
+    if (isFinite(av) && av <= 0) erro('Avanço sobre o degrau de baixo precisa ser maior que zero (você digitou ' + fmt(av, 2) + '). Para uma borda sem saliência, escolha "Sem saliência".');
+    pos('avanco', 'Avanço sobre o degrau de baixo', 0.1, 10);
+  }
   const avanco = bocelModo === 'sem' ? 0 : st.avanco;
   if (!st.pAuto) pos('p', 'Piso', 10, 100);
   let nm = NORMAS[st.norma] || NORMAS.res;
@@ -650,10 +656,13 @@ function calc(inp) {
      NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou, sem bocel, balanço da quina sobre o degrau de baixo com o mesmo mínimo;
      NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a projeção da aresta avança no máximo 1,5 cm. */
   {
-    const nomeB = bocelModo === 'bocel' ? 'bocel de ' + fmt(avanco, 1) + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + fmt(avanco, 1) + ' cm' : 'sem saliência (espelho reto)';
-    if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
+    /* avanço com até 2 casas: 1,45 não pode aparecer como "1,5" ao lado de "mínimo 1,5" */
+    const av2 = fmt(avanco, 2);
+    const nomeB = hel ? (bocelModo === 'sem' ? 'placas sem sobreposição' : 'cada placa avança ' + av2 + ' cm sobre a de baixo')
+      : bocelModo === 'bocel' ? 'bocel de ' + av2 + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + av2 + ' cm' : 'sem saliência (espelho reto)';
+    if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm de bocel ou de balanço da quina; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
     else if (nm.acess) { const ruim = avanco > 1.5 + TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço máx. 1,5 cm', ruim ? 'bad' : 'ok', ruim ? 'Não atende: a NBR 9050:2020 (6.7.1) limita a projeção do bocel ou da quina a 1,5 cm. (Na prática, uma borda muito saliente pode prender a ponta do pé de quem sobe.)' : 'NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a aresta avança no máximo 1,5 cm; degrau sem saliência também atende.'); }
-    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, um espelho inclinado cuja quina avance esse mesmo tanto sobre o degrau de baixo. ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou quina do espelho inclinado avançando o mesmo tanto. ') + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, balanço da quina do degrau sobre o de baixo com esse mesmo mínimo' + (hel ? '.' : ' (pela nota do 3.10, sem bocel o espelho é obrigatoriamente inclinado).') + ' ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou balanço da quina com o mesmo mínimo' + (hel ? '. ' : ' (nota do 3.10: sem bocel, espelho inclinado). ')) + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
   }
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));

@@ -123,7 +123,7 @@ function detalheSVG(R, o, C) {
     /* avanço da borda, no degrau 1 */
     if (b > 1e-9) {
       const zb = (modo === 'inclinado' ? 0 : e - tn) - fs * 1.2;
-      s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 1), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
+      s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 2), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
     } else { const tx = 'espelho reto, sem saliência'; s += halo(sText(-fs * 0.6, e * 0.5, tx, fs * 0.8, C.muted, 'end', 0, 500)); B(-fs * 0.6 - tW(tx, fs * 0.8), e * 0.5); }
   } else {
     /* helicoidal: degraus soltos (placas) de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
@@ -137,7 +137,7 @@ function detalheSVG(R, o, C) {
     /* espessura do degrau, no degrau 3 */
     s += vDim(3 * p + b + fs * 1.6, 3 * e - tD, 3 * e, 'degrau ' + fmt(tD), 1, 0, 3 * p + b, 3 * p + b);
     /* bocel = sobreposição em planta do degrau 2 sobre o 1 */
-    if (b > 1e-9) s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'avanço ' + fmt(b, 1), 2 * e - tD, e, 'right');
+    if (b > 1e-9) s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'avanço ' + fmt(b, 2), 2 * e - tD, e, 'right');
   }
   /* espelho e, no degrau 2 (à esquerda do espelho) */
   const xr2 = p + b, dE = Math.min(p * 0.32, fs * 3.5);
@@ -202,7 +202,8 @@ function detalheSVG(R, o, C) {
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
-    (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 1) + ' cm'),
+    hel ? (modo === 'sem' ? 'borda: placas sem sobreposição' : 'borda: cada placa avança ' + fmt(b, 2) + ' cm sobre a de baixo')
+      : (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 2) + ' cm'),
     '  NBR 9077:2001, 4.7.3.1 e: mín. 1,5 cm; NBR 9050:2020, 6.7.1: máx. 1,5 cm',
     R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
     'afastamento da parede ≥ 4 cm (NBR 9077:2001, 4.8.2.4' + (R.nm.acess ? '; NBR 9050:2020, 4.6.5)' : ')'),
