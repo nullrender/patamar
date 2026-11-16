@@ -2,7 +2,8 @@
    Desenho ampliado de três degraus típicos (retos) em corte, para mostrar ao professor.
    Unidades em cm, eixo y para cima (sLine/sText já invertem). Só usa as cores do tema (C).
    Valores de norma conferidos no texto:
-   - bocel 1,5 cm: NBR 9077:2001, 4.7.3.1 e (mínimo) e NBR 9050:2020, 6.7.1 (máximo) → exatamente 1,5;
+   - borda do degrau (R.bocel: 'bocel', 'inclinado' ou 'sem'; avanço R.avanco): NBR 9077:2001, 4.7.3.1 e (mínimo 1,5)
+     e NBR 9050:2020, 6.7.1 (máximo 1,5);
    - corrimão de seção circular com Ø de 38 a 65 mm: NBR 9077:2001, 4.8.2.3;
    - corrimão afastado no mínimo 40 mm da parede: NBR 9077:2001, 4.8.2.4.
    A altura do corrimão (92 cm, e 70 cm no perfil NBR 9050) é desenhada fora de escala, com a cota interrompida. */
@@ -11,7 +12,7 @@ let DTL = 0;
 function detalheSVG(R, o, C) {
   o = o || {};
   const e = R.e, p = R.p, st = R.st, hel = !!R.hel;
-  const b = 1.5; /* bocel */
+  const modo = R.bocel || 'bocel', b = modo === 'sem' ? 0 : (R.avanco === undefined ? 1.5 : R.avanco); /* avanço da borda */
   const a = Math.atan2(e, p), ca = Math.cos(a), sa = Math.sin(a), tg = e / p;
   const u = [ca, sa], n = [-sa, ca];
   const add = (P, v, t) => [P[0] + v[0] * t, P[1] + v[1] * t];
@@ -74,8 +75,12 @@ function detalheSVG(R, o, C) {
   /* ---------- degraus ---------- */
   const tn = clamp(e * 0.16, 2, 3.5); /* altura do bocel só para o desenho (não é cotada) */
   const noseRight = (k, xr) => {
-    /* do pé do espelho (xr) até o topo do piso k, com a face de baixo do bocel chanfrada e a ponta arredondada */
+    /* do pé do espelho (xr) até o topo do piso k */
     const z1 = k * e, xn = (k - 1) * p;
+    if (modo === 'sem' || b < 1e-9) return [[xn, z1]];                 /* espelho reto, quina viva */
+    if (modo === 'inclinado') return [[xn, z1]];                       /* espelho inclinado: do pé direto até a quina */
+    if (b < 1.2) return [[xr, z1 - tn], [xn, z1 - tn], [xn, z1]];      /* bocel curto: avanço reto */
+    /* bocel: face de baixo chanfrada e ponta arredondada */
     return [[xr, z1 - tn - 0.9], [xn + 0.5, z1 - tn], [xn, z1 - tn + 0.5], [xn, z1 - 0.45], [xn + 0.45, z1]];
   };
   let zMin = 0, zMax = 4 * e, xMin = -p, xMax = 3 * p + b;
@@ -115,9 +120,11 @@ function detalheSVG(R, o, C) {
       const q = add(add(Pe, n, -tl / 2), u, fs * 3.2); B(q[0] + fs * 2, q[1]);
     } else s += sText(Pe[0] + fs, Pe[1] - fs * 1.5, 'sem laje', fs * 0.8, C.muted, 'start');
     s += halo(sText((Ps[0] + Pe[0]) / 2 + p * 0.25, zu((Ps[0] + Pe[0]) / 2 + p * 0.25) - fs * 1.4, 'concreto', fs * 0.8, C.muted, 'middle', -R.incl, 500));
-    /* bocel, no degrau 1 */
-    const zb = e - tn - fs * 1.2;
-    s += hDim(0, b, zb, 'bocel 1,5', e - tn, e - tn - 0.9, 'left');
+    /* avanço da borda, no degrau 1 */
+    if (b > 1e-9) {
+      const zb = (modo === 'inclinado' ? 0 : e - tn) - fs * 1.2;
+      s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 1), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
+    } else { const tx = 'espelho reto, sem saliência'; s += halo(sText(-fs * 0.6, e * 0.5, tx, fs * 0.8, C.muted, 'end', 0, 500)); B(-fs * 0.6 - tW(tx, fs * 0.8), e * 0.5); }
   } else {
     /* helicoidal: degraus soltos (placas) de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
     for (let k = 0; k <= 3; k++) {
@@ -130,7 +137,7 @@ function detalheSVG(R, o, C) {
     /* espessura do degrau, no degrau 3 */
     s += vDim(3 * p + b + fs * 1.6, 3 * e - tD, 3 * e, 'degrau ' + fmt(tD), 1, 0, 3 * p + b, 3 * p + b);
     /* bocel = sobreposição em planta do degrau 2 sobre o 1 */
-    s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'bocel 1,5', 2 * e - tD, e, 'right');
+    if (b > 1e-9) s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'avanço ' + fmt(b, 1), 2 * e - tD, e, 'right');
   }
   /* espelho e, no degrau 2 (à esquerda do espelho) */
   const xr2 = p + b, dE = Math.min(p * 0.32, fs * 3.5);
@@ -195,8 +202,8 @@ function detalheSVG(R, o, C) {
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
-    'bocel 1,5 cm: NBR 9077:2001, 4.7.3.1 e (mín. 1,5)',
-    '  e NBR 9050:2020, 6.7.1 (máx. 1,5)',
+    (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 1) + ' cm'),
+    '  NBR 9077:2001, 4.7.3.1 e: mín. 1,5 cm; NBR 9050:2020, 6.7.1: máx. 1,5 cm',
     R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
     'afastamento da parede ≥ 4 cm (NBR 9077:2001, 4.8.2.4' + (R.nm.acess ? '; NBR 9050:2020, 4.6.5)' : ')'),
     'altura do corrimão (' + alturas.join(' e ') + ' cm) medida na vertical',

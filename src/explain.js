@@ -188,7 +188,7 @@ function explicacao(R, S, C) {
     dl([
       ['Espelho', 'Parte vertical do degrau. Seu tamanho é a altura de cada passo (e). A NBR 9077 chama de altura h.'],
       ['Piso', 'Parte horizontal onde se pisa. A profundidade p é medida entre as projeções de dois bocéis seguidos. A NBR 9077 chama de largura do degrau (b).'],
-      ['Bocel (nariz)', 'Borda do degrau que avança sobre o espelho de baixo. O avanço não se soma ao piso p. A NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1) limita o avanço a no máximo 1,5 cm. As duas juntas dão exatamente 1,5 cm.'],
+      ['Bocel (nariz)', 'Borda do degrau que avança sobre o espelho de baixo. O avanço não se soma ao piso p. A NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm, ou, sem bocel, um espelho inclinado cuja quina avance esse mesmo tanto; a NBR 9050:2020 (6.7.1) limita o avanço a no máximo 1,5 cm. As duas juntas dão exatamente 1,5 cm. Nesta escada: ' + (R.bocel === 'sem' ? 'espelho reto, sem saliência' : (R.bocel === 'inclinado' ? 'espelho inclinado, com a quina avançando ' : 'bocel de ') + f(R.avanco, 1) + ' cm') + '.'],
       ['Lance (lanço)', 'Trecho contínuo de degraus entre dois patamares, ou entre um piso e um patamar. Pela NBR 9077:2001 (3.30), um lance tem no mínimo três degraus e sobe no máximo 3,70 m.'],
       ['Patamar', 'Piso plano no início, no fim ou entre lances. Interrompe a continuidade do lance e oferece uma superfície para circulação e descanso; também é onde a escada pode mudar de direção.'],
       ['Degrau em leque (ingrauxido)', 'Degrau mais estreito de um lado, usado para fazer a escada virar sem patamar. "Ingrauxido" é o termo da NBR 9077.'],

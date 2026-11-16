@@ -43,7 +43,7 @@ const DEFAULTS = {
   nAuto: true, N: 16, pAuto: true, p: 29, n1Auto: true, n1: 7,
   lado: 'dir', kLeque: 3, nMeio: 1, nMeioP: 4, nMeioPAuto: true, vao: 10, LpAuto: true, Lp: 100, leque: 'bal',
   D: 220, Dc: 20, nPerAuto: true, nPer: 13,
-  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5,
+  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5, bocel: 'bocel', avanco: 1.5,
   zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true, showCortes: true, vistaCorte: 'A', corteA: 0, corteB: 0,
   cEmin: 16, cEmax: 18, cPmin: 25, cPmax: 32, cBmin: 63, cBmax: 64, cLmin: 80, cHpat: 320, cDw: 55, cLq: 15,
 };
@@ -90,6 +90,10 @@ function calc(inp) {
   pos('vao', 'Vão entre lances', 0, 500); pos('Lp', 'Profundidade do patamar', 30, 1000);
   pos('D', 'Diâmetro externo', 60, 1000); pos('Dc', 'Diâmetro do pilar', 4, 200);
   pos('zCorte', 'Altura do corte', 20, 3000);
+  /* borda do degrau: bocel (nariz saliente), espelho inclinado (a quina avança) ou sem saliência */
+  const bocelModo = ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) >= 0 ? st.bocel : 'bocel';
+  if (bocelModo !== 'sem') pos('avanco', 'Avanço do bocel', 0.1, 10);
+  const avanco = bocelModo === 'sem' ? 0 : st.avanco;
   if (!st.pAuto) pos('p', 'Piso', 10, 100);
   let nm = NORMAS[st.norma] || NORMAS.res;
   if (st.norma === 'custom') {
@@ -642,6 +646,15 @@ function calc(inp) {
   chk('L', hel ? 'Largura útil (raio − pilar)' : 'Largura útil', fmt(Lval) + ' cm', 'mín. ' + fmt(nm.Lmin) + ' cm', lOk, lOk !== 'ok' ? (hel ? 'Não atende: abaixo do mínimo do perfil. Alguns códigos de obras têm regra própria para caracol; se for o caso, use "Personalizada".' : 'Não atende: abaixo do mínimo do perfil.') : '');
   const maxRise = Math.max.apply(null, rises);
   chk('patamar', 'Desnível sem patamar', fmt(maxRise, 1) + ' cm', 'até ' + fmt(nm.hPat) + ' cm', maxRise > nm.hPat + 1e-6 ? 'bad' : 'ok', maxRise > nm.hPat + 1e-6 ? (rises.length > 1 ? 'Um lance ficou com ' + fmt(maxRise, 1) + ' cm. Este tipo tem ' + (rises.length - 1 === 1 ? 'um patamar só' : (rises.length - 1) + ' patamares') + '; com este desnível seriam precisos mais. Mude a divisão em "Pisos no 1º lance"' + (rises.length > 2 ? ' e "Pisos no lance do meio"' : '') + ', use um tipo com mais patamares ou reduza o desnível.' : 'Passou do máximo sem patamar: use um tipo com patamar.') : '');
+  /* borda do degrau (bocel ou quina do espelho inclinado):
+     NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou, sem bocel, balanço da quina sobre o degrau de baixo com o mesmo mínimo;
+     NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a projeção da aresta avança no máximo 1,5 cm. */
+  {
+    const nomeB = bocelModo === 'bocel' ? 'bocel de ' + fmt(avanco, 1) + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + fmt(avanco, 1) + ' cm' : 'sem saliência (espelho reto)';
+    if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
+    else if (nm.acess) { const ruim = avanco > 1.5 + TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço máx. 1,5 cm', ruim ? 'bad' : 'ok', ruim ? 'Não atende: a NBR 9050:2020 (6.7.1) limita a projeção do bocel ou da quina a 1,5 cm. (Na prática, uma borda muito saliente pode prender a ponta do pé de quem sobe.)' : 'NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a aresta avança no máximo 1,5 cm; degrau sem saliência também atende.'); }
+    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, um espelho inclinado cuja quina avance esse mesmo tanto sobre o degrau de baixo. ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou quina do espelho inclinado avançando o mesmo tanto. ') + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+  }
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));
   const lMin = Math.min.apply(null, lancos);
@@ -698,7 +711,7 @@ function calc(inp) {
   return {
     st, nm, tipo, hel, H, N, e, T, p: pReal, pInput: p, pAlvo, bl, incl, L, Lp, g, kw, nMeio, dw, thk,
     a, b, avail, nSug, rises, polys, walk, arrival: hel ? arrival : { pts: arrivalPts }, slab: hel ? slab : { pts: slabPts },
-    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente,
+    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente, bocel: bocelModo, avanco,
     pole, helix, opening, kc, kCut, zc, person, lances: lancesTxt, nReto, nLeque, nPat, contagem, areaOcup, temFaixa, fP, bbox, bboxAll, startEdge, Wtot, checks, memo, mirror,
   };
 }

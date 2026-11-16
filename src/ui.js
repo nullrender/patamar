@@ -32,7 +32,7 @@ const FIELDS = [
   { id: 'D', key: 'D', kind: 'num' }, { id: 'Dc', key: 'Dc', kind: 'num' },
   { id: 'hLivre', key: 'hLivre', kind: 'num' }, { id: 'espLaje', key: 'espLaje', kind: 'num' },
   { id: 'tLaje', key: 'tLaje', kind: 'num' }, { id: 'espDegrau', key: 'espDegrau', kind: 'num' },
-  { id: 'zCorte', key: 'zCorte', kind: 'num' },
+  { id: 'zCorte', key: 'zCorte', kind: 'num' }, { id: 'avanco', key: 'avanco', kind: 'num' },
   { id: 'cEmin', key: 'cEmin', kind: 'num' }, { id: 'cEmax', key: 'cEmax', kind: 'num' }, { id: 'cPmin', key: 'cPmin', kind: 'num' }, { id: 'cPmax', key: 'cPmax', kind: 'num' },
   { id: 'cBmin', key: 'cBmin', kind: 'num' }, { id: 'cBmax', key: 'cBmax', kind: 'num' }, { id: 'cLmin', key: 'cLmin', kind: 'num' }, { id: 'cHpat', key: 'cHpat', kind: 'num' }, { id: 'cDw', key: 'cDw', kind: 'num' }, { id: 'cLq', key: 'cLq', kind: 'num' },
 ];
@@ -49,6 +49,8 @@ function mount() {
     '<section class="card"><h2>Degraus</h2>' +
     '<div class="field"><div class="labrow"><label for="N">Número de espelhos</label><label class="auto"><input type="checkbox" id="nAuto"> sugerido</label></div><div class="stepper"><button type="button" id="Nminus" aria-label="Menos um espelho">−</button><input id="N" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="Nplus" aria-label="Mais um espelho">+</button></div><p class="hint" id="Nhint"></p></div>' +
     '<div class="field"><div class="labrow"><label for="p" id="pLab">Piso (profundidade)</label><label class="auto"><input type="checkbox" id="pAuto"> pela fórmula</label></div><div class="inp"><input id="p" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
+    '<div class="field"><span class="lab" id="bocLab">Borda do degrau</span><div class="seg" id="bocel" role="group" aria-labelledby="bocLab"><button type="button" data-v="bocel">Bocel</button><button type="button" data-v="inclinado">Espelho inclinado</button><button type="button" data-v="sem">Sem saliência</button></div></div>' +
+    '<div class="field" id="avancoWrap"><label for="avanco">Avanço sobre o degrau de baixo</label><div class="inp"><input id="avanco" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div><p class="hint" id="bocHint"></p></div>' +
     '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
     '<section class="card" id="cardEsp"><h2>Detalhes do tipo</h2>' +
     '<div class="field" data-for="l-leque u-leque"><span class="lab" id="lqLab">Forma dos leques</span><div class="seg" id="leque" role="group" aria-labelledby="lqLab"><button type="button" data-v="bal">Balanceados</button><button type="button" data-v="conv">Convergentes</button></div><p class="hint" id="lqHint"></p></div>' +
@@ -96,6 +98,7 @@ function bind() {
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
+  $('bocel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bocel = b.dataset.v; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
   $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
@@ -158,6 +161,10 @@ function render(typing) {
   THEME = THEME || getTheme();
   opcoesK(S.leque !== 'conv', 0, clamp(Math.round(num(S.kLeque, 3)), 2, 6));
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
+  const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
+  document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
+  $('avancoWrap').hidden = bocM === 'sem';
+  $('bocHint').textContent = (bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 pede pelo menos 1,5 cm; a NBR 9050:2020, no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -193,6 +200,7 @@ function render(typing) {
     $('nPerHint').textContent = 'Cada degrau gira ' + fmt(R.helix.th, 1) + '°. Para o piso de ' + fmt(R.hel ? R.pAlvo : R.p, 1) + ' cm seriam ' + R.helix.nPref + '; para a altura livre, no mínimo ' + R.helix.nReq + '. Menos degraus por volta: piso mais largo e menos altura livre.';
   }
   setVal('nMeioP', String(R.nMeioP));
+  setVal('avanco', plain(S.avanco));
   setVal('N', String(R.N)); setVal('p', S.pAuto ? plain(R.hel ? R.pAlvo : R.pInput) : plain(S.p)); setVal('n1', String(R.a)); setVal('Lp', plain(R.Lp));
   $('pLab').textContent = R.hel ? 'Piso desejado (linha de caminhamento)' : 'Piso (profundidade)';
   $('Nhint').textContent = 'Sugestão: ' + R.nSug + ' espelhos (espelho de ' + fmt(S.H / R.nSug, 2) + ' cm). Atual: ' + fmt(R.e, 2) + ' cm.';

@@ -163,6 +163,19 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const fc=buildFaces(calc({}),C); ok(fc.some(f=>f.kind==='top'&&f.tris.some(t=>t.some(v=>Math.abs(v[2]-(280-12))<1e-6))) ,'3D: dente da chegada sob a laje de cima');
 }
 { const hc=corteSVG(calc({tipo:'helicoidal'}),{},C,'A'); const pp=[...hc.matchAll(/<polygon points="([^"]+)" fill="url\(#hcc\d+\)"/g)].map(m=>m[1].split(' ').map(p=>p.split(',').map(Number))); const top1=p=>{const ys=p.map(q=>q[1]),mn=Math.min(...ys);return ys.filter(y=>Math.abs(y-mn)<1e-6).length===2;}; ok(pp.length>1 && pp.every(top1),'helicoidal: cada degrau cortado é uma placa solta (sem espelho ligando)'); }
+/* v6.1: borda do degrau (bocel, espelho inclinado, sem saliência) */
+{
+  ok(st(calc({}),'bocel')==='ok','padrão: bocel de 1,5 cm atende o perfil Estudo');
+  ok(st(calc({bocel:'sem'}),'bocel')==='bad' && st(calc({avanco:1}),'bocel')==='bad','Estudo (NBR 9077): sem saliência ou bocel de 1 cm não atende (mín. 1,5)');
+  ok(st(calc({bocel:'inclinado',avanco:2}),'bocel')==='ok','Estudo: espelho inclinado com quina de 2 cm atende');
+  ok(st(calc({norma:'acess',L:120,bocel:'sem'}),'bocel')==='ok' && st(calc({norma:'acess',L:120,avanco:2}),'bocel')==='bad','NBR 9050: sem saliência atende; bocel de 2 cm não (máx. 1,5)');
+  ok(st(calc({norma:'custom',avanco:3}),'bocel')==='info','perfil personalizado: borda só informada');
+  let eA=false; try{calc({avanco:0});}catch(e){eA=!!e.patamar;} ok(eA,'avanço de bocel zero com "bocel" escolhido dá erro de entrada');
+  let eS=true; try{calc({bocel:'sem',avanco:'abc'});}catch(e){eS=false;} ok(eS,'sem saliência ignora o campo de avanço');
+  const dB=detalheSVG(calc({avanco:2.5}),{},C), dI=detalheSVG(calc({bocel:'inclinado'}),{},C), dS=detalheSVG(calc({bocel:'sem'}),{},C);
+  ok(/bocel 2,5/.test(dB) && /quina 1,5/.test(dI) && /sem saliência/.test(dS),'detalhe desenha e cota cada tipo de borda');
+  ok(/espelho reto, sem saliência/.test(explicacao(calc({bocel:'sem'}),calc({bocel:'sem'}).st,C)),'explicação cita a borda escolhida');
+}
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');

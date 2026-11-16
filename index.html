@@ -89,6 +89,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .seg button{flex:1;border:0;background:var(--paper);padding:9px;cursor:pointer;font-size:14px}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
+#bocel button{font-size:13px;padding:9px 4px}
 
 .out{display:flex;flex-direction:column;gap:12px;min-width:0}
 .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
@@ -331,7 +332,7 @@ const DEFAULTS = {
   nAuto: true, N: 16, pAuto: true, p: 29, n1Auto: true, n1: 7,
   lado: 'dir', kLeque: 3, nMeio: 1, nMeioP: 4, nMeioPAuto: true, vao: 10, LpAuto: true, Lp: 100, leque: 'bal',
   D: 220, Dc: 20, nPerAuto: true, nPer: 13,
-  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5,
+  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5, bocel: 'bocel', avanco: 1.5,
   zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true, showCortes: true, vistaCorte: 'A', corteA: 0, corteB: 0,
   cEmin: 16, cEmax: 18, cPmin: 25, cPmax: 32, cBmin: 63, cBmax: 64, cLmin: 80, cHpat: 320, cDw: 55, cLq: 15,
 };
@@ -378,6 +379,10 @@ function calc(inp) {
   pos('vao', 'Vão entre lances', 0, 500); pos('Lp', 'Profundidade do patamar', 30, 1000);
   pos('D', 'Diâmetro externo', 60, 1000); pos('Dc', 'Diâmetro do pilar', 4, 200);
   pos('zCorte', 'Altura do corte', 20, 3000);
+  /* borda do degrau: bocel (nariz saliente), espelho inclinado (a quina avança) ou sem saliência */
+  const bocelModo = ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) >= 0 ? st.bocel : 'bocel';
+  if (bocelModo !== 'sem') pos('avanco', 'Avanço do bocel', 0.1, 10);
+  const avanco = bocelModo === 'sem' ? 0 : st.avanco;
   if (!st.pAuto) pos('p', 'Piso', 10, 100);
   let nm = NORMAS[st.norma] || NORMAS.res;
   if (st.norma === 'custom') {
@@ -930,6 +935,15 @@ function calc(inp) {
   chk('L', hel ? 'Largura útil (raio − pilar)' : 'Largura útil', fmt(Lval) + ' cm', 'mín. ' + fmt(nm.Lmin) + ' cm', lOk, lOk !== 'ok' ? (hel ? 'Não atende: abaixo do mínimo do perfil. Alguns códigos de obras têm regra própria para caracol; se for o caso, use "Personalizada".' : 'Não atende: abaixo do mínimo do perfil.') : '');
   const maxRise = Math.max.apply(null, rises);
   chk('patamar', 'Desnível sem patamar', fmt(maxRise, 1) + ' cm', 'até ' + fmt(nm.hPat) + ' cm', maxRise > nm.hPat + 1e-6 ? 'bad' : 'ok', maxRise > nm.hPat + 1e-6 ? (rises.length > 1 ? 'Um lance ficou com ' + fmt(maxRise, 1) + ' cm. Este tipo tem ' + (rises.length - 1 === 1 ? 'um patamar só' : (rises.length - 1) + ' patamares') + '; com este desnível seriam precisos mais. Mude a divisão em "Pisos no 1º lance"' + (rises.length > 2 ? ' e "Pisos no lance do meio"' : '') + ', use um tipo com mais patamares ou reduza o desnível.' : 'Passou do máximo sem patamar: use um tipo com patamar.') : '');
+  /* borda do degrau (bocel ou quina do espelho inclinado):
+     NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou, sem bocel, balanço da quina sobre o degrau de baixo com o mesmo mínimo;
+     NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a projeção da aresta avança no máximo 1,5 cm. */
+  {
+    const nomeB = bocelModo === 'bocel' ? 'bocel de ' + fmt(avanco, 1) + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + fmt(avanco, 1) + ' cm' : 'sem saliência (espelho reto)';
+    if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
+    else if (nm.acess) { const ruim = avanco > 1.5 + TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço máx. 1,5 cm', ruim ? 'bad' : 'ok', ruim ? 'Não atende: a NBR 9050:2020 (6.7.1) limita a projeção do bocel ou da quina a 1,5 cm. (Na prática, uma borda muito saliente pode prender a ponta do pé de quem sobe.)' : 'NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a aresta avança no máximo 1,5 cm; degrau sem saliência também atende.'); }
+    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, um espelho inclinado cuja quina avance esse mesmo tanto sobre o degrau de baixo. ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou quina do espelho inclinado avançando o mesmo tanto. ') + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+  }
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));
   const lMin = Math.min.apply(null, lancos);
@@ -986,7 +1000,7 @@ function calc(inp) {
   return {
     st, nm, tipo, hel, H, N, e, T, p: pReal, pInput: p, pAlvo, bl, incl, L, Lp, g, kw, nMeio, dw, thk,
     a, b, avail, nSug, rises, polys, walk, arrival: hel ? arrival : { pts: arrivalPts }, slab: hel ? slab : { pts: slabPts },
-    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente,
+    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente, bocel: bocelModo, avanco,
     pole, helix, opening, kc, kCut, zc, person, lances: lancesTxt, nReto, nLeque, nPat, contagem, areaOcup, temFaixa, fP, bbox, bboxAll, startEdge, Wtot, checks, memo, mirror,
   };
 }
@@ -1498,7 +1512,8 @@ function chamadaCorte(R, qual, fs, C, bbA) {
    Desenho ampliado de três degraus típicos (retos) em corte, para mostrar ao professor.
    Unidades em cm, eixo y para cima (sLine/sText já invertem). Só usa as cores do tema (C).
    Valores de norma conferidos no texto:
-   - bocel 1,5 cm: NBR 9077:2001, 4.7.3.1 e (mínimo) e NBR 9050:2020, 6.7.1 (máximo) → exatamente 1,5;
+   - borda do degrau (R.bocel: 'bocel', 'inclinado' ou 'sem'; avanço R.avanco): NBR 9077:2001, 4.7.3.1 e (mínimo 1,5)
+     e NBR 9050:2020, 6.7.1 (máximo 1,5);
    - corrimão de seção circular com Ø de 38 a 65 mm: NBR 9077:2001, 4.8.2.3;
    - corrimão afastado no mínimo 40 mm da parede: NBR 9077:2001, 4.8.2.4.
    A altura do corrimão (92 cm, e 70 cm no perfil NBR 9050) é desenhada fora de escala, com a cota interrompida. */
@@ -1507,7 +1522,7 @@ let DTL = 0;
 function detalheSVG(R, o, C) {
   o = o || {};
   const e = R.e, p = R.p, st = R.st, hel = !!R.hel;
-  const b = 1.5; /* bocel */
+  const modo = R.bocel || 'bocel', b = modo === 'sem' ? 0 : (R.avanco === undefined ? 1.5 : R.avanco); /* avanço da borda */
   const a = Math.atan2(e, p), ca = Math.cos(a), sa = Math.sin(a), tg = e / p;
   const u = [ca, sa], n = [-sa, ca];
   const add = (P, v, t) => [P[0] + v[0] * t, P[1] + v[1] * t];
@@ -1570,8 +1585,12 @@ function detalheSVG(R, o, C) {
   /* ---------- degraus ---------- */
   const tn = clamp(e * 0.16, 2, 3.5); /* altura do bocel só para o desenho (não é cotada) */
   const noseRight = (k, xr) => {
-    /* do pé do espelho (xr) até o topo do piso k, com a face de baixo do bocel chanfrada e a ponta arredondada */
+    /* do pé do espelho (xr) até o topo do piso k */
     const z1 = k * e, xn = (k - 1) * p;
+    if (modo === 'sem' || b < 1e-9) return [[xn, z1]];                 /* espelho reto, quina viva */
+    if (modo === 'inclinado') return [[xn, z1]];                       /* espelho inclinado: do pé direto até a quina */
+    if (b < 1.2) return [[xr, z1 - tn], [xn, z1 - tn], [xn, z1]];      /* bocel curto: avanço reto */
+    /* bocel: face de baixo chanfrada e ponta arredondada */
     return [[xr, z1 - tn - 0.9], [xn + 0.5, z1 - tn], [xn, z1 - tn + 0.5], [xn, z1 - 0.45], [xn + 0.45, z1]];
   };
   let zMin = 0, zMax = 4 * e, xMin = -p, xMax = 3 * p + b;
@@ -1611,9 +1630,11 @@ function detalheSVG(R, o, C) {
       const q = add(add(Pe, n, -tl / 2), u, fs * 3.2); B(q[0] + fs * 2, q[1]);
     } else s += sText(Pe[0] + fs, Pe[1] - fs * 1.5, 'sem laje', fs * 0.8, C.muted, 'start');
     s += halo(sText((Ps[0] + Pe[0]) / 2 + p * 0.25, zu((Ps[0] + Pe[0]) / 2 + p * 0.25) - fs * 1.4, 'concreto', fs * 0.8, C.muted, 'middle', -R.incl, 500));
-    /* bocel, no degrau 1 */
-    const zb = e - tn - fs * 1.2;
-    s += hDim(0, b, zb, 'bocel 1,5', e - tn, e - tn - 0.9, 'left');
+    /* avanço da borda, no degrau 1 */
+    if (b > 1e-9) {
+      const zb = (modo === 'inclinado' ? 0 : e - tn) - fs * 1.2;
+      s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 1), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
+    } else { const tx = 'espelho reto, sem saliência'; s += halo(sText(-fs * 0.6, e * 0.5, tx, fs * 0.8, C.muted, 'end', 0, 500)); B(-fs * 0.6 - tW(tx, fs * 0.8), e * 0.5); }
   } else {
     /* helicoidal: degraus soltos (placas) de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
     for (let k = 0; k <= 3; k++) {
@@ -1626,7 +1647,7 @@ function detalheSVG(R, o, C) {
     /* espessura do degrau, no degrau 3 */
     s += vDim(3 * p + b + fs * 1.6, 3 * e - tD, 3 * e, 'degrau ' + fmt(tD), 1, 0, 3 * p + b, 3 * p + b);
     /* bocel = sobreposição em planta do degrau 2 sobre o 1 */
-    s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'bocel 1,5', 2 * e - tD, e, 'right');
+    if (b > 1e-9) s += hDim(p, p + b, 2 * e - tD - fs * 1.2, 'avanço ' + fmt(b, 1), 2 * e - tD, e, 'right');
   }
   /* espelho e, no degrau 2 (à esquerda do espelho) */
   const xr2 = p + b, dE = Math.min(p * 0.32, fs * 3.5);
@@ -1691,8 +1712,8 @@ function detalheSVG(R, o, C) {
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
-    'bocel 1,5 cm: NBR 9077:2001, 4.7.3.1 e (mín. 1,5)',
-    '  e NBR 9050:2020, 6.7.1 (máx. 1,5)',
+    (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 1) + ' cm'),
+    '  NBR 9077:2001, 4.7.3.1 e: mín. 1,5 cm; NBR 9050:2020, 6.7.1: máx. 1,5 cm',
     R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
     'afastamento da parede ≥ 4 cm (NBR 9077:2001, 4.8.2.4' + (R.nm.acess ? '; NBR 9050:2020, 4.6.5)' : ')'),
     'altura do corrimão (' + alturas.join(' e ') + ' cm) medida na vertical',
@@ -2195,7 +2216,7 @@ function explicacao(R, S, C) {
     dl([
       ['Espelho', 'Parte vertical do degrau. Seu tamanho é a altura de cada passo (e). A NBR 9077 chama de altura h.'],
       ['Piso', 'Parte horizontal onde se pisa. A profundidade p é medida entre as projeções de dois bocéis seguidos. A NBR 9077 chama de largura do degrau (b).'],
-      ['Bocel (nariz)', 'Borda do degrau que avança sobre o espelho de baixo. O avanço não se soma ao piso p. A NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1) limita o avanço a no máximo 1,5 cm. As duas juntas dão exatamente 1,5 cm.'],
+      ['Bocel (nariz)', 'Borda do degrau que avança sobre o espelho de baixo. O avanço não se soma ao piso p. A NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm, ou, sem bocel, um espelho inclinado cuja quina avance esse mesmo tanto; a NBR 9050:2020 (6.7.1) limita o avanço a no máximo 1,5 cm. As duas juntas dão exatamente 1,5 cm. Nesta escada: ' + (R.bocel === 'sem' ? 'espelho reto, sem saliência' : (R.bocel === 'inclinado' ? 'espelho inclinado, com a quina avançando ' : 'bocel de ') + f(R.avanco, 1) + ' cm') + '.'],
       ['Lance (lanço)', 'Trecho contínuo de degraus entre dois patamares, ou entre um piso e um patamar. Pela NBR 9077:2001 (3.30), um lance tem no mínimo três degraus e sobe no máximo 3,70 m.'],
       ['Patamar', 'Piso plano no início, no fim ou entre lances. Interrompe a continuidade do lance e oferece uma superfície para circulação e descanso; também é onde a escada pode mudar de direção.'],
       ['Degrau em leque (ingrauxido)', 'Degrau mais estreito de um lado, usado para fazer a escada virar sem patamar. "Ingrauxido" é o termo da NBR 9077.'],
@@ -2276,7 +2297,7 @@ const FIELDS = [
   { id: 'D', key: 'D', kind: 'num' }, { id: 'Dc', key: 'Dc', kind: 'num' },
   { id: 'hLivre', key: 'hLivre', kind: 'num' }, { id: 'espLaje', key: 'espLaje', kind: 'num' },
   { id: 'tLaje', key: 'tLaje', kind: 'num' }, { id: 'espDegrau', key: 'espDegrau', kind: 'num' },
-  { id: 'zCorte', key: 'zCorte', kind: 'num' },
+  { id: 'zCorte', key: 'zCorte', kind: 'num' }, { id: 'avanco', key: 'avanco', kind: 'num' },
   { id: 'cEmin', key: 'cEmin', kind: 'num' }, { id: 'cEmax', key: 'cEmax', kind: 'num' }, { id: 'cPmin', key: 'cPmin', kind: 'num' }, { id: 'cPmax', key: 'cPmax', kind: 'num' },
   { id: 'cBmin', key: 'cBmin', kind: 'num' }, { id: 'cBmax', key: 'cBmax', kind: 'num' }, { id: 'cLmin', key: 'cLmin', kind: 'num' }, { id: 'cHpat', key: 'cHpat', kind: 'num' }, { id: 'cDw', key: 'cDw', kind: 'num' }, { id: 'cLq', key: 'cLq', kind: 'num' },
 ];
@@ -2293,6 +2314,8 @@ function mount() {
     '<section class="card"><h2>Degraus</h2>' +
     '<div class="field"><div class="labrow"><label for="N">Número de espelhos</label><label class="auto"><input type="checkbox" id="nAuto"> sugerido</label></div><div class="stepper"><button type="button" id="Nminus" aria-label="Menos um espelho">−</button><input id="N" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="Nplus" aria-label="Mais um espelho">+</button></div><p class="hint" id="Nhint"></p></div>' +
     '<div class="field"><div class="labrow"><label for="p" id="pLab">Piso (profundidade)</label><label class="auto"><input type="checkbox" id="pAuto"> pela fórmula</label></div><div class="inp"><input id="p" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
+    '<div class="field"><span class="lab" id="bocLab">Borda do degrau</span><div class="seg" id="bocel" role="group" aria-labelledby="bocLab"><button type="button" data-v="bocel">Bocel</button><button type="button" data-v="inclinado">Espelho inclinado</button><button type="button" data-v="sem">Sem saliência</button></div></div>' +
+    '<div class="field" id="avancoWrap"><label for="avanco">Avanço sobre o degrau de baixo</label><div class="inp"><input id="avanco" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div><p class="hint" id="bocHint"></p></div>' +
     '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
     '<section class="card" id="cardEsp"><h2>Detalhes do tipo</h2>' +
     '<div class="field" data-for="l-leque u-leque"><span class="lab" id="lqLab">Forma dos leques</span><div class="seg" id="leque" role="group" aria-labelledby="lqLab"><button type="button" data-v="bal">Balanceados</button><button type="button" data-v="conv">Convergentes</button></div><p class="hint" id="lqHint"></p></div>' +
@@ -2340,6 +2363,7 @@ function bind() {
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
+  $('bocel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bocel = b.dataset.v; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
   $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
@@ -2402,6 +2426,10 @@ function render(typing) {
   THEME = THEME || getTheme();
   opcoesK(S.leque !== 'conv', 0, clamp(Math.round(num(S.kLeque, 3)), 2, 6));
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
+  const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
+  document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
+  $('avancoWrap').hidden = bocM === 'sem';
+  $('bocHint').textContent = (bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 pede pelo menos 1,5 cm; a NBR 9050:2020, no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -2437,6 +2465,7 @@ function render(typing) {
     $('nPerHint').textContent = 'Cada degrau gira ' + fmt(R.helix.th, 1) + '°. Para o piso de ' + fmt(R.hel ? R.pAlvo : R.p, 1) + ' cm seriam ' + R.helix.nPref + '; para a altura livre, no mínimo ' + R.helix.nReq + '. Menos degraus por volta: piso mais largo e menos altura livre.';
   }
   setVal('nMeioP', String(R.nMeioP));
+  setVal('avanco', plain(S.avanco));
   setVal('N', String(R.N)); setVal('p', S.pAuto ? plain(R.hel ? R.pAlvo : R.pInput) : plain(S.p)); setVal('n1', String(R.a)); setVal('Lp', plain(R.Lp));
   $('pLab').textContent = R.hel ? 'Piso desejado (linha de caminhamento)' : 'Piso (profundidade)';
   $('Nhint').textContent = 'Sugestão: ' + R.nSug + ' espelhos (espelho de ' + fmt(S.H / R.nSug, 2) + ' cm). Atual: ' + fmt(R.e, 2) + ' cm.';
