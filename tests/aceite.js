@@ -119,6 +119,21 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ok(R.quant.volConc<=sup+1 && R.quant.volConc>=0.95*sup,'reta: volume de concreto confere com a conta à mão ('+(R.quant.volConc/1e6).toFixed(3)+' m³)');
   ok(Math.abs(R.quant.aEspelhos-16*17.5*100)<1e-6 && Math.abs(R.quant.aPisos-15*29*100)<1e-6,'reta: área de espelhos e de pisos');
 }
+/* v6: detalhe do degrau e 3D com fundo real */
+{
+  let ruimD=0, ruim3=0;
+  for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const lado of ['dir','esq']){
+    const X=calc({tipo:t,norma:no,lado}); const d=detalheSVG(X,{},C);
+    if(!/DETALHE DO DEGRAU/.test(d)||/NaN|undefined|Infinity/.test(d)) ruimD++;
+    const fc=buildFaces(X,C); if(fc.some(f=>f.tris.some(tr=>tr.some(v=>v.some(c=>!isFinite(c)))))) ruim3++;
+  }
+  ok(ruimD===0,'detalhe do degrau nos 9 tipos, sem NaN');
+  ok(ruim3===0,'3D nos 9 tipos, sem coordenada inválida');
+  ok(/4\.8\.2\.3/.test(detalheSVG(calc({}),{},C)) && /bocel 1,5/.test(detalheSVG(calc({}),{},C)),'detalhe cita o diâmetro do corrimão (NBR 9077 4.8.2.3) e o bocel de 1,5 cm');
+  const R=calc({}); const fc=buildFaces(R,C); const d3=R.polys[7];
+  const zs=fc.filter(f=>f.kind==='side').flatMap(f=>f.tris.flat().map(v=>v[2]));
+  ok(zs.some(z=>Math.abs(z-R.zBot(d3,[50,7*29]))<0.01),'3D: fundo dos degraus segue o intradorso (zBot)');
+}
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');

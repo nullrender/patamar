@@ -166,7 +166,7 @@ function explicacao(R, S, C) {
       ['Cortes A-A e B-B', 'Corte é um plano vertical que atravessa a edificação. Na planta ele aparece como uma linha de traço e ponto, com as letras nas pontas e setas que mostram para onde se olha. No desenho do corte, o que o plano atravessa (degraus, laje da escada, laje do piso de cima, chão) aparece hachurado e com traço grosso; o que está além do plano aparece em vista, com traço fino; o que fica atrás de quem olha não aparece. O A-A passa ao longo do 1º lance e o B-B atravessa esse lance; você pode deslocar cada linha. Repare na laje de cima: onde a escada passa, ela é interrompida pela abertura.'],
       ['Detalhe', 'Ampliação de poucos degraus, com as medidas do espelho, do piso, do bocel e da laje, para mostrar o que a escala da planta não deixa ler.'],
       ['Cotas', 'Todas em centímetros. Níveis em metros: ' + nivel(0) + ' é o piso de baixo e ' + nivel(R.H) + ' o de cima.'],
-      ['3D', 'Volumes esquemáticos, só para enxergar o conjunto. Não representa o sistema construtivo. Gire arrastando.']
+      ['3D', 'Modelo para enxergar o conjunto: ' + (R.hel ? 'degraus soltos em volta do pilar, com corrimão do lado de fora' : 'degraus com a face de baixo da laje inclinada de verdade, patamares e corrimãos') + '. Não mostra armadura, revestimento nem acabamentos. Gire arrastando.']
     ]), false);
 
   /* 9. Erros comuns */

@@ -517,7 +517,7 @@ function calc(inp) {
   const Wtot = cum;
 
   /* ---- FACE INFERIOR (intradorso) em qualquer ponto da planta ----
-     Laje de concreto: espessura tLaje medida na perpendicular à linha dos bocéis; nos patamares, laje horizontal.
+     Laje de concreto: espessura tLaje medida na perpendicular à linha dos cantos internos (pés dos espelhos); nos patamares, laje horizontal.
      Ao longo da linha de caminhamento (X) a face inferior é a mesma poligonal do perfil desenvolvido.
      Um ponto da planta é levado a X pela fração entre a aresta de entrada e a de saída do degrau em que ele está:
      exato nos degraus retos; nos leques é uma aproximação suave. Na helicoidal, degraus soltos de espessura espDegrau. */

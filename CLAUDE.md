@@ -1,6 +1,6 @@
 # Patamar
 
-Calculadora de escadas para estudantes de arquitetura. Ela calcula e desenha planta, perfil desenvolvido e 3D, e tem uma aba "Explicação" para a estudante apresentar ao professor. É um app web de página única instalável (PWA), publicado pelo GitHub Pages a partir da branch `main`, na raiz: https://nullrender.github.io/patamar/
+Calculadora de escadas para estudantes de arquitetura. Ela calcula e desenha planta, cortes A-A e B-B, perfil desenvolvido, detalhe do degrau e 3D, e tem uma aba "Explicação" para a estudante apresentar ao professor. É um app web de página única instalável (PWA), publicado pelo GitHub Pages a partir da branch `main`, na raiz: https://nullrender.github.io/patamar/
 
 ## Quem usa e como falar
 
@@ -13,8 +13,9 @@ Calculadora de escadas para estudantes de arquitetura. Ela calcula e desenha pla
 
 ```
 src/core.js      cálculo e geometria (sem DOM). calc(estado) devolve tudo; erro de entrada lança RangeError com .patamar = true
-src/draw.js      SVG da planta (inferior/superior) e do perfil desenvolvido
-src/r3d.js       3D próprio (rasterizador com z-buffer em canvas 2D)
+src/draw.js      SVG da planta (inferior/superior, com as chamadas de corte), do perfil desenvolvido e dos cortes A-A/B-B (corteSVG, cortesDe)
+src/detail.js    detalhe do degrau ampliado (detalheSVG)
+src/r3d.js       3D próprio (rasterizador com z-buffer em canvas 2D): fundo real da laje (R.zBot) e corrimãos
 src/explain.js   aba "Explicação": textos montados com os números do cálculo
 src/ui.js        interface, estado, localStorage (chave patamar-v1), hash #<tipo>[-planta|-corte|-3d|-explica]
 src/template.html  HTML e CSS; o build injeta o JS no lugar de /*__SCRIPT__*/
@@ -45,12 +46,15 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 - Entrada inválida não é corrigida em silêncio: `calc` lança erro e a interface mostra a mensagem, sem desenho.
 - A contagem é N espelhos e N − 1 superfícies entre eles. Patamar e leque contam como superfícies, mas não como "pisos comuns". Use `R.contagem`, `R.nReto`, `R.nLeque` e `R.nPat`.
 - **Leques**: o padrão é `leque: 'bal'` (balanceados, função `balanceado()` no `core.js`). Todos os degraus têm piso p na linha de caminhamento; as larguras na borda interna seguem progressão aritmética numa zona que cresce até a ponta chegar a `lqMin`. `leque: 'conv'` mantém os leques convergentes antigos, para comparar. Cada polígono tem `wIn` e `wOut` (largura nas bordas interna e externa). Teste de área: no balanceado, a soma de todos os degraus é a área do contorno; no convergente, os leques somam L² por curva.
-- O "Perfil" é desenvolvido ao longo da linha de caminhamento. **Não é corte A-A**, e os textos não podem chamá-lo assim.
+- O "Perfil" é desenvolvido ao longo da linha de caminhamento. **Não é corte A-A**, e os textos não podem chamá-lo assim. Os cortes A-A e B-B (aba Cortes) são planos verticais de verdade: A ao longo do 1º lance, B atravessado a ele, deslocáveis (`corteA`, `corteB`); o que é cortado vira poché, o que está além aparece em vista.
+- `R.zBot(pl, [x, y])` dá a cota da face inferior da laje em qualquer ponto da planta (espessura `tLaje` na perpendicular à linha dos cantos internos; patamar horizontal). Cortes, 3D e quantitativos usam essa função.
+- Tipos: reta, reta-patamar, l-patamar, l-leque, u-patamar, u-leque, c-patamar, z-patamar (três lances, dois patamares) e helicoidal (com "Degraus por volta" automático ou escolhido).
 - O artefato do claude.ai não permite download; o "Baixar PNG" só funciona no Pages ou no arquivo local.
 
 ## Pendências conhecidas
 
-- Não existe corte A-A real com chamada na planta, e o 3D é só volumétrico.
+- O 3D não mostra armadura nem acabamentos; o detalhe do degrau é sempre de um degrau reto típico.
+- Os quantitativos são estimativas da geometria (sem perdas nem armadura).
 - A edição de 2025 da NBR 9077 não foi lida.
 - O balanceamento usa progressão aritmética das larguras na borda interna. A NBR 9077:2001 fala em "sistemas de balanceamento recomendados" sem fixar um; outros processos gráficos dão degraus um pouco diferentes.
 - O "Imprimir / PDF" usa `window.print()`; no artefato do claude.ai pode não abrir.

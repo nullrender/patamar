@@ -221,7 +221,7 @@ function render(typing) {
   if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', R.bal ? 'Degrau balanceado' : 'Leque']);
   if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
   const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
-  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">Volumes esquemáticos, só para visualizar. Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
+  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">Modelo de estudo: degraus com o fundo real da laje e corrimãos, sem acabamentos. Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
   $('view3dBar').hidden = VIEW !== '3d';
   $('viewPlantaBar').hidden = VIEW !== 'planta';
   $('viewCorteBar').hidden = VIEW !== 'corte';
