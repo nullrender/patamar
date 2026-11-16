@@ -144,10 +144,10 @@ function calc(inp) {
   let pReal = p;
 
   const rectPts = (F, t0, t1, s0, s1) => [F.map(t0, s0), F.map(t1, s0), F.map(t1, s1), F.map(t0, s1)];
-  const flight = (F, s0, m) => {
-    const gid = ++grpN;
+  const flight = (F, s0, m, tw) => {
+    const gid = ++grpN, tW = tw === undefined ? L - dw : tw; /* tW: posição da linha de caminhamento no lance (padrão: dw do lado direito) */
     for (let j = 0; j < m; j++) { const aa = s0 + j * p; add(rectPts(F, 0, L, aa, aa + p), 'reto', p, { grp: gid, entry: [F.map(0, aa), F.map(L, aa)], wIn: p, wOut: p }); }
-    if (m > 0) walk.push([F.map(L - dw, s0), F.map(L - dw, s0 + m * p)]);
+    if (m > 0) walk.push([F.map(tW, s0), F.map(tW, s0 + m * p)]);
     return s0 + m * p;
   };
   const arcWalk = (F, s0) => {
@@ -174,8 +174,6 @@ function calc(inp) {
   };
   const turn = (F, s0) => { const o = F.map(L, s0 + L); return mkF(o[0], o[1], F.rx, F.ry); };
   const turnL = (F, s0) => { const o = F.map(0, s0); return mkF(o[0], o[1], -F.rx, -F.ry); };
-  /* linha de caminhamento num patamar de canto que vira para a esquerda: arco em volta do canto esquerdo */
-  const arcWalkL = (F, s0) => { const arc = [], r = L - dw; for (let i = 0; i <= 24; i++) { const ph = i / 24 * PI / 2; arc.push(F.map(r * Math.cos(ph), s0 + r * Math.sin(ph))); } walk.push(arc); };
   const split = av => {
     av = Math.max(0, av);
     const aa = st.n1Auto ? Math.ceil(av / 2) : clamp(Math.round(num(st.n1, 1)), 0, av);
@@ -358,7 +356,8 @@ function calc(inp) {
         const zz = tipo === 'z-patamar';
         avail = T - 2; need(avail);
         const mAuto = Math.round(avail / 3);
-        const mm = st.nMeioPAuto ? mAuto : clamp(Math.round(num(st.nMeioP, mAuto)), 0, avail);
+        let mm = mAuto;
+        if (!st.nMeioPAuto) { mm = Number(st.nMeioP); if (!isFinite(mm) || mm !== Math.round(mm) || mm < 0 || mm > avail) erro('Pisos no lance do meio precisa ser um número inteiro entre 0 e ' + avail + ' (com este desnível sobram ' + avail + ' pisos para os três lances).'); }
         nMeioPUsado = mm;
         [a, b] = split(avail - mm);
         let s = flight(F1, 0, a);
@@ -366,10 +365,18 @@ function calc(inp) {
         arcWalk(F1, s);
         const F2 = turn(F1, s);
         const s2 = flight(F2, 0, mm);
-        add(rectPts(F2, 0, L, s2, s2 + L), 'patamar', (zz ? L - dw : dw) * PI / 2, { entry: [F2.map(0, s2), F2.map(L, s2)] });
-        if (zz) arcWalkL(F2, s2); else arcWalk(F2, s2);
+        let wl2 = dw * PI / 2;
+        if (zz) {
+          /* na 2ª curva o lado interno passa a ser o esquerdo: a linha sai de dw da direita e chega a dw da esquerda,
+             numa curva de transição (Bézier quadrática, tangente aos dois trechos retos) */
+          const P0 = F2.map(L - dw, s2), Pc = F2.map(L - dw, s2 + dw), P1 = F2.map(0, s2 + dw), cv = [];
+          for (let i = 0; i <= 24; i++) { const t = i / 24, a = (1 - t) * (1 - t), b2 = 2 * t * (1 - t), c = t * t; cv.push([a * P0[0] + b2 * Pc[0] + c * P1[0], a * P0[1] + b2 * Pc[1] + c * P1[1]]); }
+          walk.push(cv);
+          wl2 = 0; for (let i = 1; i < cv.length; i++) wl2 += Math.hypot(cv[i][0] - cv[i - 1][0], cv[i][1] - cv[i - 1][1]);
+        } else arcWalk(F2, s2);
+        add(rectPts(F2, 0, L, s2, s2 + L), 'patamar', wl2, { entry: [F2.map(0, s2), F2.map(L, s2)] });
         const F3 = zz ? turnL(F2, s2) : turn(F2, s2);
-        flight(F3, 0, b);
+        flight(F3, 0, b, zz ? dw : undefined);
         endF = F3; endS = b * p;
         rises = [(a + 1) * e, (mm + 1) * e, H - (a + mm + 2) * e];
         lancesTxt.push('1º lance: ' + a + ' pisos; 1º patamar quadrado (' + fmt(L) + ' × ' + fmt(L) + ' cm) no degrau ' + (a + 1) + ', a ' + fmt((a + 1) * e, 1) + ' cm do piso.');
@@ -491,7 +498,7 @@ function calc(inp) {
     rises = [H];
     avail = 0;
     endF = null;
-    lancesTxt.push(T + ' degraus em ' + fmt(T * th / 360, 2) + ' volta(s), ' + fmt(th, 1) + '° por degrau, ' + nPer + ' degraus por volta.');
+    lancesTxt.push(T + ' degraus em ' + fmt(T * th / 360, 2) + ' volta(s), ' + fmt(th, 1) + '° por degrau, ' + nPer + ' degraus por volta (' + (st.nPerAuto === false ? 'escolhido por você; o automático seria ' + Math.max(nPref, nReq) : 'automático: o maior entre ' + nPref + ', que dá o piso desejado, e ' + nReq + ', que dá a altura livre') + ').');
     lancesTxt.push('Piso medido na linha de caminhamento (raio ' + fmt(rw) + ' cm): ' + fmt(pReal, 1) + ' cm.');
   }
 
@@ -521,13 +528,24 @@ function calc(inp) {
      Ao longo da linha de caminhamento (X) a face inferior é a mesma poligonal do perfil desenvolvido.
      Um ponto da planta é levado a X pela fração entre a aresta de entrada e a de saída do degrau em que ele está:
      exato nos degraus retos; nos leques é uma aproximação suave. Na helicoidal, degraus soltos de espessura espDegrau. */
+  /* inclinação (cm de subida por cm de percurso) e recuo vertical (dv) da laje de um degrau de lance */
+  const rampa = pl => { const w = pl.wlen || 1; return { s: e / w, dv: st.tLaje * Math.hypot(w, e) / w }; };
+  /* "joelho" do patamar: o fundo é o mais baixo entre a laje horizontal (top − tLaje) e a laje inclinada do lance que
+     chega, prolongada para dentro do patamar até encontrar a horizontal. Sem isso o patamar ficaria solto do lance, com um
+     vão de (e − tLaje) entre o piso do último degrau e a laje do patamar. No lance que sai não há vão: o primeiro degrau
+     dele já encosta na laje do patamar. d0: distância à aresta de entrada (null = fora da largura do lance que chega). */
+  const fundoPatamar = (i, d0) => {
+    const pl = polys[i], top = pl.k * e, pv = polys[i - 1];
+    let z = top - st.tLaje;
+    if (pv && pv.kind !== 'patamar' && d0 !== null) { const r = rampa(pv); z = Math.min(z, top - e - r.dv + r.s * d0); }
+    return z;
+  };
   const undX = [];
   if (!hel) {
-    const tl = st.tLaje;
-    polys.forEach(pl => {
+    polys.forEach((pl, i) => {
       const z0 = (pl.k - 1) * e, z1 = pl.k * e;
-      if (pl.kind === 'patamar') undX.push([pl.x0, z1 - tl], [pl.x1, z1 - tl]);
-      else { const w = (pl.x1 - pl.x0) || 1, dv = tl * Math.hypot(w, e) / w; undX.push([pl.x0, z0 - dv], [pl.x1, z1 - dv]); }
+      if (pl.kind === 'patamar') { const w = pl.x1 - pl.x0; for (let j = 0; j <= 16; j++) { const X = pl.x0 + w * j / 16; undX.push([X, fundoPatamar(i, X - pl.x0)]); } }
+      else { const r = rampa(pl); undX.push([pl.x0, z0 - r.dv], [pl.x1, z1 - r.dv]); }
     });
   }
   const Uat = X => {
@@ -541,12 +559,25 @@ function calc(inp) {
   const zBot = (pl, q) => {
     const top = pl.k * e;
     if (hel) return Math.max(0, top - thk);
-    if (pl.kind === 'patamar') return Math.max(0, top - st.tLaje);
+    if (pl.kind === 'patamar') {
+      /* distância perpendicular às arestas de entrada e de saída, só onde o ponto fica dentro da largura delas
+         (no patamar do U, o lance que sai está ao lado, e não deve "puxar" a laje do lado do lance que chega) */
+      const dSeg = (L2) => { if (!L2) return null; const ax = L2[0][0], ay = L2[0][1], dx = L2[1][0] - ax, dy = L2[1][1] - ay, l2 = dx * dx + dy * dy || 1, t = ((q[0] - ax) * dx + (q[1] - ay) * dy) / l2; return t < -1e-6 || t > 1 + 1e-6 ? null : distLinha(q, L2); };
+      return Math.max(0, fundoPatamar(pl.k - 1, dSeg(pl.entry)));
+    }
     const sa = saidaDe(pl.k - 1), d0 = distLinha(q, pl.entry), d1 = sa ? distLinha(q, sa) : 0;
     const f = d0 + d1 < 1e-9 ? 0 : d0 / (d0 + d1);
     return Uat(pl.x0 + f * (pl.x1 - pl.x0));
   };
   polys.forEach(pl => { pl.top = pl.k * e; });
+  /* "dente" da chegada: o último espelho sobe até a laje do piso de cima; quando o espelho é maior que a espessura dessa
+     laje, a faixa de H − e a H − espLaje precisa existir (viga de borda), senão sobra uma fresta entre o degrau e a laje */
+  let dente = null;
+  if (!hel && e > st.espLaje + 1e-9) {
+    const a0 = arrivalPts[0], a1 = arrivalPts[1], a3 = arrivalPts[3], l = Math.hypot(a3[0] - a0[0], a3[1] - a0[1]) || 1, w = Math.max(st.tLaje, 10);
+    const d = [(a3[0] - a0[0]) / l * w, (a3[1] - a0[1]) / l * w];
+    dente = { pts: [a0, a1, [a1[0] + d[0], a1[1] + d[1]], [a0[0] + d[0], a0[1] + d[1]]], z0: H - e, z1: H - st.espLaje };
+  }
 
   /* ---- QUANTITATIVOS (estimativas para estudo e orçamento preliminar) ---- */
   const areaTri = (a, b, c) => ((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2; /* com sinal: vale para polígono não convexo */
@@ -610,11 +641,11 @@ function calc(inp) {
   const lOk = Lval < nm.Lmin - 1e-6 ? 'bad' : 'ok';
   chk('L', hel ? 'Largura útil (raio − pilar)' : 'Largura útil', fmt(Lval) + ' cm', 'mín. ' + fmt(nm.Lmin) + ' cm', lOk, lOk !== 'ok' ? (hel ? 'Não atende: abaixo do mínimo do perfil. Alguns códigos de obras têm regra própria para caracol; se for o caso, use "Personalizada".' : 'Não atende: abaixo do mínimo do perfil.') : '');
   const maxRise = Math.max.apply(null, rises);
-  chk('patamar', 'Desnível sem patamar', fmt(maxRise, 1) + ' cm', 'até ' + fmt(nm.hPat) + ' cm', maxRise > nm.hPat + 1e-6 ? 'bad' : 'ok', maxRise > nm.hPat + 1e-6 ? (rises.length > 1 ? 'Um lance ficou com ' + fmt(maxRise, 1) + ' cm. O app põe um patamar só; com este desnível seriam precisos mais patamares. Mude a divisão em "Pisos no 1º lance" ou reduza o desnível.' : 'Passou do máximo sem patamar: use um tipo com patamar.') : '');
+  chk('patamar', 'Desnível sem patamar', fmt(maxRise, 1) + ' cm', 'até ' + fmt(nm.hPat) + ' cm', maxRise > nm.hPat + 1e-6 ? 'bad' : 'ok', maxRise > nm.hPat + 1e-6 ? (rises.length > 1 ? 'Um lance ficou com ' + fmt(maxRise, 1) + ' cm. Este tipo tem ' + (rises.length - 1 === 1 ? 'um patamar só' : (rises.length - 1) + ' patamares') + '; com este desnível seriam precisos mais. Mude a divisão em "Pisos no 1º lance"' + (rises.length > 2 ? ' e "Pisos no lance do meio"' : '') + ', use um tipo com mais patamares ou reduza o desnível.' : 'Passou do máximo sem patamar: use um tipo com patamar.') : '');
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));
   const lMin = Math.min.apply(null, lancos);
-  chk('lanco', 'Espelhos por lance', lancos.join(' + '), 'mín. ' + fmt(nm.lancoMin) + ' por lance', lMin < nm.lancoMin ? 'bad' : 'ok', lMin < nm.lancoMin ? 'Não atende: lance com ' + lMin + ' espelho(s). Até dois degraus seguidos formam um degrau isolado, que a NBR 9050:2020 (6.7.2) manda evitar; a NBR 9077:2001 (4.7.3.2) pede lance de três degraus no mínimo. Mude a divisão dos lances em "Pisos no 1º lance".' : '');
+  chk('lanco', 'Espelhos por lance', lancos.join(' + '), 'mín. ' + fmt(nm.lancoMin) + ' por lance', lMin < nm.lancoMin ? 'bad' : 'ok', lMin < nm.lancoMin ? 'Não atende: lance com ' + lMin + ' espelho(s). Até dois degraus seguidos formam um degrau isolado, que a NBR 9050:2020 (6.7.2) manda evitar; a NBR 9077:2001 (4.7.3.2) pede lance de três degraus no mínimo. ' + (rises.length > 2 && lancos[1] === lMin ? 'O lance curto é o do meio: aumente "Pisos no lance do meio".' : 'Mude a divisão dos lances em "Pisos no 1º lance"' + (rises.length > 2 ? ' ou "Pisos no lance do meio"' : '') + '.') : '');
   if (tipo === 'reta-patamar') {
     const bb2 = 2 * e + p, mn = patRetoMin, ruim = Lp < mn - 1e-6;
     chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn, 0) + ' cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: patamar curto. ' : '') + (nm.patReto ? 'NBR 9050:2020, 6.8.8: patamar entre lances com pelo menos 120 cm.' : 'NBR 9077:2001, 4.7.3.3 a: (2e + p) × n + p, com n = 1 passo no patamar: 2 × ' + fmt(e, 2) + ' + 2 × ' + fmt(p, 1) + ' = ' + fmt(mn, 1) + ' cm.' + (nm.id === 'custom' ? ' O perfil personalizado não tem limite próprio de patamar.' : '')));
@@ -667,7 +698,7 @@ function calc(inp) {
   return {
     st, nm, tipo, hel, H, N, e, T, p: pReal, pInput: p, pAlvo, bl, incl, L, Lp, g, kw, nMeio, dw, thk,
     a, b, avail, nSug, rises, polys, walk, arrival: hel ? arrival : { pts: arrivalPts }, slab: hel ? slab : { pts: slabPts },
-    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado,
+    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente,
     pole, helix, opening, kc, kCut, zc, person, lances: lancesTxt, nReto, nLeque, nPat, contagem, areaOcup, temFaixa, fP, bbox, bboxAll, startEdge, Wtot, checks, memo, mirror,
   };
 }

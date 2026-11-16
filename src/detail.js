@@ -154,7 +154,10 @@ function detalheSVG(R, o, C) {
   s += halo(sText(V[0] + rT * Math.cos(am), V[1] + rT * Math.sin(am), fmt(R.incl, 1) + '°', fs * 0.9, C.accent, 'middle', 0, 600));
 
   /* corrimão: altura medida na vertical a partir da linha dos bocéis; desenhada fora de escala (cota interrompida) */
-  const Hd = h => h * 0.4, rr = 2.5;
+  const Hd = h => h * 0.4;
+  /* diâmetro do corrimão: NBR 9077:2001 4.8.2.3 aceita 38 a 65 mm; a NBR 9050:2020 (6.9.3.1 remete a 4.6.5) pede 30 a 45 mm.
+     No perfil NBR 9050 vale a faixa dela (desenhado com 4 cm); nos outros, a da NBR 9077 (desenhado com 5 cm). */
+  const faixaD = R.nm.acess ? 'Ø 3,0 a 4,5' : 'Ø 3,8 a 6,5', rr = R.nm.acess ? 2 : 2.5;
   const alturas = R.nm && R.nm.acess ? [92, 70] : [92];
   const xr0 = -0.55 * p, xr1 = 3 * p + b + fs * 2;
   alturas.forEach((h, i) => {
@@ -169,7 +172,7 @@ function detalheSVG(R, o, C) {
   s += halo(sText(xr0 + fs * 0.5, zn(xr0) + Hd(alturas[0]) + rr + fs * 1.1, 'corrimão (altura fora de escala)', fs * 0.8, C.ink, 'start', -R.incl, 500));
   B(xr0 + fs * 0.5, zn(xr0) + Hd(alturas[0]) + rr + fs * 2);
 
-  /* seção do corrimão junto à parede, em escala: Ø desenhado com 5 cm (dentro da faixa de 3,8 a 6,5) */
+  /* seção do corrimão junto à parede, em escala, com um diâmetro dentro da faixa do perfil */
   const xw = 2.25 * p;
   const zTopLim = hel ? Math.min(zn(xw - 4) - e - tD, e - tD) - fs * 2 : (xw - 4 - b) * tg - tl / ca - fs * 1.5;
   const zi = Math.min(zTopLim - fs * 2.2 - 8, -2);
@@ -180,10 +183,10 @@ function detalheSVG(R, o, C) {
   s += hDim(xw, xw + 4, zi - rr - fs * 1.4, '', zi - 8, zi - rr * 0.2);
   s += halo(sText(xw + 2, zi - rr - fs * 2.6, '≥ 4', fs * 0.85, C.ink, 'middle', 0, 500));
   s += sLine([cx + rr * 0.7, zi + rr * 0.7], [cx + rr + fs * 1.2, zi + rr + fs * 0.6], C.muted, 0.9);
-  s += halo(sText(cx + rr + fs * 1.4, zi + rr + fs * 0.6, 'Ø 3,8 a 6,5', fs * 0.85, C.ink, 'start', 0, 500));
+  s += halo(sText(cx + rr + fs * 1.4, zi + rr + fs * 0.6, faixaD, fs * 0.85, C.ink, 'start', 0, 500));
   s += halo(sText(xw - 3, zi + 8 + fs * 1.1, 'seção do corrimão', fs * 0.8, C.muted, 'start', 0, 600));
   s += halo(sText(xw - 3.6, zi, 'parede', fs * 0.7, C.muted, 'end', 0));
-  B(xw - 3.6 - tW('parede', fs * 0.7), zi - rr - fs * 3.2); B(cx + rr + fs * 1.4 + tW('Ø 3,8 a 6,5', fs * 0.85), zi + 8 + fs * 1.6);
+  B(xw - 3.6 - tW('parede', fs * 0.7), zi - rr - fs * 3.2); B(cx + rr + fs * 1.4 + tW(faixaD, fs * 0.85), zi + 8 + fs * 1.6);
   zMin = Math.min(zMin, zi - rr - fs * 3.2);
 
   /* ---------- moldura, notas e título ---------- */
@@ -194,8 +197,8 @@ function detalheSVG(R, o, C) {
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
     'bocel 1,5 cm: NBR 9077:2001, 4.7.3.1 e (mín. 1,5)',
     '  e NBR 9050:2020, 6.7.1 (máx. 1,5)',
-    'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
-    'afastamento da parede ≥ 4 cm (NBR 9077:2001, 4.8.2.4)',
+    R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
+    'afastamento da parede ≥ 4 cm (NBR 9077:2001, 4.8.2.4' + (R.nm.acess ? '; NBR 9050:2020, 4.6.5)' : ')'),
     'altura do corrimão (' + alturas.join(' e ') + ' cm) medida na vertical',
     '  a partir da linha dos bocéis'
   ];
@@ -206,7 +209,7 @@ function detalheSVG(R, o, C) {
   } else notas.push('laje da escada ' + fmt(tl) + ' cm, medida na perpendicular à inclinação');
   const fN = fs * 0.78, lh = fs * 1.35;
   const wN = Math.max.apply(null, notas.map(t => tW(t, fN)));
-  const tb1 = 'DETALHE DO DEGRAU · ESCALA 1:10 (no papel)';
+  const tb1 = 'DETALHE DO DEGRAU · AMPLIADO (use a escala gráfica)';
   const tb2 = (hel ? 'degrau na linha de caminhamento' : 'três degraus retos típicos, ampliados') + ' · medidas em cm';
   const wT = Math.max(tW(tb1, fs * 0.95), tW(tb2, fs * 0.8));
   const vx = bb[0] - m;

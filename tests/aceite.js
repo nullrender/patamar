@@ -105,7 +105,9 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const a=corteSVG(R,{},C,'A'), b=corteSVG(R,{},C,'B');
   ok(/CORTE A-A/.test(a) && /CORTE B-B/.test(b),'cortes A-A e B-B têm título');
   const polys=(sv)=>[...sv.matchAll(/<polygon points="([^"]+)" fill="url\(#hcc\d+\)"/g)].map(m=>m[1].split(' ').map(p=>p.split(',').map(Number)));
-  const pa=polys(a); ok(pa.length===1 && Math.abs(Math.min(...pa[0].map(q=>q[1]))+15*17.5)<0.01,'reta, A-A: um só contorno cortado, do 1º ao 15º degrau (topo a 262,5)');
+  const pa=polys(a), pd=pa.filter(p=>p.length>4), pdente=pa.filter(p=>p.length===4);
+  ok(pd.length===1 && Math.abs(Math.min(...pd[0].map(q=>q[1]))+15*17.5)<0.01,'reta, A-A: um só contorno de degraus cortado, do 1º ao 15º (topo a 262,5)');
+  ok(pdente.length===1 && Math.abs(Math.min(...pdente[0].map(q=>q[1]))+(280-12))<0.01 && Math.abs(Math.max(...pdente[0].map(q=>q[1]))+(280-17.5))<0.01,'reta, A-A: dente da chegada cortado de 262,5 a 268 (espelho sob a laje de cima)');
   const pb=polys(b), d8=R.polys[7]; const esp=d8.top-R.zBot(d8,[50,7*29+14.5]);
   ok(pb.length===1 && Math.abs((Math.max(...pb[0].map(q=>q[1]))-Math.min(...pb[0].map(q=>q[1])))-esp)<0.01,'reta, B-B: corta o degrau 8 com a espessura real ('+esp.toFixed(1)+' cm)');
   const pl=planSVG(R,{},C); ok((pl.match(/font-weight="700">A</g)||[]).length===2 && (pl.match(/font-weight="700">B</g)||[]).length===2,'planta: chamadas A e B nas duas pontas');
@@ -134,6 +136,33 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const zs=fc.filter(f=>f.kind==='side').flatMap(f=>f.tris.flat().map(v=>v[2]));
   ok(zs.some(z=>Math.abs(z-R.zBot(d3,[50,7*29]))<0.01),'3D: fundo dos degraus segue o intradorso (zBot)');
 }
+/* revisão v6 (achados confirmados) */
+{
+  ['reta-patamar','l-patamar','u-patamar','c-patamar','z-patamar'].forEach(t=>{const R=calc({tipo:t}); R.polys.forEach((pl,i)=>{ if(pl.kind!=='patamar')return; const a=pl.entry[0],b=pl.entry[1],m=[(a[0]+b[0])/2,(a[1]+b[1])/2], pv=R.polys[i-1];
+    ok(R.zBot(pl,m)<=pv.top+1e-6 && Math.abs(R.zBot(pl,m)-R.zBot(pv,m))<0.01, t+': patamar '+pl.k+' encosta no lance que chega (joelho da laje, sem vão)');});});
+  const Z=calc({tipo:'z-patamar',L:150}); const ult=Z.walk[Z.walk.length-1]; const p3=Z.polys[Z.polys.length-1];
+  const dl=(q,A,B)=>{const dx=B[0]-A[0],dy=B[1]-A[1];return Math.abs((q[0]-A[0])*dy-(q[1]-A[1])*dx)/Math.hypot(dx,dy);};
+  const dIn=dl(p3.entry[0],ult[0],ult[1]), dOut=dl(p3.entry[1],ult[0],ult[1]);
+  ok(Math.abs(Math.min(dIn,dOut)-55)<0.5 && Math.abs(Math.max(dIn,dOut)-95)<0.5,'Z: no 3º lance a linha de caminhamento fica a 55 cm da borda interna (troca de lado)');
+  let eM=false; try{calc({tipo:'c-patamar',nMeioPAuto:false,nMeioP:50});}catch(e){eM=!!e.patamar;} ok(eM,'pisos no lance do meio acima do disponível dá erro (não corrige em silêncio)');
+  ok(/escolhido por você/.test(calc({tipo:'helicoidal',nPerAuto:false,nPer:10}).memo.join(' ')),'helicoidal com degraus por volta escolhidos: a memória diz que foi escolha');
+  ok(/lance do meio/.test(calc({tipo:'c-patamar',nMeioPAuto:false,nMeioP:1}).checks.find(c=>c.id==='lanco').nota),'C com lance do meio curto: aviso aponta o campo certo');
+  ok(!/um patamar só/.test(calc({tipo:'c-patamar',H:1000}).checks.find(c=>c.id==='patamar').nota),'C: aviso de desnível não diz "um patamar só"');
+  const hp=calc({tipo:'helicoidal',Dc:60,corteA:-50}); const sv=corteSVG(hp,{},C,'A'); const iP=sv.indexOf('width="60" height="268" fill="#fff"'), iC=sv.indexOf('fill="url(#hcc');
+  ok(iP>0 && iP<iC,'helicoidal: pilar além do plano entra em vista antes do que é cortado (não cobre os degraus)');
+  const rb=corteSVG(calc({tipo:'reta'}),{},C,'B'); ok((rb.match(/<polyline/g)||[]).length>=2,'reta, B-B: os dois corrimãos aparecem em vista');
+  ok(/não passa pela escada/.test(corteSVG(calc({tipo:'reta',corteB:1000}),{},C,'B')),'corte fora da escada avisa');
+  const far=planSVG(calc({tipo:'reta',corteA:300}),{},C); const vb=far.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
+  ok(vb[0]+vb[2]>350,'planta inclui a chamada deslocada no desenho');
+}
+{
+  const da=detalheSVG(calc({tipo:'reta',norma:'acess',L:120}),{},C);
+  ok(/3,0 a 4,5/.test(da) && /4\.6\.5/.test(da) && !/3,8 a 6,5/.test(da),'detalhe no perfil NBR 9050: corrimão Ø 3,0 a 4,5 cm (4.6.5)');
+  ok(!/1:10/.test(detalheSVG(calc({}),{},C)),'detalhe não afirma escala 1:10 (só escala gráfica)');
+  const pl=planSVG(calc({showCortes:false}),{modo:'inf',cortes:true},C); ok((pl.match(/font-weight="700">A</g)||[]).length===2,'relatório: planta com as chamadas mesmo com "cortes" desligado');
+  const fc=buildFaces(calc({}),C); ok(fc.some(f=>f.kind==='top'&&f.tris.some(t=>t.some(v=>Math.abs(v[2]-(280-12))<1e-6))) ,'3D: dente da chegada sob a laje de cima');
+}
+{ const hc=corteSVG(calc({tipo:'helicoidal'}),{},C,'A'); const pp=[...hc.matchAll(/<polygon points="([^"]+)" fill="url\(#hcc\d+\)"/g)].map(m=>m[1].split(' ').map(p=>p.split(',').map(Number))); const top1=p=>{const ys=p.map(q=>q[1]),mn=Math.min(...ys);return ys.filter(y=>Math.abs(y-mn)<1e-6).length===2;}; ok(pp.length>1 && pp.every(top1),'helicoidal: cada degrau cortado é uma placa solta (sem espelho ligando)'); }
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');

@@ -76,13 +76,14 @@ function railLado(R, lado, hR) {
     cur = saida[j];
   });
   out.push([cur[0], cur[1], R.H + hR]);
-  /* pontos repetidos na planta (canto interno de patamar em L, centro de leques convergentes) viram um só, na cota média:
-     o corrimão passa inclinado pelo canto em vez de dar um salto vertical */
+  /* pontos repetidos na planta (canto interno de patamar em L, centro de leques convergentes) viram um só, na cota MAIS ALTA:
+     assim o corrimão nunca fica abaixo da altura pedida sobre o degrau seguinte (sobre o patamar, fica um pouco acima) */
   const lim = [];
   for (let i = 0; i < out.length;) {
     let j = i, zs = 0;
     while (j < out.length && Math.hypot(out[j][0] - out[i][0], out[j][1] - out[i][1]) < 0.5) { zs += out[j][2]; j++; }
-    lim.push([out[i][0], out[i][1], (i === 0 ? out[i][2] : j === out.length ? out[j - 1][2] : zs / (j - i))]);
+    let zmax = -Infinity; for (let k = i; k < j; k++) zmax = Math.max(zmax, out[k][2]);
+    lim.push([out[i][0], out[i][1], i === 0 ? out[i][2] : zmax]);
     i = j;
   }
   return lim;
@@ -165,13 +166,15 @@ function buildFaces(R, C) {
   if (R.hel && R.arrival && R.arrival.arc) prism(R.arrival.pts, triOf({ arc: R.arrival.arc, pts: R.arrival.pts }), R.H - R.thk, R.H, col3.patamar || col3.reto);
   /* pilar */
   if (R.pole) { const ring = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 2 * PI; ring.push([R.pole.r * Math.cos(a), R.pole.r * Math.sin(a)]); } prism(ring, fan(ring), 0, R.H - R.st.espLaje, [88, 98, 108]); }
-  /* degraus */
+  /* dente da chegada: espelho do último degrau sob a laje do piso de cima (quando o espelho é maior que a laje) */
+  if (R.dente) prism(R.dente.pts, fan(R.dente.pts), R.dente.z0, R.dente.z1, hexRGB(C.f3));
   /* degraus: o fundo segue a face inferior real (R.zBot): laje inclinada nos lances, horizontal nos patamares;
      na helicoidal, degraus soltos com a espessura do degrau */
   R.polys.forEach(pl => { const top = pl.k * R.e; prism(pl.pts, triOf(pl), R.zBot ? q => R.zBot(pl, q) : Math.max(top - R.thk, 0), top, col3[pl.kind] || col3.reto); });
   /* corrimãos: prismas finos de 5 × 5 cm sobre a linha dos bocéis, 4 cm para dentro da borda, com montante nas pontas */
   const ink = hexRGB(C.ink), pap = hexRGB(C.paper), colR = ink.map((v, i) => Math.round(v * 0.6 + pap[i] * 0.4));
-  const W5 = 5, OFF = 4;
+  /* eixo do corrimão a 4 cm + meia seção da borda: a face fica a 4 cm livres da parede (NBR 9077:2001 4.8.2.4; NBR 9050:2020 4.6.5), como no detalhe */
+  const W5 = 5, OFF = 4 + W5 / 2;
   const corrimao = (pts, postes) => {
     const tris = [], tn = [];
     for (let s = 0; s < pts.length - 1; s++) tubo(pts[s], pts[s + 1], W5, tris, tn);

@@ -101,8 +101,9 @@ function bind() {
   $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
   $('Nplus').addEventListener('click', () => { S.nAuto = false; S.N = (CUR ? CUR.N : S.N) + 1; render(); });
   const nPerAtual = () => CUR && CUR.helix ? CUR.helix.nPer : Math.round(num(S.nPer, 13));
-  $('nPerMinus').addEventListener('click', () => { S.nPerAuto = false; S.nPer = Math.max(4, nPerAtual() - 1); render(); });
-  $('nPerPlus').addEventListener('click', () => { S.nPerAuto = false; S.nPer = Math.min(72, nPerAtual() + 1); render(); });
+  const limpaNPer = () => { delete BAD.nPer; $('nPer').classList.remove('err'); };
+  $('nPerMinus').addEventListener('click', () => { limpaNPer(); S.nPerAuto = false; S.nPer = Math.max(4, nPerAtual() - 1); render(); });
+  $('nPerPlus').addEventListener('click', () => { limpaNPer(); S.nPerAuto = false; S.nPer = Math.min(72, nPerAtual() + 1); render(); });
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; render(); });
   $('tipos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tipo = b.dataset.v; render(); });
   $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
@@ -137,6 +138,7 @@ function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || 
 
 function falha(msg) {
   CUR = null;
+  FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
   ['tiles', 'memo', 'checks', 'legend', 'quant'].forEach(id => { $(id).innerHTML = ''; });
   $('stage').dataset.view = 'erro';
   $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
@@ -221,12 +223,13 @@ function render(typing) {
   if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', R.bal ? 'Degrau balanceado' : 'Leque']);
   if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
   const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
-  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">Modelo de estudo: degraus com o fundo real da laje e corrimãos, sem acabamentos. Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
+  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">' + (R.hel ? 'Modelo de estudo: degraus soltos em volta do pilar e corrimão do lado de fora, sem acabamentos.' : 'Modelo de estudo: degraus com o fundo real da laje e corrimãos, sem acabamentos.') + ' Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
   $('view3dBar').hidden = VIEW !== '3d';
   $('viewPlantaBar').hidden = VIEW !== 'planta';
   $('viewCorteBar').hidden = VIEW !== 'corte';
   document.querySelectorAll('#vistaC button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.vistaCorte || 'A')));
   $('deslWrap').hidden = !(S.vistaCorte === 'A' || S.vistaCorte === 'B' || !S.vistaCorte);
+  if (document.activeElement !== $('desl')) $('desl').classList.remove('err');
   setVal('desl', plain(num(S.vistaCorte === 'B' ? S.corteB : S.corteA, 0)));
   $('showCortes').checked = S.showCortes !== false;
   $('btnSvg').hidden = VIEW === '3d' || VIEW === 'explica';
@@ -235,7 +238,7 @@ function render(typing) {
   /* palco */
   $('stage').dataset.view = VIEW;
   if (VIEW === 'planta') { $('stage').innerHTML = planSVG(R, {}, THEME); }
-  else if (VIEW === 'corte') { $('stage').innerHTML = svgCorte(R, {}, THEME) + '<p class="cap">' + LEG_CORTE[S.vistaCorte || 'A'] + '</p>'; }
+  else if (VIEW === 'corte') { $('stage').innerHTML = svgCorte(R, {}, THEME) + '<p class="cap">' + legCorte(R, S.vistaCorte || 'A') + '</p>'; }
   else if (VIEW === 'explica') { $('stage').innerHTML = explicacao(R, S, THEME); }
   else { $('stage').innerHTML = ''; $('stage').appendChild(CV3); draw3d(true); }
   save();
@@ -246,9 +249,9 @@ function quantHTML(R) {
   const q = R.quant, m2 = v => fmt(v / 10000, 2) + ' m²';
   const linhas = [
     ['Piso dos degraus e patamares', m2(q.aPisos), 'soma das superfícies em planta (revestimento de piso)'],
-    ['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'],
-    ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte'],
   ];
+  if (R.hel) linhas[0][2] = 'soma das placas dos degraus; elas se sobrepõem em planta quando a escada dá mais de uma volta';
+  else linhas.push(['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'], ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte']);
   if (R.hel) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm; pilar fora da conta']);
   else {
     linhas.push(['Concreto da escada', fmt(q.volConc / 1e6, 3) + ' m³', 'degraus + laje de ' + fmt(R.st.tLaje) + ' cm, até o chão; sem a laje do piso de cima']);
@@ -264,12 +267,13 @@ function svgCorte(R, o, C) {
   if (v === 'detalhe') return detalheSVG(R, o, C);
   return corteSVG(R, o, C, v);
 }
-const LEG_CORTE = {
-  A: 'Corte A-A: plano vertical marcado na planta com as letras A. O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.',
-  B: 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B. Hachura = cortado; traço fino = em vista, além do plano.',
-  perfil: 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.',
-  detalhe: 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.'
-};
+function legCorte(R, v) {
+  const fora = R.st['corte' + v] ? ' A linha foi deslocada ' + fmt(R.st['corte' + v]) + ' cm.' : '';
+  if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do pilar, marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
+  if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
+  if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
+  return R.hel ? 'Detalhe do degrau: ampliação dos degraus soltos da helicoidal (sem laje e sem espelho), com o piso medido na linha de caminhamento e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.';
+}
 function draw3d(hq) {
   if (VIEW !== '3d' || !CUR) return;
   const box = $('stage'), cw = Math.max(280, box.clientWidth || 640);
@@ -299,7 +303,7 @@ function montarRelatorio() {
   let h = '<h1>Escada ' + t.nome.toLowerCase().replace(' l ', ' L ').replace(' u ', ' U ') + '</h1>';
   h += '<p class="sub">Desnível de ' + fmt(R.H) + ' cm · ' + R.nm.nome + ' · gerado pelo Patamar em ' + hoje + '</p>';
   h += '<div class="ptiles">' + tiles.map(x => '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>').join('') + '</div>';
-  h += '<figure>' + planSVG(R, { modo: 'inf' }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso.</figcaption></figure>';
+  h += '<figure>' + planSVG(R, { modo: 'inf', cortes: true }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso e as linhas dos cortes A-A e B-B.</figcaption></figure>';
   h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
   h += '<div class="quebra"></div><figure>' + corteSVG(R, {}, C, 'A') + '<figcaption>Corte A-A, marcado na planta.</figcaption></figure>';
   h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
