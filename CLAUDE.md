@@ -36,7 +36,7 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 
 - Não invente norma, item, número ou fonte. Se um limite não foi conferido no texto da norma, diga isso no app e na resposta.
 - Os perfis ficam em `NORMAS`, no `core.js`. Fontes conferidas no texto das normas em 16/11/2026:
-  - **Estudo**: espelho 16 a 18, piso 25 a 32, Blondel 63 a 64, largura 80, linha a 50 cm, ponta de leque 15 cm, lance de 3 espelhos no mínimo. Blondel, ponta e lance vêm da NBR 9077:2001 (4.7.3.1 b e c, 4.7.3.2). Piso 25, largura 80 e 3,20 m sem patamar não têm fonte nacional.
+  - **Estudo**: espelho 16 a 18, piso 25 a 32, Blondel 63 a 64, largura 80, linha a 55 cm (no eixo abaixo de 110 cm), ponta de leque 15 cm, lance de 3 espelhos no mínimo, patamar reto pela fórmula (2e + p) + p. Blondel, linha, ponta, lance e patamar vêm da NBR 9077:2001 (4.7.3.1 b e c, 3.32, 4.7.3.2, 4.7.3.3 a). Piso 25, largura 80 e 3,20 m sem patamar não têm fonte nacional.
   - **NBR 9050:2020**, versão corrigida de 2021: 6.8.2 (espelho 16 a 18, piso 28 a 32, Blondel 63 a 65), 6.8.3 (largura 120), 6.8.6 (linha a 55 cm da borda interna em lances curvos, Figura 75 com ponta ≥ 15), 6.8.7 (patamar a cada 320 cm e nas mudanças de direção), 6.8.8 (patamar reto de 120 cm), 6.9.3.2 (corrimãos a 92 e 70 cm, prolongados 30 cm). É uma conferência dimensional parcial, não uma validação de acessibilidade.
   - **Personalizada**: limites digitados pelo usuário, validados (positivos, faixas não invertidas, ponta do leque ≥ 0).
 - **NBR 9077:2025** (terceira edição, 16/07/2025) substitui a de 2001 e **não foi lida** (é paga). Todo texto que cita a NBR 9077 precisa dizer que é a edição de 2001.

@@ -136,8 +136,18 @@ function falha(msg) {
   ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = true; });
   $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true;
 }
+/* opções do número de degraus da curva: de 2 até pelo menos kw (o mínimo do balanceamento pode passar de 6) */
+function opcoesK(bal, kMin, kAtual) {
+  const top = Math.max(6, kAtual || 0, (kMin || 0) + 2), ops = [];
+  for (let k = 2; k <= top; k++) ops.push('<option value="' + k + '"' + (bal && kMin && k < kMin ? ' disabled' : '') + '>' + k + (bal ? ' degraus' : ' leques (' + fmt(90 / k, 1) + '° cada)') + '</option>');
+  const h = ops.join('');
+  if ($('kLeque').innerHTML !== h) $('kLeque').innerHTML = h;
+  $('kLeque').value = String(kAtual);
+}
 function render(typing) {
   THEME = THEME || getTheme();
+  opcoesK(S.leque !== 'conv', 0, clamp(Math.round(num(S.kLeque, 3)), 2, 6));
+  document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -161,10 +171,9 @@ function render(typing) {
   $('zcWrap').hidden = S.modoPlanta === 'sup';
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (R.bal ? 'bal' : 'conv')));
   $('lqHint').textContent = R.bal ? 'Piso igual na linha de caminhamento, ponta larga na borda interna. É o que a NBR 9077 pede.' : 'Todos saem do canto interno, com ponta zero. Serve para comparar com os balanceados.';
-  const kOpts = [2, 3, 4, 5, 6].map(k => '<option value="' + k + '"' + (R.bal && k < R.kwMin ? ' disabled' : '') + '>' + k + (R.bal ? ' arestas na curva' : ' leques (' + fmt(90 / k, 1) + '° cada)') + '</option>').join('');
-  if ($('kLeque').innerHTML !== kOpts) $('kLeque').innerHTML = kOpts;
+  opcoesK(R.bal, R.kwMin, R.kw);
   $('kLeque').value = String(R.kw);
-  $('kLab').textContent = R.bal ? 'Degraus que giram dentro da curva' : 'Leques em cada curva';
+  $('kLab').textContent = R.bal ? 'Degraus no trecho de cada curva' : 'Leques em cada curva';
   $('kHint').textContent = R.bal ? 'Mínimo ' + R.kwMin + ' para manter o piso de ' + fmt(R.p, 1) + ' cm na curva da linha (' + fmt(R.dw * Math.PI / 2, 1) + ' cm).' : '';
   FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
   setVal('H', plain(S.H)); setVal('L', plain(S.L)); setVal('hLivre', plain(S.hLivre)); setVal('espLaje', plain(S.espLaje)); setVal('tLaje', plain(S.tLaje)); setVal('espDegrau', plain(S.espDegrau));
@@ -231,8 +240,8 @@ function resumo() {
 }
 
 /* relatório para imprimir ou salvar em PDF: sempre com as cores do tema claro, que é o que sai no papel */
-function imprimir() {
-  if (!CUR) return;
+function montarRelatorio() {
+  if (!CUR) { $('printArea').innerHTML = '<p>Corrija as medidas antes de imprimir: com entrada inválida o app não desenha a escada.</p>'; return; }
   const R = CUR, t = TIPOS.find(x => x.id === S.tipo), root = document.documentElement, antes = root.getAttribute('data-theme');
   root.setAttribute('data-theme', 'light');
   const C = getTheme();
@@ -250,8 +259,8 @@ function imprimir() {
   h += '<p class="rodape">' + $('aviso').textContent + '</p>';
   $('printArea').innerHTML = h;
   if (antes === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', antes);
-  setTimeout(() => window.print(), 50);
 }
+function imprimir() { montarRelatorio(); setTimeout(() => window.print(), 50); }
 
 let toastT = null;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
@@ -272,6 +281,7 @@ function gerarImagem() {
   img.src = url;
 }
 
+window.addEventListener('beforeprint', montarRelatorio);
 window.addEventListener('DOMContentLoaded', () => {
   load(); mount(); bind(); renderTypes(); render();
   let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => draw3d(true), 120); });

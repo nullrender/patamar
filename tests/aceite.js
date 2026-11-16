@@ -38,7 +38,9 @@ const f3=buildFaces(h,C).length, f3b=buildFaces(Object.assign({},h,{hel:false}),
   ok(B.bal && B.polys.every(q=>Math.abs(q.wlen-B.p)<1e-9),'L balanceado: piso igual na linha de caminhamento em todos os degraus');
   ok(st(B,'ponta')==='ok' && Math.min(...B.polys.filter(q=>q.kind==='leque').map(q=>q.wIn))>=15-1e-6,'L balanceado padrão: ponta ≥ 15 cm');
   ok(st(calc({tipo:'l-leque',leque:'conv'}),'ponta')==='bad','leques convergentes: ponta 0 "não atende"');
-  ok(st(calc({tipo:'u-leque'}),'ponta')==='bad' && st(calc({tipo:'u-leque',H:450,nMeio:3}),'ponta')==='ok','U balanceado: H 280 não chega a 15 cm, H 450 com 3 pisos no meio chega');
+  ok(st(calc({tipo:'u-leque',H:180}),'ponta')==='bad' && st(calc({tipo:'u-leque',H:450,nMeio:3}),'ponta')==='ok','U balanceado: H 180 não chega a 15 cm, H 450 com 3 pisos no meio chega');
+  /* revisão: escada curta balanceada desenha (ponta "não atende") em vez de dar erro */
+  [{tipo:'u-leque',H:180},{tipo:'l-leque',L:100,H:100,kLeque:3},{tipo:'l-leque',L:100,H:100,kLeque:5}].forEach(o=>{let R=null;try{R=calc(o);}catch(e){} ok(R && R.polys.length===R.T,'escada curta balanceada desenha: '+JSON.stringify(o));});
   const k2=calc({tipo:'l-leque',kLeque:2}); ok(k2.kw>=k2.kwMin && st(k2,'kw')==='info','pedir menos arestas que o mínimo: app sobe e avisa');
   let erroLq=false; try{calc({norma:'custom',cLq:-1});}catch(e){erroLq=!!e.patamar;} ok(erroLq,'ponta mínima personalizada negativa dá erro de entrada');
   ok(st(calc({norma:'custom',tipo:'l-leque',cLq:25}),'ponta')==='bad','ponta mínima personalizada de 25 cm é respeitada');
@@ -63,6 +65,30 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ok(/piso p \(cm\)/.test(ex2) && /sua escada/.test(ex2),'explicação tem o gráfico de Blondel');
   ok(/Borda interna/.test(ex2) && /progressão aritmética/.test(ex2),'explicação do balanceamento com tabela');
   ok(/Tales/.test(ex2) && /1:50/.test(ex2),'roteiro de desenho à mão');
+}
+/* revisão v5 (achados confirmados) */
+{
+  ok(calc({tipo:'l-leque',norma:'custom',cDw:120,L:240,H:450}).kw===7,'kw pode passar de 6 (a interface gera opções até kw)');
+  const E=calc({tipo:'l-leque',norma:'res',L:120}); ok(E.dw===55,'perfil Estudo: linha a 55 cm (NBR 9077:2001, 3.32)');
+  ok(calc({tipo:'l-leque',norma:'res',L:104}).dw===52,'L 104: linha no eixo (nota do 3.32)');
+  const P=calc({tipo:'reta-patamar',norma:'res',L:120,H:300,LpAuto:false,Lp:100});
+  ok(st(P,'patprof')==='ok','Estudo, patamar reto 100 cm com L 120: atende a fórmula da NBR 9077 (não exige = largura)');
+  ok(st(calc({tipo:'reta-patamar',norma:'res',LpAuto:false,Lp:80}),'patprof')==='bad','patamar reto abaixo da fórmula com n = 1 não atende');
+  ok(st(calc({tipo:'reta-patamar',norma:'acess',L:150,H:700}),'patprof')==='ok' && calc({tipo:'reta-patamar',norma:'acess',L:150,H:700}).patRetoMin===120,'NBR 9050: patamar reto mínimo de 120 cm');
+  const L1=calc({tipo:'reta-patamar',norma:'res',H:300,nAuto:false,N:17,n1Auto:false,n1:1}); const nl=(L1.checks.find(c=>c.id==='lanco')||{}).nota||'';
+  ok(/manda evitar/.test(nl) && !/tropeça/.test(nl),'lance mínimo: texto fiel à NBR 9050 6.7.2');
+  const PT=calc({tipo:'reta-patamar',H:700,norma:'acess',L:150}); ok(!/use um tipo com patamar/.test((PT.checks.find(c=>c.id==='patamar')||{}).nota||''),'tipo com patamar não manda "usar um tipo com patamar"');
+  const exl=explicacao(calc({tipo:'l-leque'}),calc({tipo:'l-leque'}).st,C);
+  ok(/Esta é uma <b>escada em L com leques<\/b>/.test(exl),'resumo começa com "escada em L com leques"');
+  ok(!/caem dentro da curva|cabem nela/.test(exl+calc({tipo:'l-leque'}).memo.join(' ')),'não afirma quantas arestas caem no arco');
+  ok(!/6492 recomenda/.test(exl),'NBR 6492 não conferida não é citada como se fosse');
+  const cu=calc({tipo:'reta',norma:'custom',cEmin:16.5,cEmax:18.5,cPmin:27.5,cPmax:31,cBmin:63.1,cBmax:64.3}); const exc=(explicacao(cu,cu.st,C)+cu.memo.join(' ')+cu.checks.map(c=>c.regra+' '+c.nota).join(' ')).replace(/<svg[\s\S]*?<\/svg>/g,'');
+  ok(!/16\.5|18\.5|27\.5|63\.1|64\.3|1\.1999/.test(exc) && /16,5/.test(exc),'limites personalizados com vírgula, sem erro de ponto flutuante');
+  ok(/10,03/.test(explicacao(calc({tipo:'reta',H:180.5}),calc({tipo:'reta',H:180.5}).st,C)),'quociente H ÷ eMax com 2 casas');
+  const hx=calc({tipo:'helicoidal',H:450}); ok(!/exatamente o desnível/.test(explicacao(hx,hx.st,C)),'divisão não exata não diz "exatamente"');
+  ok(!/arredondado e dentro/.test(calc({tipo:'reta',nAuto:false,N:14}).memo.join(' ')),'piso preso ao limite não é chamado de arredondado');
+  ok(/120 cm do piso/.test(explicacao(calc({tipo:'reta',zCorte:120}),calc({tipo:'reta',zCorte:120}).st,C)),'roteiro usa a altura de corte escolhida');
+  ok(/topo da vertical/.test(exl),'Tales: roteiro diz qual vertical e qual ponto ligar');
 }
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}

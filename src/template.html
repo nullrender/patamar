@@ -194,6 +194,14 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .printArea{display:none}
 @media print{
   @page{size:A4;margin:14mm}
+  /* papel sempre com as cores do tema claro, qualquer que seja o tema da tela (o :not(#_) ganha em especificidade) */
+  :root:not(#_),:root[data-theme]:not(#_){
+    --paper:#eef2f4; --panel:#ffffff; --ink:#13242f; --muted:#5a6b78; --line:#cdd7dd; --accent:#d9531a; --accent-ink:#ffffff; --info:#2a6fbb;
+    --ok:#17803f; --warn:#a86a00; --bad:#c73434; --okbg:#e3f3ea; --warnbg:#fbefd5; --badbg:#fbe3e3; --infobg:#e4eef9;
+    --tread:#dbe6ec; --winder:#f6d9c4; --patamar:#cfe5d9; --piso:#e8edf0;
+    color-scheme:light;
+  }
+  html{background:#fff}
   body{background:#fff;color:#000;font-size:11pt}
   body>*:not(#printArea){display:none !important}
   #printArea{display:block}
@@ -205,7 +213,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
   .printArea .ptiles b{display:block;font:500 12pt var(--mono)}
   .printArea .ptiles span{font-size:8pt;color:#555;text-transform:uppercase;letter-spacing:.06em}
   .printArea figure{margin:0 0 8pt;break-inside:avoid}
-  .printArea figure svg{width:100%;height:auto;max-height:118mm}
+  .printArea figure svg{width:100%;height:auto;max-height:96mm}
   .printArea figcaption{font-size:9pt;color:#444}
   .printArea .quebra{break-before:page}
   .printArea .checks li,.printArea .memo li{break-inside:avoid}
