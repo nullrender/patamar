@@ -2,6 +2,7 @@
 const r2 = v => Math.round(v * 100) / 100;
 const escXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const NS = 'vector-effect="non-scaling-stroke"';
+let HCH = 0;
 const FONT = "'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace";
 
 function sLine(a, b, col, w, dash) {
@@ -156,6 +157,15 @@ function planSVG(R, o, C) {
   }
   if (clipId) s += '</g>';
   s += rotulos;
+  /* ponta mais estreita dos degraus balanceados: marca no canto interno */
+  if (showDims && !sup && R.bal && R.nLeque) {
+    const lqs = R.polys.filter(pl => pl.kind === 'leque');
+    const pm = lqs.reduce((m, pl) => pl.wIn < m.wIn ? pl : m, lqs[0]);
+    const I = pm.entry[1], c = centroid(pm.pts);
+    let dx = I[0] - c[0], dy = I[1] - c[1]; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+    const T2 = [I[0] + dx * fs * 2.2, I[1] + dy * fs * 2.2];
+    s += sLine(I, T2, C.accent, 0.9) + sText(T2[0] + dx * fs * 1.6, T2[1] + dy * fs * 0.9, 'ponta ' + fmt(pm.wIn, 1), fs * 0.75, C.accent, 'middle', 0, 600);
+  }
   /* cotas */
   if (showDims) {
     const topGap = (bbA[3] - bb[3]) + fs * 5.4, rightGap = (bbA[2] - bb[2]) + fs * 5.4;
@@ -197,10 +207,11 @@ function sectionSVG(R, o, C) {
   const xmin = left - fs * 4, xmax = right + fs * 8;
   const ymin = -fs * 15.5, ymax = H + 92 + fs * 3;
   const vx = xmin, vy = -ymax, vw = xmax - xmin, vh = ymax - ymin;
-  const defs = '<defs><pattern id="hch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="' + C.muted + '" stroke-width="1"/></pattern></defs>';
+  const hid = 'hch' + (++HCH); /* id único: a mesma página pode ter dois perfis (tela e impressão) */
+  const defs = '<defs><pattern id="' + hid + '" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="' + C.muted + '" stroke-width="1"/></pattern></defs>';
   let s = '';
   /* terreno */
-  s += '<rect x="' + left + '" y="0" width="' + (0 - left) + '" height="' + r2(fs * 2.2) + '" fill="url(#hch)" stroke="none"/>';
+  s += '<rect x="' + left + '" y="0" width="' + (0 - left) + '" height="' + r2(fs * 2.2) + '" fill="url(#' + hid + ')" stroke="none"/>';
   s += sLine([left, 0], [0, 0], C.ink, 2.4);
   /* degraus */
   if (R.hel) {
@@ -229,7 +240,7 @@ function sectionSVG(R, o, C) {
   /* laje superior */
   const kcPoly = R.opening ? R.polys.find(pl => pl.k === R.opening.kc) : null;
   const xo = kcPoly ? kcPoly.x0 : X;
-  const slabBox = (x0, x1) => '<rect x="' + r2(x0) + '" y="' + r2(-H) + '" width="' + r2(x1 - x0) + '" height="' + r2(st.espLaje) + '" fill="url(#hch)" stroke="' + C.ink + '" stroke-width="1.5" ' + NS + '/>';
+  const slabBox = (x0, x1) => '<rect x="' + r2(x0) + '" y="' + r2(-H) + '" width="' + r2(x1 - x0) + '" height="' + r2(st.espLaje) + '" fill="url(#' + hid + ')" stroke="' + C.ink + '" stroke-width="1.5" ' + NS + '/>';
   if (!R.hel && xo > left + 1) s += slabBox(left, xo); /* na helicoidal a laje fica fora do furo, longe do percurso */
   s += slabBox(X, X + slabR);
   /* linha dos narizes e corrimão */
@@ -238,7 +249,14 @@ function sectionSVG(R, o, C) {
   R.polys.forEach(pl => { nos.push([pl.x0, pl.k * e]); if (pl.kind === 'patamar') nos.push([Math.max(pl.x0, pl.x1 - R.pInput), pl.k * e]); });
   if (nos.length) {
     const alturas = R.nm.acess ? [92, 70] : [92];
-    alturas.forEach(hR => { s += sPolyline(nos.concat([[X, H]]).map(q => [q[0], q[1] + hR]), C.ink, 1.1); });
+    /* NBR 9050:2020, 6.9.3.2: corrimãos prolongados 30 cm (na horizontal) antes do primeiro e depois do último degrau */
+    const ext = R.nm.acess ? 30 : 0;
+    alturas.forEach(hR => {
+      const pl = nos.concat([[X, H]]).map(q => [q[0], q[1] + hR]);
+      if (ext) { pl.unshift([pl[0][0] - ext, pl[0][1]]); pl.push([pl[pl.length - 1][0] + ext, pl[pl.length - 1][1]]); }
+      s += sPolyline(pl, C.ink, 1.1);
+    });
+    if (ext) s += sText(X + ext / 2, H + 92 + fs * 1.1, '+30', fs * 0.7, C.muted, 'middle');
     s += sLine([nos[0][0], nos[0][1] + 92], [nos[0][0], nos[0][1]], C.muted, 0.8, '3 3');
     s += sText(nos[Math.min(1, nos.length - 1)][0] - fs * 0.6, nos[Math.min(1, nos.length - 1)][1] + 92 + fs * 1.2, 'corrimão ' + alturas.join(' e '), fs * 0.8, C.muted, 'start', -R.incl);
   }

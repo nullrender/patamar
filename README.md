@@ -1,6 +1,6 @@
 # Patamar
 
-Calculadora de escadas: calcula e desenha planta, perfil desenvolvido e 3D, com explicação passo a passo. Tipos: reta, reta com patamar, em L e em U (com patamar ou leques) e helicoidal.
+Calculadora de escadas: calcula e desenha planta, perfil desenvolvido e 3D, com explicação passo a passo, gráfico de Blondel, tabela de degraus, roteiro de desenho à mão e relatório para imprimir. Tipos: reta, reta com patamar, em L e em U (com patamar ou leques balanceados) e helicoidal.
 
 Abrir ou instalar no celular: https://nullrender.github.io/patamar/
 
