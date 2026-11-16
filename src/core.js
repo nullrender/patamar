@@ -32,6 +32,8 @@ const TIPOS = [
   { id: 'l-leque',      nome: 'Em L com leques',   desc: 'Curva de 90° com degraus em leque' },
   { id: 'u-patamar',    nome: 'Em U com patamar',  desc: 'Retorno de 180° com patamar' },
   { id: 'u-leque',      nome: 'Em U com leques',   desc: 'Retorno de 180° com degraus em leque' },
+  { id: 'c-patamar',    nome: 'Em C (dois patamares)', desc: 'Duas curvas de 90° para o mesmo lado, com três lances' },
+  { id: 'z-patamar',    nome: 'Em Z (dois patamares)', desc: 'Uma curva para cada lado: o último lance segue paralelo ao primeiro' },
   { id: 'helicoidal',   nome: 'Helicoidal',        desc: 'Caracol: degraus em volta de um pilar' },
 ];
 
@@ -39,8 +41,8 @@ const DEFAULTS = {
   tipo: 'l-patamar', norma: 'res',
   H: 280, L: 100,
   nAuto: true, N: 16, pAuto: true, p: 29, n1Auto: true, n1: 7,
-  lado: 'dir', kLeque: 3, nMeio: 1, vao: 10, LpAuto: true, Lp: 100, leque: 'bal',
-  D: 220, Dc: 20,
+  lado: 'dir', kLeque: 3, nMeio: 1, nMeioP: 4, nMeioPAuto: true, vao: 10, LpAuto: true, Lp: 100, leque: 'bal',
+  D: 220, Dc: 20, nPerAuto: true, nPer: 13,
   hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5,
   zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true,
   cEmin: 16, cEmax: 18, cPmin: 25, cPmax: 32, cBmin: 63, cBmax: 64, cLmin: 80, cHpat: 320, cDw: 55, cLq: 15,
@@ -129,7 +131,7 @@ function calc(inp) {
   const kwMin = Math.max(2, Math.ceil(A90 / p - 1e-9));
   const kwSubiu = bal && (tipo === 'l-leque' || tipo === 'u-leque') && kw < kwMin;
   if (bal && kw < kwMin) kw = kwMin;
-  let balInfo = null, gU = 0;
+  let balInfo = null, gU = 0, nMeioPUsado = 0;
   const nMeio = clamp(Math.round(num(st.nMeio, 1)), 0, 6);
   const g = Math.max(0, st.vao);
   /* patamar reto (mesma direção): NBR 9050:2020 6.8.8 pede 120 cm; nos outros perfis, a fórmula da NBR 9077:2001 4.7.3.3 a com n = 1.
@@ -171,6 +173,9 @@ function calc(inp) {
     arcWalk(F, s0);
   };
   const turn = (F, s0) => { const o = F.map(L, s0 + L); return mkF(o[0], o[1], F.rx, F.ry); };
+  const turnL = (F, s0) => { const o = F.map(0, s0); return mkF(o[0], o[1], -F.rx, -F.ry); };
+  /* linha de caminhamento num patamar de canto que vira para a esquerda: arco em volta do canto esquerdo */
+  const arcWalkL = (F, s0) => { const arc = [], r = L - dw; for (let i = 0; i <= 24; i++) { const ph = i / 24 * PI / 2; arc.push(F.map(r * Math.cos(ph), s0 + r * Math.sin(ph))); } walk.push(arc); };
   const split = av => {
     av = Math.max(0, av);
     const aa = st.n1Auto ? Math.ceil(av / 2) : clamp(Math.round(num(st.n1, 1)), 0, av);
@@ -348,6 +353,30 @@ function calc(inp) {
         lancesTxt.push('2º lance (virado 90°): ' + b + ' pisos até o piso superior.');
         break;
       }
+      case 'c-patamar':
+      case 'z-patamar': {
+        const zz = tipo === 'z-patamar';
+        avail = T - 2; need(avail);
+        const mAuto = Math.round(avail / 3);
+        const mm = st.nMeioPAuto ? mAuto : clamp(Math.round(num(st.nMeioP, mAuto)), 0, avail);
+        nMeioPUsado = mm;
+        [a, b] = split(avail - mm);
+        let s = flight(F1, 0, a);
+        add(rectPts(F1, 0, L, s, s + L), 'patamar', dw * PI / 2, { entry: [F1.map(0, s), F1.map(L, s)] });
+        arcWalk(F1, s);
+        const F2 = turn(F1, s);
+        const s2 = flight(F2, 0, mm);
+        add(rectPts(F2, 0, L, s2, s2 + L), 'patamar', (zz ? L - dw : dw) * PI / 2, { entry: [F2.map(0, s2), F2.map(L, s2)] });
+        if (zz) arcWalkL(F2, s2); else arcWalk(F2, s2);
+        const F3 = zz ? turnL(F2, s2) : turn(F2, s2);
+        flight(F3, 0, b);
+        endF = F3; endS = b * p;
+        rises = [(a + 1) * e, (mm + 1) * e, H - (a + mm + 2) * e];
+        lancesTxt.push('1º lance: ' + a + ' pisos; 1º patamar quadrado (' + fmt(L) + ' × ' + fmt(L) + ' cm) no degrau ' + (a + 1) + ', a ' + fmt((a + 1) * e, 1) + ' cm do piso.');
+        lancesTxt.push('2º lance (virado 90°): ' + mm + ' pisos; 2º patamar no degrau ' + (a + mm + 2) + ', a ' + fmt((a + mm + 2) * e, 1) + ' cm do piso.');
+        lancesTxt.push('3º lance (virado mais 90° ' + (zz ? 'para o outro lado, paralelo ao 1º' : 'para o mesmo lado, voltando paralelo ao 1º') + '): ' + b + ' pisos até o piso superior.');
+        break;
+      }
       case 'l-leque': {
         avail = T - kw; need(avail);
         [a, b] = split(avail);
@@ -427,7 +456,9 @@ function calc(inp) {
     const pT = st.pAuto ? pAlvo : st.p;
     const nPref = Math.max(6, Math.round(2 * PI * rw / pT));
     const nReq = Math.ceil((st.hLivre + thk) / e - 1e-9);
-    const nPer = Math.max(nPref, nReq);
+    /* degraus por volta: automático = o maior entre o que dá o piso desejado e o que dá a altura livre; ou escolhido pela estudante */
+    let nPer = Math.max(nPref, nReq);
+    if (!st.nPerAuto) { nPer = Math.round(Number(st.nPer)); if (!isFinite(nPer) || nPer < 4 || nPer > 72) erro('Degraus por volta precisa ser um número inteiro entre 4 e 72.'); }
     const th = 360 / nPer;
     const dir = st.lado === 'esq' ? 1 : -1;
     const phi0 = -90;
@@ -456,7 +487,7 @@ function calc(inp) {
     slab = mkSector(R / Math.cos(rad(90 / 16)), R + 50, phiEnd, phiEnd + dir * 90); /* laje fora do furo: o raio interno compensa as cordas do polígono */
     pole = { r: rc, h: H };
     pReal = rw * rad(th);
-    helix = { R, rc, rw, th, nPer, dir, phi0, phiEnd, turns: T * th / 360, clearance: nPer * e - thk, Leff, dw };
+    helix = { R, rc, rw, th, nPer, nPref, nReq, nPerAuto: st.nPerAuto !== false, dir, phi0, phiEnd, turns: T * th / 360, clearance: nPer * e - thk, Leff, dw };
     rises = [H];
     avail = 0;
     endF = null;
@@ -484,6 +515,59 @@ function calc(inp) {
   let cum = 0;
   polys.forEach(pl => { pl.x0 = cum; cum += pl.wlen; pl.x1 = cum; });
   const Wtot = cum;
+
+  /* ---- FACE INFERIOR (intradorso) em qualquer ponto da planta ----
+     Laje de concreto: espessura tLaje medida na perpendicular à linha dos bocéis; nos patamares, laje horizontal.
+     Ao longo da linha de caminhamento (X) a face inferior é a mesma poligonal do perfil desenvolvido.
+     Um ponto da planta é levado a X pela fração entre a aresta de entrada e a de saída do degrau em que ele está:
+     exato nos degraus retos; nos leques é uma aproximação suave. Na helicoidal, degraus soltos de espessura espDegrau. */
+  const undX = [];
+  if (!hel) {
+    const tl = st.tLaje;
+    polys.forEach(pl => {
+      const z0 = (pl.k - 1) * e, z1 = pl.k * e;
+      if (pl.kind === 'patamar') undX.push([pl.x0, z1 - tl], [pl.x1, z1 - tl]);
+      else { const w = (pl.x1 - pl.x0) || 1, dv = tl * Math.hypot(w, e) / w; undX.push([pl.x0, z0 - dv], [pl.x1, z1 - dv]); }
+    });
+  }
+  const Uat = X => {
+    if (!undX.length) return 0;
+    if (X <= undX[0][0]) return Math.max(0, undX[0][1]);
+    for (let i = 1; i < undX.length; i++) if (X <= undX[i][0] + 1e-9) { const a0 = undX[i - 1], a1 = undX[i], d = a1[0] - a0[0]; return Math.max(0, d < 1e-9 ? a1[1] : a0[1] + (a1[1] - a0[1]) * (X - a0[0]) / d); }
+    return Math.max(0, undX[undX.length - 1][1]);
+  };
+  const distLinha = (q, L2) => { const dx = L2[1][0] - L2[0][0], dy = L2[1][1] - L2[0][1], l = Math.hypot(dx, dy) || 1; return Math.abs((q[0] - L2[0][0]) * dy - (q[1] - L2[0][1]) * dx) / l; };
+  const saidaDe = i => i + 1 < polys.length ? polys[i + 1].entry : (hel ? null : arrivalPts.slice(0, 2));
+  const zBot = (pl, q) => {
+    const top = pl.k * e;
+    if (hel) return Math.max(0, top - thk);
+    if (pl.kind === 'patamar') return Math.max(0, top - st.tLaje);
+    const sa = saidaDe(pl.k - 1), d0 = distLinha(q, pl.entry), d1 = sa ? distLinha(q, sa) : 0;
+    const f = d0 + d1 < 1e-9 ? 0 : d0 / (d0 + d1);
+    return Uat(pl.x0 + f * (pl.x1 - pl.x0));
+  };
+  polys.forEach(pl => { pl.top = pl.k * e; });
+
+  /* ---- QUANTITATIVOS (estimativas para estudo e orçamento preliminar) ---- */
+  const areaTri = (a, b, c) => ((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2; /* com sinal: vale para polígono não convexo */
+  const integra = (pl, fn) => {
+    /* triângulos em leque a partir do primeiro vértice (o app ordena os polígonos para isso funcionar), cada um subdividido em 16 */
+    let s = 0; const q = pl.pts;
+    const sub = (a, b, c, n) => { if (!n) { const g = [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3]; s += areaTri(a, b, c) * fn(g); return; } const ab = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], bc = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2], ca = [(c[0] + a[0]) / 2, (c[1] + a[1]) / 2]; sub(a, ab, ca, n - 1); sub(ab, b, bc, n - 1); sub(ca, bc, c, n - 1); sub(ab, bc, ca, n - 1); };
+    for (let i = 1; i < q.length - 1; i++) sub(q[0], q[i], q[i + 1], 2);
+    let o = 0; for (let i = 0; i < q.length; i++) { const a = q[i], b = q[(i + 1) % q.length]; o += a[0] * b[1] - b[0] * a[1]; }
+    return o < 0 ? -s : s;
+  };
+  const areaPl = pl => integra(pl, () => 1);
+  const volConc = polys.reduce((s, pl) => s + integra(pl, g => pl.top - zBot(pl, g)), 0);
+  const riserLen = polys.map(pl => Math.hypot(pl.entry[1][0] - pl.entry[0][0], pl.entry[1][1] - pl.entry[0][1]));
+  if (!hel) { const ar = arrivalPts; riserLen.push(Math.hypot(ar[1][0] - ar[0][0], ar[1][1] - ar[0][1])); } else riserLen.push(helix.R - helix.rc);
+  const aPisos = polys.reduce((s, pl) => s + areaPl(pl), 0);
+  const aEspelhos = riserLen.reduce((s, l) => s + l * e, 0);
+  const incPl = pl => pl.kind === 'patamar' ? 1 : Math.hypot(pl.wlen, e) / pl.wlen;
+  const aForma = hel ? 0 : polys.reduce((s, pl) => s + areaPl(pl) * incPl(pl), 0);
+  const corrimao = polys.reduce((s, pl) => s + (pl.kind === 'patamar' ? pl.wlen : Math.hypot(pl.wlen, e)), 0) + (nm.acess ? 60 : 0);
+  const quant = { aPisos, aEspelhos, volConc, aForma, corrimao, riserLen };
 
   /* vão mínimo na laje */
   const limite = H - st.espLaje - st.hLivre;
@@ -537,7 +621,7 @@ function calc(inp) {
     chk('patform', 'Fórmula do patamar (NBR 9077:2001, 4.7.3.3 a)', 'n = 1: ' + fmt(bb2 + p, 0) + ' · n = 2: ' + fmt(2 * bb2 + p, 0) + ' · n = 3: ' + fmt(3 * bb2 + p, 0) + ' cm', '(2e + p) × n + p', 'info', 'Comprimentos que dão n passos inteiros no patamar sem quebrar o ritmo da passada. Seu patamar tem ' + fmt(Lp) + ' cm.');
   }
   if (tipo === 'u-patamar') chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', 'mín. = largura (' + fmt(L) + ' cm)', Lp < L - 1e-6 ? 'bad' : 'ok', (Lp < L - 1e-6 ? 'Não atende: patamar curto. ' : '') + 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).');
-  if (tipo === 'l-patamar') chk('patprof', 'Patamar de canto', fmt(L) + ' × ' + fmt(L) + ' cm', 'lados = largura', 'ok', 'Quadrado com lado igual à largura, por construção.');
+  if (tipo === 'l-patamar' || tipo === 'c-patamar' || tipo === 'z-patamar') chk('patprof', tipo === 'l-patamar' ? 'Patamar de canto' : 'Patamares de canto', fmt(L) + ' × ' + fmt(L) + ' cm', 'lados = largura', 'ok', 'Quadrado com lado igual à largura, por construção (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).');
   if (nm.acess && (nLeque || hel)) chk('mudanca', 'Mudança de direção sem patamar', hel ? 'helicoidal' : nLeque + ' leques', 'patamar obrigatório', 'bad', 'Não atende ao perfil NBR 9050: a norma pede patamar nas mudanças de direção. Use um tipo com patamar.');
   if (tipo === 'l-leque' || tipo === 'u-leque') {
     const lqs = polys.filter(q => q.kind === 'leque');
@@ -583,7 +667,7 @@ function calc(inp) {
   return {
     st, nm, tipo, hel, H, N, e, T, p: pReal, pInput: p, pAlvo, bl, incl, L, Lp, g, kw, nMeio, dw, thk,
     a, b, avail, nSug, rises, polys, walk, arrival: hel ? arrival : { pts: arrivalPts }, slab: hel ? slab : { pts: slabPts },
-    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin,
+    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado,
     pole, helix, opening, kc, kCut, zc, person, lances: lancesTxt, nReto, nLeque, nPat, contagem, areaOcup, temFaixa, fP, bbox, bboxAll, startEdge, Wtot, checks, memo, mirror,
   };
 }

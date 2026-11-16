@@ -28,7 +28,7 @@ const FIELDS = [
   { id: 'H', key: 'H', kind: 'num' }, { id: 'L', key: 'L', kind: 'num' },
   { id: 'N', key: 'N', kind: 'int', auto: 'nAuto' }, { id: 'p', key: 'p', kind: 'num', auto: 'pAuto' },
   { id: 'n1', key: 'n1', kind: 'int', auto: 'n1Auto' }, { id: 'Lp', key: 'Lp', kind: 'num', auto: 'LpAuto' },
-  { id: 'nMeio', key: 'nMeio', kind: 'int' }, { id: 'vao', key: 'vao', kind: 'num' },
+  { id: 'nMeio', key: 'nMeio', kind: 'int' }, { id: 'nPer', key: 'nPer', kind: 'int', auto: 'nPerAuto' }, { id: 'nMeioP', key: 'nMeioP', kind: 'int', auto: 'nMeioPAuto' }, { id: 'vao', key: 'vao', kind: 'num' },
   { id: 'D', key: 'D', kind: 'num' }, { id: 'Dc', key: 'Dc', kind: 'num' },
   { id: 'hLivre', key: 'hLivre', kind: 'num' }, { id: 'espLaje', key: 'espLaje', kind: 'num' },
   { id: 'tLaje', key: 'tLaje', kind: 'num' }, { id: 'espDegrau', key: 'espDegrau', kind: 'num' },
@@ -45,11 +45,11 @@ function mount() {
     fieldNum('H', 'Desnível piso a piso', 'cm', 'Do piso de baixo ao piso de cima, acabados.') + fieldNum('L', 'Largura útil', 'cm', 'Espaço livre para passar, entre paredes ou guardas.') + '</div>' +
     '<div class="field"><label for="norma">Referência de limites</label><select id="norma">' + norm + '</select></div>' +
     '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + fieldNum('cLq', 'Ponta mínima do leque', 'cm') + '</div></div>' +
-    '<div class="field" data-for="l-patamar l-leque u-patamar u-leque helicoidal"><span class="lab" id="ladoLab">Ao subir, a escada vira para</span><div class="seg" id="lado" role="group" aria-labelledby="ladoLab"><button type="button" data-v="dir">Direita</button><button type="button" data-v="esq">Esquerda</button></div></div></section>' +
+    '<div class="field" data-for="l-patamar l-leque u-patamar u-leque c-patamar z-patamar helicoidal"><span class="lab" id="ladoLab">Ao subir, a escada vira para</span><div class="seg" id="lado" role="group" aria-labelledby="ladoLab"><button type="button" data-v="dir">Direita</button><button type="button" data-v="esq">Esquerda</button></div></div></section>' +
     '<section class="card"><h2>Degraus</h2>' +
     '<div class="field"><div class="labrow"><label for="N">Número de espelhos</label><label class="auto"><input type="checkbox" id="nAuto"> sugerido</label></div><div class="stepper"><button type="button" id="Nminus" aria-label="Menos um espelho">−</button><input id="N" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="Nplus" aria-label="Mais um espelho">+</button></div><p class="hint" id="Nhint"></p></div>' +
     '<div class="field"><div class="labrow"><label for="p" id="pLab">Piso (profundidade)</label><label class="auto"><input type="checkbox" id="pAuto"> pela fórmula</label></div><div class="inp"><input id="p" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
-    '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
+    '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
     '<section class="card" id="cardEsp"><h2>Detalhes do tipo</h2>' +
     '<div class="field" data-for="l-leque u-leque"><span class="lab" id="lqLab">Forma dos leques</span><div class="seg" id="leque" role="group" aria-labelledby="lqLab"><button type="button" data-v="bal">Balanceados</button><button type="button" data-v="conv">Convergentes</button></div><p class="hint" id="lqHint"></p></div>' +
     '<div class="field" data-for="l-leque u-leque"><label for="kLeque" id="kLab">Degraus em cada curva</label><select id="kLeque"></select><p class="hint" id="kHint"></p></div>' +
@@ -57,10 +57,12 @@ function mount() {
     '<div class="field" data-for="u-patamar"><label for="vao">Vão entre os dois lances</label><div class="inp"><input id="vao" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
     '<div class="field" data-for="reta-patamar u-patamar"><div class="labrow"><label for="Lp">Profundidade do patamar</label><label class="auto"><input type="checkbox" id="LpAuto"> igual à largura</label></div><div class="inp"><input id="Lp" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
     '<div class="grid2" data-for="helicoidal">' + fieldNum('D', 'Diâmetro externo', 'cm') + fieldNum('Dc', 'Diâmetro do pilar', 'cm') + '</div>' +
+    '<div class="field" data-for="helicoidal"><div class="labrow"><label for="nPer">Degraus por volta</label><label class="auto"><input type="checkbox" id="nPerAuto"> automático</label></div><div class="stepper"><button type="button" id="nPerMinus" aria-label="Menos um degrau por volta">−</button><input id="nPer" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="nPerPlus" aria-label="Mais um degrau por volta">+</button></div><p class="hint" id="nPerHint"></p></div>' +
+    '<div class="field" data-for="c-patamar z-patamar"><div class="labrow"><label for="nMeioP">Pisos no lance do meio</label><label class="auto"><input type="checkbox" id="nMeioPAuto"> um terço</label></div><div class="inp"><input id="nMeioP" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div></div>' +
     '<p class="hint" id="semDetalhe" data-for="reta">Esse tipo não tem detalhes extras. Ajuste só as medidas e os degraus.</p></section>' +
     '<details class="card"><summary>Altura livre e laje</summary><div class="grid2" style="margin-top:12px">' +
     fieldNum('hLivre', 'Altura livre mínima', 'cm') + fieldNum('espLaje', 'Laje do piso de cima', 'cm') +
-    '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
+    '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
     '<div data-for="helicoidal">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
   $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Perfil'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
 }
@@ -95,6 +97,9 @@ function bind() {
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
   $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
   $('Nplus').addEventListener('click', () => { S.nAuto = false; S.N = (CUR ? CUR.N : S.N) + 1; render(); });
+  const nPerAtual = () => CUR && CUR.helix ? CUR.helix.nPer : Math.round(num(S.nPer, 13));
+  $('nPerMinus').addEventListener('click', () => { S.nPerAuto = false; S.nPer = Math.max(4, nPerAtual() - 1); render(); });
+  $('nPerPlus').addEventListener('click', () => { S.nPerAuto = false; S.nPer = Math.min(72, nPerAtual() + 1); render(); });
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; render(); });
   $('tipos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tipo = b.dataset.v; render(); });
   $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
@@ -178,10 +183,15 @@ function render(typing) {
   FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
   setVal('H', plain(S.H)); setVal('L', plain(S.L)); setVal('hLivre', plain(S.hLivre)); setVal('espLaje', plain(S.espLaje)); setVal('tLaje', plain(S.tLaje)); setVal('espDegrau', plain(S.espDegrau));
   setVal('D', plain(S.D)); setVal('Dc', plain(S.Dc)); setVal('vao', plain(S.vao)); setVal('nMeio', String(R.nMeio));
+  if (R.helix) {
+    setVal('nPer', String(R.helix.nPer));
+    $('nPerHint').textContent = 'Cada degrau gira ' + fmt(R.helix.th, 1) + '°. Para o piso de ' + fmt(R.hel ? R.pAlvo : R.p, 1) + ' cm seriam ' + R.helix.nPref + '; para a altura livre, no mínimo ' + R.helix.nReq + '. Menos degraus por volta: piso mais largo e menos altura livre.';
+  }
+  setVal('nMeioP', String(R.nMeioP));
   setVal('N', String(R.N)); setVal('p', S.pAuto ? plain(R.hel ? R.pAlvo : R.pInput) : plain(S.p)); setVal('n1', String(R.a)); setVal('Lp', plain(R.Lp));
   $('pLab').textContent = R.hel ? 'Piso desejado (linha de caminhamento)' : 'Piso (profundidade)';
   $('Nhint').textContent = 'Sugestão: ' + R.nSug + ' espelhos (espelho de ' + fmt(S.H / R.nSug, 2) + ' cm). Atual: ' + fmt(R.e, 2) + ' cm.';
-  $('n1Un').textContent = 'de ' + Math.max(0, R.avail) + ' pisos retos';
+  $('n1Un').textContent = 'de ' + Math.max(0, R.avail - (R.tipo === 'c-patamar' || R.tipo === 'z-patamar' ? R.nMeioP : 0)) + ' pisos retos';
   $('nMeioHint').textContent = 'Vão central entre os lances: ' + fmt(R.gU || R.nMeio * R.p, 1) + ' cm.';
   /* resultados */
   const incl = R.incl;

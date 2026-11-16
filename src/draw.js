@@ -181,8 +181,12 @@ function planSVG(R, o, C) {
       R.polys.forEach(pl => { if (pl.kind === 'reto' && pl.grp) (groups[pl.grp] = groups[pl.grp] || []).push(pl); });
       Object.keys(groups).forEach(k => {
         const g = groups[k], f = g[0], l = g[g.length - 1];
-        const ux = f.pts[0][0] - f.pts[1][0], uy = f.pts[0][1] - f.pts[1][1], ul = Math.hypot(ux, uy) || 1;
-        s += dimLine(f.pts[0], l.pts[3], ux / ul, uy / ul, fs * 1.7, g.length + ' × ' + fmt(R.pInput, 1) + ' = ' + fmt(g.length * R.pInput, 0), fs * 0.9, C);
+        let ux = f.pts[0][0] - f.pts[1][0], uy = f.pts[0][1] - f.pts[1][1]; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+        /* a cota sai para o lado de fora da escada (longe do centro do desenho), para não cair em cima de outro lance */
+        const cx = (bb[0] + bb[2]) / 2, cy = (bb[1] + bb[3]) / 2, gm = centroid([f.pts[0], f.pts[1], l.pts[2], l.pts[3]]);
+        let a0 = f.pts[0], a1 = l.pts[3];
+        if ((gm[0] - cx) * ux + (gm[1] - cy) * uy < 0) { ux = -ux; uy = -uy; a0 = f.pts[1]; a1 = l.pts[2]; }
+        s += dimLine(a0, a1, ux, uy, fs * 1.7, g.length + ' × ' + fmt(R.pInput, 1) + ' = ' + fmt(g.length * R.pInput, 0), fs * 0.9, C);
       });
     }
   }

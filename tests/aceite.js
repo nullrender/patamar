@@ -90,7 +90,16 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ok(/120 cm do piso/.test(explicacao(calc({tipo:'reta',zCorte:120}),calc({tipo:'reta',zCorte:120}).st,C)),'roteiro usa a altura de corte escolhida');
   ok(/topo da vertical/.test(exl),'Tales: roteiro diz qual vertical e qual ponto ligar');
 }
+/* v6: degraus por volta escolhidos; tipos C e Z */
+{
+  const h10=calc({tipo:'helicoidal',nPerAuto:false,nPer:10}); ok(h10.helix.nPer===10 && st(h10,'altura')==='bad','helicoidal com 10 degraus por volta: piso largo e altura livre "não atende"');
+  ok(calc({tipo:'helicoidal'}).helix.nPerAuto===true && calc({tipo:'helicoidal'}).helix.nPer===13,'helicoidal automática continua com 13 por volta');
+  let eP=false; try{calc({tipo:'helicoidal',nPerAuto:false,nPer:2});}catch(e){eP=!!e.patamar;} ok(eP,'degraus por volta fora de 4 a 72 dá erro de entrada');
+  ['c-patamar','z-patamar'].forEach(t=>['dir','esq'].forEach(lado=>{const R=calc({tipo:t,lado}); ok(R.polys.length===R.T && R.rises.length===3 && R.nPat===2,t+' '+lado+': 3 lances, 2 patamares, N − 1 superfícies');}));
+  const Z=calc({tipo:'z-patamar'}), Rt=calc({tipo:'reta'});
+  ok(Math.abs(Z.quant.aEspelhos-Rt.quant.aEspelhos)<1e-6,'Z: área de espelhos = N × e × largura');
+}
 /* varredura */
-let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
+let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
 console.log(fail?fail+' falha(s)':'todos passaram');
