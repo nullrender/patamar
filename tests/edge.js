@@ -1,0 +1,11 @@
+const {calc}=require('./carregar.js');
+const show=(n,o)=>{const R=calc(o);console.log(n,'N',R.N,'e',R.e.toFixed(2),'p',R.p.toFixed(1),'| ',R.checks.filter(c=>c.status==='bad'||c.status==='warn').map(c=>c.id+':'+c.status+' '+c.valor).join(' ; ')||'sem alertas');};
+show('reta 340',{tipo:'reta',H:340});
+show('l-leque H=150 (pouco desnível)',{tipo:'l-leque',H:150});
+show('u-leque H=190',{tipo:'u-leque',H:190});
+show('manual N=18 L=70',{tipo:'reta',nAuto:false,N:18,L:70});
+show('acess',{tipo:'u-patamar',norma:'acess',L:100});
+show('helice D=140',{tipo:'helicoidal',D:140});
+show('helice esq',{tipo:'helicoidal',lado:'esq'});
+show('u-pat Lp<L',{tipo:'u-patamar',LpAuto:false,Lp:60});
+show('H=60',{tipo:'reta',H:60});

@@ -1,5 +1,14 @@
 # Patamar
 
-Calculadora de escadas: planta, perfil desenvolvido, 3D e explicação passo a passo. App instalável (PWA).
+Calculadora de escadas: calcula e desenha planta, perfil desenvolvido e 3D, com explicação passo a passo. Tipos: reta, reta com patamar, em L e em U (com patamar ou leques) e helicoidal.
 
-Abra: https://nullrender.github.io/patamar/
+Abrir ou instalar no celular: https://nullrender.github.io/patamar/
+
+## Desenvolvimento
+
+```
+node build.js   # gera index.html a partir de src/
+npm test        # roda os testes
+```
+
+Detalhes e regras do projeto: [CLAUDE.md](CLAUDE.md).

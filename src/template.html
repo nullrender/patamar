@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patamar Calculadora de Escadas</title>
+<meta name="theme-color" content="#13242f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Patamar">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Direção: prancheta de desenho técnico. Papel frio, tinta azul-petróleo, laranja de segurança só no que sobe e no que é ação. Layout: controles à esquerda, desenho e verificações à direita. */
+:root{
+  --paper:#eef2f4; --panel:#ffffff; --ink:#13242f; --muted:#5a6b78; --line:#cdd7dd; --accent:#d9531a; --accent-ink:#ffffff; --info:#2a6fbb;
+  --ok:#17803f; --warn:#a86a00; --bad:#c73434; --okbg:#e3f3ea; --warnbg:#fbefd5; --badbg:#fbe3e3; --infobg:#e4eef9;
+  --tread:#dbe6ec; --winder:#f6d9c4; --patamar:#cfe5d9; --piso:#e8edf0;
+  --t3:#b3c7d3; --w3:#eeaa7c; --p3:#97c7b0; --f3:#cdd5da; --ground:#dfe5e8;
+  --display:'Barlow Condensed','Arial Narrow',Arial,sans-serif; --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0e1b27; --panel:#132636; --ink:#e4edf3; --muted:#92a6b5; --line:#274055; --accent:#ff8a4c; --accent-ink:#1a1008; --info:#6cb0ff;
+    --ok:#4cc27e; --warn:#e8a63a; --bad:#ff7777; --okbg:#143a2a; --warnbg:#3b2d10; --badbg:#431d1f; --infobg:#17304d;
+    --tread:#1d3b52; --winder:#5c3a2a; --patamar:#1f4a3e; --piso:#183043;
+    --t3:#3f7396; --w3:#c0703f; --p3:#3f8f78; --f3:#3a4d5c; --ground:#1a2e3f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0e1b27; --panel:#132636; --ink:#e4edf3; --muted:#92a6b5; --line:#274055; --accent:#ff8a4c; --accent-ink:#1a1008; --info:#6cb0ff;
+  --ok:#4cc27e; --warn:#e8a63a; --bad:#ff7777; --okbg:#143a2a; --warnbg:#3b2d10; --badbg:#431d1f; --infobg:#17304d;
+  --tread:#1d3b52; --winder:#5c3a2a; --patamar:#1f4a3e; --piso:#183043;
+  --t3:#3f7396; --w3:#c0703f; --p3:#3f8f78; --f3:#3a4d5c; --ground:#1a2e3f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%}
+h1,h2,h3{margin:0;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+
+
+.top{max-width:1280px;margin:0 auto;padding:18px 16px 4px;display:flex;align-items:center;gap:12px}
+.mark{width:34px;height:34px;flex:none}
+.top h1{font:600 30px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.top p{margin:0;color:var(--muted);font-size:13px}
+.app{max-width:1280px;margin:0 auto;padding:12px 16px 32px;display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
+.ctrl{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.card h2,.sec h2{font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+summary{cursor:pointer;font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+.tipos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tipos button{display:flex;flex-direction:column;gap:6px;align-items:stretch;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px;cursor:pointer;text-align:left}
+.tipos button:hover{border-color:var(--muted)}
+.tipos button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--panel)}
+.tipos .th{display:block;height:84px;overflow:hidden}
+.tipos .th svg{width:100%;height:100%;display:block}
+.tipos .nm{font-size:13px;font-weight:600;line-height:1.2}
+
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;margin-top:12px}
+.grid2 .field{margin-top:0}
+.field>label,.lab,.labrow label:first-child{font-size:13px;font-weight:500}
+.labrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.auto{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;cursor:pointer;white-space:nowrap}
+.auto input{accent-color:var(--accent);margin:0}
+.inp{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
+.inp:focus-within,.stepper:focus-within{border-color:var(--accent)}
+.inp input,.stepper input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:9px 10px;font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;outline:none}
+.un{padding:0 10px;display:flex;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.stepper{display:flex;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
+.stepper button{width:44px;border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--ink)}
+.stepper button:hover{background:var(--line)}
+.stepper input{text-align:center}
+select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:9px 10px;font-size:14px}
+.hint{margin:0;font-size:12px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--paper);padding:9px;cursor:pointer;font-size:14px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
+
+.out{display:flex;flex-direction:column;gap:12px;min-width:0}
+.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.head h2{font:600 28px/1.1 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0}
+.head p{margin:0;color:var(--muted);font-size:13px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.tl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tv{font:500 18px/1.2 var(--mono);font-variant-numeric:tabular-nums}
+.ts{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:4px}
+.tabs button{border:1px solid var(--line);background:var(--panel);padding:8px 18px;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;border-bottom:0}
+.tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.board{background:var(--panel);border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:12px;margin-top:-13px}
+.stage{min-height:260px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;border-radius:4px;padding:6px;overflow:hidden}
+.stage svg{max-height:70vh}
+.stage canvas{display:block;touch-action:none;cursor:grab;border-radius:4px}
+.cap{margin:8px 4px 2px;font-size:12px;color:var(--muted)}
+.bar3{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0 0 10px}
+.bar3 label{display:flex;align-items:center;gap:8px;font-size:13px}
+.bar3 input{accent-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
+.lg{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block}
+.ln{width:22px;height:0;border-top:2.5px solid var(--accent);display:inline-block}
+.ln.dash{border-top:2px dashed var(--info)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{border:1px solid var(--ink);background:transparent;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500;font-size:14px}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.08);background:var(--accent);color:var(--accent-ink)}
+
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:1100px){.two{grid-template-columns:minmax(0,1fr)}}
+.cs{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;margin-bottom:10px}
+.cs.ok{background:var(--okbg);color:var(--ok)} .cs.warn{background:var(--warnbg);color:var(--warn)} .cs.bad{background:var(--badbg);color:var(--bad)}
+.checks,.memo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ck{display:flex;gap:10px;align-items:flex-start;border-left:3px solid var(--line);padding:2px 0 2px 10px}
+.ck.ok{border-color:var(--ok)} .ck.warn{border-color:var(--warn)} .ck.bad{border-color:var(--bad)} .ck.info{border-color:var(--info)}
+.pill{flex:none;width:62px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:2px 0;margin-top:2px}
+.ck.ok .pill{background:var(--okbg);color:var(--ok)} .ck.warn .pill{background:var(--warnbg);color:var(--warn)} .ck.bad .pill{background:var(--badbg);color:var(--bad)} .ck.info .pill{background:var(--infobg);color:var(--info)}
+.cn{font-size:14px;font-weight:500}
+.cv{font-size:13px;color:var(--muted)} .cv b{font-family:var(--mono);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+.cnote{font-size:13px;margin-top:2px}
+.memo{counter-reset:m;font-size:14px}
+.memo li{counter-increment:m;padding-left:30px;position:relative}
+.memo li::before{content:counter(m);position:absolute;left:0;top:1px;font:500 12px/1.6 var(--mono);color:var(--muted);width:22px;text-align:right}
+.note{font-size:12px;color:var(--muted);margin:0}
+
+.modal{position:fixed;inset:0;background:rgba(8,16,24,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal .box{background:var(--panel);border-radius:10px;padding:14px;max-width:min(1100px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.modal img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff}
+.modal .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
+.toast.on{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+@media (max-width:900px){
+  .app{display:flex;flex-direction:column;align-items:stretch}
+  .ctrl{display:contents}
+  .ctrl>*{order:4}
+  .ctrl>.o1{order:1} .ctrl>.o2{order:2} .out{order:3}
+}
+@media (max-width:640px){
+  .stage{overflow-x:auto}
+  .stage[data-view=corte] svg{min-width:640px}
+  .stage[data-view=planta] svg{min-width:560px}
+}
+.barP{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:0 0 10px;font-size:13px}
+.barP .seg{min-width:250px}
+.barP .seg button{padding:7px 12px;font-size:13px}
+.barP label{display:flex;align-items:center;gap:7px}
+.barP input[type=checkbox]{accent-color:var(--accent)}
+.barP input.mini{width:64px;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);font:inherit}
+.stage[data-view=explica]{background:none;padding:0;overflow:visible;min-height:0}
+.ex{border:1px solid var(--line);border-radius:8px;background:var(--paper);margin:0 0 8px}
+.ex>summary{cursor:pointer;padding:12px 14px;font-weight:600;list-style:none}
+.ex>summary::-webkit-details-marker{display:none}
+.ex>summary::after{content:"+";float:right;color:var(--muted);font-weight:500}
+.ex[open]>summary::after{content:"−"}
+.ex .exb{padding:2px 16px 14px;font-size:14px;line-height:1.6}
+.ex .exb p{margin:0 0 10px}
+.ex .exb ol,.ex .exb ul{margin:0 0 10px;padding-left:20px}
+.ex .exb li{margin:0 0 8px}
+.ex .exb dl{margin:0 0 6px}
+.ex .exb dt{font-weight:600;margin-top:10px}
+.ex .exb dd{margin:2px 0 0}
+.ex .exb svg{margin:4px 0 12px}
+.cn2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
+
+.inp input.err,.stepper input.err,input.err{outline:2px solid #c0392b;outline-offset:-2px}
+.errbox{padding:22px;border:1px solid #c0392b;border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
+.errbox p{margin:8px 0 0}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.stage[data-view=erro]{background:none;min-height:0}
+</style>
+</head>
+<body>
+<header class="top">
+  <svg class="mark" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="6" fill="var(--ink)"/><path d="M6 27h6v-5h6v-5h6v-5h4" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  <div><h1>Patamar</h1><p>Escadas calculadas e desenhadas: planta, corte e 3D</p></div>
+</header>
+<main class="app">
+  <div class="ctrl" id="ctrl"></div>
+  <div class="out">
+    <div class="head"><h2 id="title"></h2><p id="desc"></p></div>
+    <div class="tiles" id="tiles" aria-live="polite"></div>
+    <div>
+      <div class="tabs" id="tabs" role="tablist" aria-label="Tipo de desenho"></div>
+      <div class="board">
+        <div class="bar3" id="view3dBar" hidden>
+          <label>Girar <input type="range" id="yaw" min="-180" max="180" value="-32"></label>
+          <label>Inclinar <input type="range" id="pit" min="12" max="80" value="42"></label>
+        </div>
+        <div class="barP" id="viewPlantaBar" hidden>
+          <div class="seg" id="modoP" role="group" aria-label="Pavimento"><button type="button" data-v="inf">Pav. inferior</button><button type="button" data-v="sup">Pav. superior</button></div>
+          <label id="zcWrap">Corte a <input class="mini" id="zCorte" type="text" inputmode="decimal" autocomplete="off"> cm</label>
+          <label><input type="checkbox" id="showDims"> cotas</label>
+          <label><input type="checkbox" id="showNums"> números</label>
+        </div>
+        <div class="stage" id="stage"></div>
+        <div class="legend" id="legend"></div>
+        <div class="actions">
+          <button type="button" class="btn pri" id="btnImg">Gerar imagem</button>
+          <button type="button" class="btn" id="btnSvg">Copiar SVG</button>
+          <button type="button" class="btn" id="btnResumo">Copiar resumo</button>
+        </div>
+      </div>
+    </div>
+    <div class="two">
+      <section class="card"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><ul class="checks" id="checks"></ul></section>
+      <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
+    </div>
+    <p class="note">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os valores do item 6.8 da norma (conferidos em fontes secundárias em 16/11/2026); o perfil Estudo usa valores usuais, sem norma nacional que os sustente. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
+  </div>
+</main>
+<div hidden><canvas id="cv3" width="800" height="600" aria-label="Vista 3D da escada"></canvas></div>
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-label="Imagem gerada">
+  <div class="box">
+    <img id="modalImg" alt="Desenho gerado">
+    <div class="row"><a class="btn pri" id="modalDl" download="patamar.png" style="text-decoration:none">Baixar PNG</a><button type="button" class="btn" id="modalClose">Fechar</button><span class="note">Se o download não abrir, segure (celular) ou clique com o botão direito (PC) na imagem e salve.</span></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+/*__SCRIPT__*/
+</script>
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { }); });
+}
+</script>
+</body>
+</html>

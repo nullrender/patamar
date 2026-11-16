@@ -1,0 +1,9 @@
+{
+  "name": "patamar",
+  "private": true,
+  "description": "Calculadora de escadas: planta, perfil, 3D e explicação (PWA)",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node tests/test_core.js && node tests/edge.js && node tests/aceite.js"
+  }
+}
