@@ -30,16 +30,29 @@ function cont(t){
 ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque'].forEach(cont);
 // áreas de leque somam área do quadrado L*L
 {
- const R=calc({tipo:'l-leque',L:100,H:280});
+ const R=calc({tipo:'l-leque',L:100,H:280,leque:'conv'});
  const ar=pts=>{let s=0;for(let i=0;i<pts.length;i++){const q=pts[i],r=pts[(i+1)%pts.length];s+=q[0]*r[1]-r[0]*q[1];}return Math.abs(s)/2;};
  const w=R.polys.filter(p=>p.kind==='leque').reduce((s,p)=>s+ar(p.pts),0);
  eq(w,100*100,'área leques = L²',1e-3);
- const R2=calc({tipo:'u-leque',L:100,H:300,nMeio:2});
+ const R2=calc({tipo:'u-leque',L:100,H:300,nMeio:2,leque:'conv'});
  const w2=R2.polys.filter(p=>p.kind==='leque').reduce((s,p)=>s+ar(p.pts),0);
  eq(w2,2*100*100,'área leques U = 2L²',1e-3);
+}
+// balanceados: a soma das áreas de todos os degraus é a área do contorno (trechos retos × L + L² por curva)
+{
+ const ar=pts=>{let s=0;for(let i=0;i<pts.length;i++){const q=pts[i],r=pts[(i+1)%pts.length];s+=q[0]*r[1]-r[0]*q[1];}return s/2;};
+ for(const [t,nc] of [['l-leque',1],['u-leque',2]]) for(const lado of ['dir','esq']) for(const H of [280,340,450]) {
+  const R=calc({tipo:t,lado,H,L:100,nMeio:2});
+  const A=R.dw*Math.PI/2, esperado=(R.T*R.p-nc*A)*R.L+nc*R.L*R.L;
+  const as=R.polys.map(p=>ar(p.pts));
+  eq(as.reduce((s,a)=>s+Math.abs(a),0),esperado,`${t} ${lado} H${H}: área balanceada = contorno`,1e-3);
+  if(as.some(a=>Math.sign(a)!==Math.sign(as[0]))){console.log('FALHOU orientação',t,lado,H);bad++;}
+  R.polys.forEach(p=>eq(p.wlen,R.p,'piso constante na linha'));
+ }
 }
 // valores conhecidos: H=280 -> N=16, e=17.5, p=29
 const R=calc({tipo:'reta',H:280});
 eq(R.N,16,'N');eq(R.e,17.5,'e');eq(R.p,29,'p');
 console.log(R.memo.join('\n'));
 console.log('falhas:',bad);
+if(bad)process.exitCode=1;

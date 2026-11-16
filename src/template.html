@@ -177,12 +177,52 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .ex .exb dd{margin:2px 0 0}
 .ex .exb svg{margin:4px 0 12px}
 .cn2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
+.tabwrap{overflow-x:auto;margin:0 0 12px}
+.tab{border-collapse:collapse;font-size:13px;min-width:100%}
+.tab th,.tab td{border-bottom:1px solid var(--line);padding:4px 10px;text-align:right;white-space:nowrap}
+.tab th{font-weight:600;color:var(--muted);font-size:12px}
+.tab td:first-child,.tab th:first-child{text-align:left}
+.tab td{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
 .inp input.err,.stepper input.err,input.err{outline:2px solid #c0392b;outline-offset:-2px}
 .errbox{padding:22px;border:1px solid #c0392b;border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
 .errbox p{margin:8px 0 0}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .stage[data-view=erro]{background:none;min-height:0}
+
+/* ---- relatório para imprimir ou salvar em PDF ---- */
+.printArea{display:none}
+@media print{
+  @page{size:A4;margin:14mm}
+  /* papel sempre com as cores do tema claro, qualquer que seja o tema da tela (o :not(#_) ganha em especificidade) */
+  :root:not(#_),:root[data-theme]:not(#_){
+    --paper:#eef2f4; --panel:#ffffff; --ink:#13242f; --muted:#5a6b78; --line:#cdd7dd; --accent:#d9531a; --accent-ink:#ffffff; --info:#2a6fbb;
+    --ok:#17803f; --warn:#a86a00; --bad:#c73434; --okbg:#e3f3ea; --warnbg:#fbefd5; --badbg:#fbe3e3; --infobg:#e4eef9;
+    --tread:#dbe6ec; --winder:#f6d9c4; --patamar:#cfe5d9; --piso:#e8edf0;
+    color-scheme:light;
+  }
+  html{background:#fff}
+  body{background:#fff;color:#000;font-size:11pt}
+  body>*:not(#printArea){display:none !important}
+  #printArea{display:block}
+  .printArea h1{font:600 22pt/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+  .printArea h2{font:600 13pt/1.2 var(--display);text-transform:uppercase;letter-spacing:.08em;margin:14pt 0 6pt;color:#333}
+  .printArea .sub{color:#444;margin:3pt 0 10pt}
+  .printArea .ptiles{display:grid;grid-template-columns:repeat(3,1fr);gap:4pt;margin-bottom:8pt}
+  .printArea .ptiles div{border:1px solid #bbb;border-radius:4pt;padding:4pt 6pt}
+  .printArea .ptiles b{display:block;font:500 12pt var(--mono)}
+  .printArea .ptiles span{font-size:8pt;color:#555;text-transform:uppercase;letter-spacing:.06em}
+  .printArea figure{margin:0 0 8pt;break-inside:avoid}
+  .printArea figure svg{width:100%;height:auto;max-height:96mm}
+  .printArea figcaption{font-size:9pt;color:#444}
+  .printArea .quebra{break-before:page}
+  .printArea .checks li,.printArea .memo li{break-inside:avoid}
+  .printArea .ex{border:0;background:none;margin:0 0 6pt}
+  .printArea .ex>summary{padding:0;font:600 12pt var(--display);text-transform:uppercase;letter-spacing:.06em}
+  .printArea .ex>summary::after{content:none}
+  .printArea .ex .exb{padding:4pt 0 0;font-size:10pt}
+  .printArea .rodape{margin-top:12pt;font-size:8pt;color:#555;border-top:1px solid #bbb;padding-top:4pt}
+}
 </style>
 </head>
 <body>
@@ -214,6 +254,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
           <button type="button" class="btn pri" id="btnImg">Gerar imagem</button>
           <button type="button" class="btn" id="btnSvg">Copiar SVG</button>
           <button type="button" class="btn" id="btnResumo">Copiar resumo</button>
+          <button type="button" class="btn" id="btnPrint">Imprimir / PDF</button>
         </div>
       </div>
     </div>
@@ -221,7 +262,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
       <section class="card"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><ul class="checks" id="checks"></ul></section>
       <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
     </div>
-    <p class="note">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os valores do item 6.8 da norma (conferidos em fontes secundárias em 16/11/2026); o perfil Estudo usa valores usuais, sem norma nacional que os sustente. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
+    <p class="note" id="aviso">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021), conferidos no texto da norma em 16/11/2026. O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001; a edição de 2025 da NBR 9077 não foi lida. Piso mínimo de 25 cm, largura de 80 cm e desnível de 3,20 m sem patamar, no perfil Estudo, não têm norma nacional que os sustente. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
   </div>
 </main>
 <div hidden><canvas id="cv3" width="800" height="600" aria-label="Vista 3D da escada"></canvas></div>
@@ -232,6 +273,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
+<div id="printArea" class="printArea" aria-hidden="true"></div>
 <script>
 /*__SCRIPT__*/
 </script>

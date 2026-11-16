@@ -6,7 +6,7 @@ let VIEW = 'planta', YAW = -32, PIT = 42, CUR = null, THEME = null, CV3 = null;
 
 function getTheme() {
   const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
-  return { paper: g('--paper'), ink: g('--ink'), muted: g('--muted'), line: g('--line'), accent: g('--accent'), info: g('--info'), tread: g('--tread'), winder: g('--winder'), patamar: g('--patamar'), piso: g('--piso'), t3: g('--t3'), w3: g('--w3'), p3: g('--p3'), f3: g('--f3'), ground: g('--ground') };
+  return { paper: g('--paper'), ink: g('--ink'), muted: g('--muted'), line: g('--line'), accent: g('--accent'), info: g('--info'), tread: g('--tread'), winder: g('--winder'), patamar: g('--patamar'), piso: g('--piso'), t3: g('--t3'), w3: g('--w3'), p3: g('--p3'), f3: g('--f3'), ground: g('--ground'), ok: g('--ok') };
 }
 const plain = v => String(Math.round(v * 100) / 100).replace('.', ',');
 /* leitura estrita: aceita 280, 17,5 ou 17.5; recusa vazio, letras e separador de milhar */
@@ -34,7 +34,7 @@ const FIELDS = [
   { id: 'tLaje', key: 'tLaje', kind: 'num' }, { id: 'espDegrau', key: 'espDegrau', kind: 'num' },
   { id: 'zCorte', key: 'zCorte', kind: 'num' },
   { id: 'cEmin', key: 'cEmin', kind: 'num' }, { id: 'cEmax', key: 'cEmax', kind: 'num' }, { id: 'cPmin', key: 'cPmin', kind: 'num' }, { id: 'cPmax', key: 'cPmax', kind: 'num' },
-  { id: 'cBmin', key: 'cBmin', kind: 'num' }, { id: 'cBmax', key: 'cBmax', kind: 'num' }, { id: 'cLmin', key: 'cLmin', kind: 'num' }, { id: 'cHpat', key: 'cHpat', kind: 'num' }, { id: 'cDw', key: 'cDw', kind: 'num' },
+  { id: 'cBmin', key: 'cBmin', kind: 'num' }, { id: 'cBmax', key: 'cBmax', kind: 'num' }, { id: 'cLmin', key: 'cLmin', kind: 'num' }, { id: 'cHpat', key: 'cHpat', kind: 'num' }, { id: 'cDw', key: 'cDw', kind: 'num' }, { id: 'cLq', key: 'cLq', kind: 'num' },
 ];
 
 function mount() {
@@ -44,14 +44,15 @@ function mount() {
     '<section class="card o2"><h2>Medidas</h2><div class="grid2">' +
     fieldNum('H', 'Desnível piso a piso', 'cm', 'Do piso de baixo ao piso de cima, acabados.') + fieldNum('L', 'Largura útil', 'cm', 'Espaço livre para passar, entre paredes ou guardas.') + '</div>' +
     '<div class="field"><label for="norma">Referência de limites</label><select id="norma">' + norm + '</select></div>' +
-    '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + '</div></div>' +
+    '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + fieldNum('cLq', 'Ponta mínima do leque', 'cm') + '</div></div>' +
     '<div class="field" data-for="l-patamar l-leque u-patamar u-leque helicoidal"><span class="lab" id="ladoLab">Ao subir, a escada vira para</span><div class="seg" id="lado" role="group" aria-labelledby="ladoLab"><button type="button" data-v="dir">Direita</button><button type="button" data-v="esq">Esquerda</button></div></div></section>' +
     '<section class="card"><h2>Degraus</h2>' +
     '<div class="field"><div class="labrow"><label for="N">Número de espelhos</label><label class="auto"><input type="checkbox" id="nAuto"> sugerido</label></div><div class="stepper"><button type="button" id="Nminus" aria-label="Menos um espelho">−</button><input id="N" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="Nplus" aria-label="Mais um espelho">+</button></div><p class="hint" id="Nhint"></p></div>' +
     '<div class="field"><div class="labrow"><label for="p" id="pLab">Piso (profundidade)</label><label class="auto"><input type="checkbox" id="pAuto"> pela fórmula</label></div><div class="inp"><input id="p" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
     '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
     '<section class="card" id="cardEsp"><h2>Detalhes do tipo</h2>' +
-    '<div class="field" data-for="l-leque u-leque"><label for="kLeque">Leques em cada curva</label><select id="kLeque"><option value="2">2 leques (45° cada)</option><option value="3">3 leques (30° cada)</option><option value="4">4 leques (22,5° cada)</option></select></div>' +
+    '<div class="field" data-for="l-leque u-leque"><span class="lab" id="lqLab">Forma dos leques</span><div class="seg" id="leque" role="group" aria-labelledby="lqLab"><button type="button" data-v="bal">Balanceados</button><button type="button" data-v="conv">Convergentes</button></div><p class="hint" id="lqHint"></p></div>' +
+    '<div class="field" data-for="l-leque u-leque"><label for="kLeque" id="kLab">Degraus em cada curva</label><select id="kLeque"></select><p class="hint" id="kHint"></p></div>' +
     '<div class="field" data-for="u-leque"><label for="nMeio">Pisos retos entre as duas curvas</label><div class="inp"><input id="nMeio" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div><p class="hint" id="nMeioHint"></p></div>' +
     '<div class="field" data-for="u-patamar"><label for="vao">Vão entre os dois lances</label><div class="inp"><input id="vao" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
     '<div class="field" data-for="reta-patamar u-patamar"><div class="labrow"><label for="Lp">Profundidade do patamar</label><label class="auto"><input type="checkbox" id="LpAuto"> igual à largura</label></div><div class="inp"><input id="Lp" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
@@ -83,13 +84,14 @@ function bind() {
   });
   $('norma').addEventListener('change', e => {
     const v = e.target.value;
-    if (v === 'custom' && S.norma !== 'custom') { const b = NORMAS[S.norma] || NORMAS.res; Object.assign(S, { cEmin: b.eMin, cEmax: b.eMax, cPmin: b.pMin, cPmax: b.pMax, cBmin: b.bMin, cBmax: b.bMax, cLmin: b.Lmin, cHpat: b.hPat, cDw: b.dw }); }
+    if (v === 'custom' && S.norma !== 'custom') { const b = NORMAS[S.norma] || NORMAS.res; Object.assign(S, { cEmin: b.eMin, cEmax: b.eMax, cPmin: b.pMin, cPmax: b.pMax, cBmin: b.bMin, cBmax: b.bMax, cLmin: b.Lmin, cHpat: b.hPat, cDw: b.dw, cLq: b.lqMin }); }
     S.norma = v; render();
   });
   $('modoP').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.modoPlanta = b.dataset.v; render(); });
   $('showDims').addEventListener('change', e => { S.showDims = e.target.checked; render(); });
   $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
+  $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
   $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
   $('Nplus').addEventListener('click', () => { S.nAuto = false; S.N = (CUR ? CUR.N : S.N) + 1; render(); });
@@ -100,6 +102,7 @@ function bind() {
   $('btnResumo').addEventListener('click', () => copiar(resumo(), 'Resumo copiado'));
   $('btnSvg').addEventListener('click', () => { if (VIEW === '3d') return; copiar(VIEW === 'corte' ? sectionSVG(CUR, { pxW: 1400 }, THEME) : planSVG(CUR, { pxW: 1400 }, THEME), 'SVG copiado'); });
   $('btnImg').addEventListener('click', gerarImagem);
+  $('btnPrint').addEventListener('click', imprimir);
   $('modalClose').addEventListener('click', () => $('modal').hidden = true);
   $('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').hidden = true; });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') $('modal').hidden = true; });
@@ -130,11 +133,21 @@ function falha(msg) {
   $('stage').dataset.view = 'erro';
   $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
   $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Entrada ou configuração inválida';
-  ['btnImg', 'btnSvg', 'btnResumo'].forEach(id => { $(id).disabled = true; });
+  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = true; });
   $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true;
+}
+/* opções do número de degraus da curva: de 2 até pelo menos kw (o mínimo do balanceamento pode passar de 6) */
+function opcoesK(bal, kMin, kAtual) {
+  const top = Math.max(6, kAtual || 0, (kMin || 0) + 2), ops = [];
+  for (let k = 2; k <= top; k++) ops.push('<option value="' + k + '"' + (bal && kMin && k < kMin ? ' disabled' : '') + '>' + k + (bal ? ' degraus' : ' leques (' + fmt(90 / k, 1) + '° cada)') + '</option>');
+  const h = ops.join('');
+  if ($('kLeque').innerHTML !== h) $('kLeque').innerHTML = h;
+  $('kLeque').value = String(kAtual);
 }
 function render(typing) {
   THEME = THEME || getTheme();
+  opcoesK(S.leque !== 'conv', 0, clamp(Math.round(num(S.kLeque, 3)), 2, 6));
+  document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -145,18 +158,23 @@ function render(typing) {
   let R;
   try { R = calc(S); } catch (err) { if (!err.patamar) console.error(err); falha(err.message); return; }
   CUR = R;
-  ['btnImg', 'btnSvg', 'btnResumo'].forEach(id => { $(id).disabled = false; });
+  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = false; });
   /* controles */
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#lado button').forEach(b => b.classList.toggle('on', b.dataset.v === S.lado));
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   $('norma').value = S.norma; $('customNorm').hidden = S.norma !== 'custom';
-  ['cEmin','cEmax','cPmin','cPmax','cBmin','cBmax','cLmin','cHpat','cDw'].forEach(k => setVal(k, plain(S[k])));
+  ['cEmin','cEmax','cPmin','cPmax','cBmin','cBmax','cLmin','cHpat','cDw','cLq'].forEach(k => setVal(k, plain(S[k])));
   setVal('zCorte', plain(S.zCorte)); $('showDims').checked = S.showDims !== false; $('showNums').checked = S.showNums !== false;
   document.querySelectorAll('#modoP button').forEach(b => b.classList.toggle('on', b.dataset.v === S.modoPlanta));
   $('zcWrap').hidden = S.modoPlanta === 'sup';
+  document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (R.bal ? 'bal' : 'conv')));
+  $('lqHint').textContent = R.bal ? 'Piso igual na linha de caminhamento, ponta larga na borda interna. É o que a NBR 9077 pede.' : 'Todos saem do canto interno, com ponta zero. Serve para comparar com os balanceados.';
+  opcoesK(R.bal, R.kwMin, R.kw);
   $('kLeque').value = String(R.kw);
+  $('kLab').textContent = R.bal ? 'Degraus no trecho de cada curva' : 'Leques em cada curva';
+  $('kHint').textContent = R.bal ? 'Mínimo ' + R.kwMin + ' para manter o piso de ' + fmt(R.p, 1) + ' cm na curva da linha (' + fmt(R.dw * Math.PI / 2, 1) + ' cm).' : '';
   FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
   setVal('H', plain(S.H)); setVal('L', plain(S.L)); setVal('hLivre', plain(S.hLivre)); setVal('espLaje', plain(S.espLaje)); setVal('tLaje', plain(S.tLaje)); setVal('espDegrau', plain(S.espDegrau));
   setVal('D', plain(S.D)); setVal('Dc', plain(S.Dc)); setVal('vao', plain(S.vao)); setVal('nMeio', String(R.nMeio));
@@ -164,12 +182,12 @@ function render(typing) {
   $('pLab').textContent = R.hel ? 'Piso desejado (linha de caminhamento)' : 'Piso (profundidade)';
   $('Nhint').textContent = 'Sugestão: ' + R.nSug + ' espelhos (espelho de ' + fmt(S.H / R.nSug, 2) + ' cm). Atual: ' + fmt(R.e, 2) + ' cm.';
   $('n1Un').textContent = 'de ' + Math.max(0, R.avail) + ' pisos retos';
-  $('nMeioHint').textContent = 'Vão central entre os lances: ' + fmt(R.nMeio * R.p) + ' cm.';
+  $('nMeioHint').textContent = 'Vão central entre os lances: ' + fmt(R.gU || R.nMeio * R.p, 1) + ' cm.';
   /* resultados */
   const incl = R.incl;
   $('tiles').innerHTML = [
     ['Espelhos', R.N, 'altura ' + fmt(R.e, 2) + ' cm'],
-    ['Pisos', R.nReto + R.nLeque, R.hel ? 'degraus' : [R.nLeque ? R.nReto + ' retos + ' + R.nLeque + ' leques' : 'pisos comuns', R.nPat ? '+ ' + R.nPat + ' patamar' : ''].filter(Boolean).join(' ')],
+    ['Pisos', R.nReto + R.nLeque, R.hel ? 'degraus' : [R.nLeque ? R.nReto + ' retos + ' + R.nLeque + (R.bal ? ' balanceados' : ' leques') : 'pisos comuns', R.nPat ? '+ ' + R.nPat + ' patamar' : ''].filter(Boolean).join(' ')],
     ['Piso', fmt(R.p, 1) + ' cm', R.hel ? 'na linha de caminhamento' : 'profundidade'],
     ['Blondel', fmt(R.bl, 1) + ' cm', '2e + p'],
     ['Inclinação', fmt(incl, 1) + '°', fmt(R.e / R.p * 100, 0) + '%'],
@@ -186,7 +204,7 @@ function render(typing) {
   $('desc').textContent = TIPOS.find(t => t.id === S.tipo).desc + '. ' + R.nm.nome + '.';
   /* legenda */
   const lg = [['sw', 'var(--tread)', 'Degrau reto']];
-  if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', 'Leque']);
+  if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', R.bal ? 'Degrau balanceado' : 'Leque']);
   if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
   const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
   $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">Volumes esquemáticos, só para visualizar. Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
@@ -221,6 +239,29 @@ function resumo() {
     'Inclinação ' + fmt(R.incl, 1) + '°\n\n' + R.memo.join('\n') + '\n\nVerificações:\n' + R.checks.map(c => '- ' + c.nome + ': ' + c.valor + (c.regra ? ' (ref. ' + c.regra + ')' : '') + ' [' + c.status + ']').join('\n');
 }
 
+/* relatório para imprimir ou salvar em PDF: sempre com as cores do tema claro, que é o que sai no papel */
+function montarRelatorio() {
+  if (!CUR) { $('printArea').innerHTML = '<p>Corrija as medidas antes de imprimir: com entrada inválida o app não desenha a escada.</p>'; return; }
+  const R = CUR, t = TIPOS.find(x => x.id === S.tipo), root = document.documentElement, antes = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', 'light');
+  const C = getTheme();
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
+  const tiles = [['Espelhos', R.N + ' × ' + fmt(R.e, 2) + ' cm'], ['Piso', fmt(R.p, 1) + ' cm'], ['Blondel (2e + p)', fmt(R.bl, 1) + ' cm'], ['Inclinação', fmt(R.incl, 1) + '°'], ['Largura útil', fmt(R.L) + ' cm'], ['Superfícies', R.contagem]];
+  let h = '<h1>Escada ' + t.nome.toLowerCase().replace(' l ', ' L ').replace(' u ', ' U ') + '</h1>';
+  h += '<p class="sub">Desnível de ' + fmt(R.H) + ' cm · ' + R.nm.nome + ' · gerado pelo Patamar em ' + hoje + '</p>';
+  h += '<div class="ptiles">' + tiles.map(x => '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>').join('') + '</div>';
+  h += '<figure>' + planSVG(R, { modo: 'inf' }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso.</figcaption></figure>';
+  h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
+  h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('') + '</ul>';
+  h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
+  h += '<div class="quebra"></div><h2>Explicação</h2>' + explicacao(R, S, C).replace(/<details class="ex"( open)?>/g, '<details class="ex" open>');
+  h += '<p class="rodape">' + $('aviso').textContent + '</p>';
+  $('printArea').innerHTML = h;
+  if (antes === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', antes);
+}
+function imprimir() { montarRelatorio(); setTimeout(() => window.print(), 50); }
+
 let toastT = null;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
 function copiar(txt, msg) {
@@ -240,6 +281,7 @@ function gerarImagem() {
   img.src = url;
 }
 
+window.addEventListener('beforeprint', montarRelatorio);
 window.addEventListener('DOMContentLoaded', () => {
   load(); mount(); bind(); renderTypes(); render();
   let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => draw3d(true), 120); });

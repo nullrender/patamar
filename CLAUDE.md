@@ -35,20 +35,24 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 ## Regras técnicas
 
 - Não invente norma, item, número ou fonte. Se um limite não foi conferido no texto da norma, diga isso no app e na resposta.
-- Os perfis ficam em `NORMAS`, no `core.js`:
-  - **Estudo**: espelho 16 a 18, piso 25 a 32, Blondel 63 a 64, largura 80, linha a 50 cm. O Blondel tem fonte na NBR 9077:2001 (4.7.3.1 b). Piso 25 e largura 80 não têm fonte nacional.
-  - **NBR 9050:2020** (item 6.8): piso 28 a 32, Blondel 63 a 65, largura 120, patamar a cada 320 cm e nas mudanças de direção, patamar reto de 120 cm, linha a 55 cm da borda interna, corrimãos a 92 e 70 cm. É uma conferência dimensional parcial, não uma validação de acessibilidade.
-  - **Personalizada**: limites digitados pelo usuário, validados (positivos, faixas não invertidas).
+- Os perfis ficam em `NORMAS`, no `core.js`. Fontes conferidas no texto das normas em 16/11/2026:
+  - **Estudo**: espelho 16 a 18, piso 25 a 32, Blondel 63 a 64, largura 80, linha a 55 cm (no eixo abaixo de 110 cm), ponta de leque 15 cm, lance de 3 espelhos no mínimo, patamar reto pela fórmula (2e + p) + p. Blondel, linha, ponta, lance e patamar vêm da NBR 9077:2001 (4.7.3.1 b e c, 3.32, 4.7.3.2, 4.7.3.3 a). Piso 25, largura 80 e 3,20 m sem patamar não têm fonte nacional.
+  - **NBR 9050:2020**, versão corrigida de 2021: 6.8.2 (espelho 16 a 18, piso 28 a 32, Blondel 63 a 65), 6.8.3 (largura 120), 6.8.6 (linha a 55 cm da borda interna em lances curvos, Figura 75 com ponta ≥ 15), 6.8.7 (patamar a cada 320 cm e nas mudanças de direção), 6.8.8 (patamar reto de 120 cm), 6.9.3.2 (corrimãos a 92 e 70 cm, prolongados 30 cm). É uma conferência dimensional parcial, não uma validação de acessibilidade.
+  - **Personalizada**: limites digitados pelo usuário, validados (positivos, faixas não invertidas, ponta do leque ≥ 0).
+- **NBR 9077:2025** (terceira edição, 16/07/2025) substitui a de 2001 e **não foi lida** (é paga). Todo texto que cita a NBR 9077 precisa dizer que é a edição de 2001.
+- Cópias públicas usadas na conferência: NBR 9077:2001 no site do CNMP, NBR 9050:2020 no drive da Prefeitura de São Paulo, NPT 011 dos Bombeiros do PR. O ambiente de nuvem "patamar" libera esses hosts.
 - Status das verificações: `bad` = fora do limite do perfil ("não atende"); `warn` = algo que o app não consegue validar; `info` = só informação. A tolerância é 1e-6 (só erro de arredondamento), nunca uma folga de obra.
 - Entrada inválida não é corrigida em silêncio: `calc` lança erro e a interface mostra a mensagem, sem desenho.
 - A contagem é N espelhos e N − 1 superfícies entre eles. Patamar e leque contam como superfícies, mas não como "pisos comuns". Use `R.contagem`, `R.nReto`, `R.nLeque` e `R.nPat`.
+- **Leques**: o padrão é `leque: 'bal'` (balanceados, função `balanceado()` no `core.js`). Todos os degraus têm piso p na linha de caminhamento; as larguras na borda interna seguem progressão aritmética numa zona que cresce até a ponta chegar a `lqMin`. `leque: 'conv'` mantém os leques convergentes antigos, para comparar. Cada polígono tem `wIn` e `wOut` (largura nas bordas interna e externa). Teste de área: no balanceado, a soma de todos os degraus é a área do contorno; no convergente, os leques somam L² por curva.
 - O "Perfil" é desenvolvido ao longo da linha de caminhamento. **Não é corte A-A**, e os textos não podem chamá-lo assim.
 - O artefato do claude.ai não permite download; o "Baixar PNG" só funciona no Pages ou no arquivo local.
 
 ## Pendências conhecidas
 
-- **P2: balanceamento de leques.** Hoje os leques convergem num ponto (largura 0 no canto interno). A NBR 9077 (4.7.3.1 c) pede leques balanceados, com a parte mais estreita de pelo menos 15 cm. O app só avisa. Implementar exige rever `winders()` no `core.js`, o comprimento na linha de caminhamento (`wlen`) e os testes de área (a soma das áreas dos leques precisa continuar igual a L² por curva de 90°).
 - Não existe corte A-A real com chamada na planta, e o 3D é só volumétrico.
 - A edição de 2025 da NBR 9077 não foi lida.
+- O balanceamento usa progressão aritmética das larguras na borda interna. A NBR 9077:2001 fala em "sistemas de balanceamento recomendados" sem fixar um; outros processos gráficos dão degraus um pouco diferentes.
+- O "Imprimir / PDF" usa `window.print()`; no artefato do claude.ai pode não abrir.
 
 Relatório com fontes e o plano das correções anteriores: https://claude.ai/artifact/HDivZUpEWVE1FGpeLKgLH5
