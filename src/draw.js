@@ -42,7 +42,8 @@ function dimLine(a, b, ux, uy, dist, label, fs, C) {
   s += sLine([B[0] - tx, B[1] - ty], [B[0] + tx, B[1] + ty], C.ink, 1.3);
   let ang = deg(Math.atan2(-dy, dx)); if (ang > 90) ang -= 180; if (ang <= -90) ang += 180;
   const mxp = (A[0] + B[0]) / 2 + ux * fs * 0.95, myp = (A[1] + B[1]) / 2 + uy * fs * 0.95;
-  s += sText(mxp, myp, label, fs * 0.95, C.ink, 'middle', ang, 500);
+  /* contorno da cor do papel: a linha de corte que cruza a cota não risca o número */
+  s += haloTxt(sText(mxp, myp, label, fs * 0.95, C.ink, 'middle', ang, 500), C.paper, fs);
   return cam('COTAS', s);
 }
 
@@ -55,6 +56,52 @@ function svgWrap(vx, vy, vw, vh, body, o, extraDefs) {
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + r2(vx) + ' ' + r2(vy) + ' ' + r2(vw) + ' ' + r2(vh) + '"' + size + ' role="img">' + (extraDefs || '') + body + '</svg>';
 }
 
+/* contorno da cor do fundo em volta das letras: a linha que passa embaixo (chamada de corte, cota) não risca o texto */
+function haloTxt(t, cor, fs) {
+  return t.replace('<text ', '<text stroke="' + cor + '" stroke-width="' + r2(fs * 0.3) + '" stroke-linejoin="round" paint-order="stroke" ');
+}
+/* caixa estimada de um texto (largura = 0,6 × tamanho × caracteres, a da fonte mono; altura = tamanho),
+   em coordenadas do SVG (y para baixo), já com o text-anchor e a rotação */
+function caixaTexto(attrs, conteudo) {
+  const g = k => { const m = new RegExp('(?:^|\\s)' + k + '="([^"]*)"').exec(attrs); return m ? m[1] : null; };
+  const x = +g('x'), y = +g('y'), sz = +g('font-size') || 0, an = g('text-anchor') || 'start';
+  const t = conteudo.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  const L = [...t].length * sz * 0.6, xa = an === 'middle' ? x - L / 2 : an === 'end' ? x - L : x;
+  let pts = [[xa, y - sz / 2], [xa + L, y - sz / 2], [xa + L, y + sz / 2], [xa, y + sz / 2]];
+  const tr = /rotate\(([-\d.e]+) ([-\d.e]+) ([-\d.e]+)\)/.exec(g('transform') || '');
+  if (tr) { const a = +tr[1] * Math.PI / 180, cx = +tr[2], cy = +tr[3], c = Math.cos(a), sn = Math.sin(a); pts = pts.map(q => [cx + (q[0] - cx) * c - (q[1] - cy) * sn, cy + (q[0] - cx) * sn + (q[1] - cy) * c]); }
+  return [Math.min(pts[0][0], pts[1][0], pts[2][0], pts[3][0]), Math.min(pts[0][1], pts[1][1], pts[2][1], pts[3][1]), Math.max(pts[0][0], pts[1][0], pts[2][0], pts[3][0]), Math.max(pts[0][1], pts[1][1], pts[2][1], pts[3][1])];
+}
+/* caixas de todos os textos de um trecho de SVG */
+function caixasTextos(s) { const out = []; for (const m of s.matchAll(/<text ([^>]*)>([^<]*)<\/text>/g)) out.push(caixaTexto(m[1], m[2])); return out; }
+/* aumenta o viewBox [vx, vy, vw, vh] só onde algum texto passaria da borda (com folga pad); onde tudo cabe, não muda nada */
+function cabeTextos(vb, s, pad) {
+  let x0 = vb[0], y0 = vb[1], x1 = vb[0] + vb[2], y1 = vb[1] + vb[3];
+  caixasTextos(s).forEach(b => {
+    if (b[0] < x0) x0 = b[0] - pad; if (b[1] < y0) y0 = b[1] - pad;
+    if (b[2] > x1) x1 = b[2] + pad; if (b[3] > y1) y1 = b[3] + pad;
+  });
+  return [x0, y0, x1 - x0, y1 - y0];
+}
+/* quebra um texto em linhas de até maxW (largura estimada 0,6 × tamanho), de preferência nos " · " */
+function quebraTexto(txt, size, maxW) {
+  const cabe = t => [...t].length * size * 0.6 <= maxW;
+  if (cabe(txt)) return [txt];
+  const linhas = []; let cur = '';
+  const partes = txt.split(' · ');
+  partes.forEach((p, i) => {
+    const sep = i < partes.length - 1 ? ' ·' : '';
+    const tenta = cur ? cur + ' ' + p + sep : p + sep;
+    if (cabe(tenta)) { cur = tenta; return; }
+    if (cur) linhas.push(cur);
+    /* a parte sozinha não cabe: quebra nas palavras */
+    cur = '';
+    (p + sep).split(' ').forEach(w => { const t2 = cur ? cur + ' ' + w : w; if (cabe(t2) || !cur) cur = t2; else { linhas.push(cur); cur = w; } });
+  });
+  if (cur) linhas.push(cur);
+  return linhas;
+}
+
 /* linha de ruptura (zigue-zague) ao longo de um segmento */
 function breakLine(e0, e1, fs, C) {
   const dx = e1[0] - e0[0], dy = e1[1] - e0[1], len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
@@ -65,16 +112,21 @@ function breakLine(e0, e1, fs, C) {
 }
 
 /* bloco de título + escala gráfica */
+/* devolve { svg, h }: h é a altura ocupada abaixo de ymin (7,5 fs quando cada linha cabe inteira; as linhas longas
+   quebram em vez de passar da largura vw, e o bloco cresce para baixo) */
 function titleBlock(vx, ymin, vw, fs, l1, l2, C) {
   let s = sLine([vx + fs * 0.5, ymin], [vx + vw - fs * 0.5, ymin], C.ink, 1.2);
-  s += sText(vx + fs, ymin - fs * 1.4, l1, fs * 0.9, C.ink, 'start', 0, 600);
-  s += sText(vx + fs, ymin - fs * 2.9, l2, fs * 0.8, C.muted, 'start', 0, 400);
+  const maxW = vw - fs * 1.5, a1 = quebraTexto(l1, fs * 0.9, maxW), a2 = quebraTexto(l2, fs * 0.8, maxW);
+  let y = 1.4;
+  a1.forEach((t, i) => { if (i) y += 1.15; s += sText(vx + fs, ymin - fs * y, t, fs * 0.9, C.ink, 'start', 0, 600); });
+  y += 1.5;
+  a2.forEach((t, i) => { if (i) y += 1.05; s += sText(vx + fs, ymin - fs * y, t, fs * 0.8, C.muted, 'start', 0, 400); });
   /* escala gráfica: 0 - 50 - 100 cm, em tamanho real do desenho */
-  const x0 = vx + fs, y0 = ymin - fs * 5.2, h = fs * 0.55;
+  const x0 = vx + fs, y0 = ymin - fs * (y + 2.3), h = fs * 0.55;
   [0, 1].forEach(i => { s += '<rect x="' + r2(x0 + i * 50) + '" y="' + r2(-y0 - h) + '" width="50" height="' + r2(h) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
   [0, 50, 100].forEach(v => { s += sText(x0 + v, y0 - fs * 0.9, String(v), fs * 0.7, C.muted, 'middle'); });
   s += sText(x0 + 108, y0 - fs * 0.15, 'cm', fs * 0.7, C.muted, 'start');
-  return cam('TITULO', s);
+  return { svg: cam('TITULO', s), h: fs * (y + 4.6) };
 }
 
 function planSVG(R, o, C) {
@@ -92,7 +144,8 @@ function planSVG(R, o, C) {
   const w = bbA[2] - bbA[0], h = bbA[3] - bbA[1], span = Math.max(w, h);
   /* o.semTitulo (prancha): sem o bloco de título e a escala gráfica, que a prancha já põe embaixo de cada vista */
   const semT = !!(o && o.semTitulo);
-  const m = thumb ? span * 0.07 : comCortes || semT ? fs * 3.5 : fs * 10, tb = thumb || semT ? 0 : fs * 7.5;
+  /* na prancha (semT) a margem é curta: o que passa dela (cotas, rótulos) faz o desenho crescer só ali (cabeTextos, abaixo) */
+  const m = thumb ? span * 0.07 : semT ? fs * 1.2 : comCortes ? fs * 3.5 : fs * 10, tb = thumb || semT ? 0 : fs * 7.5;
   const vx = bbA[0] - m, vy = -(bbA[3] + m), vw = w + 2 * m, vh = h + 2 * m + tb;
   const showDims = !thumb && o.dims !== false && R.st.showDims !== false;
   const showNums = !thumb && o.nums !== false && R.st.showNums !== false;
@@ -105,8 +158,9 @@ function planSVG(R, o, C) {
     const arr = R.arrival, ac = centroid(arr.pts);
     s += cam('PISO_SUPERIOR', sSolidArrival(arr.pts, sup, C));
     if (!sup) {
-      s += cam('TEXTO', sText(ac[0], ac[1] + fs * 0.6, R.hel ? 'PISO SUP.' : 'PISO SUPERIOR', fs * 0.72, C.muted, 'middle', 0, 500) +
-        sText(ac[0], ac[1] - fs * 0.7, nivel(R.H), fs * 0.8, C.ink, 'middle', 0, 600));
+      /* contorno da cor do piso: a linha do corte A, que passa por aqui, não risca o texto */
+      s += cam('TEXTO', haloTxt(sText(ac[0], ac[1] + fs * 0.6, R.hel ? 'PISO SUP.' : 'PISO SUPERIOR', fs * 0.72, C.muted, 'middle', 0, 500), C.piso, fs) +
+        haloTxt(sText(ac[0], ac[1] - fs * 0.7, nivel(R.H), fs * 0.8, C.ink, 'middle', 0, 600), C.piso, fs));
     }
   }
   let clipId = null;
@@ -153,8 +207,12 @@ function planSVG(R, o, C) {
       let fx = tail[0] - tnext[0], fy = tail[1] - tnext[1]; const fl = Math.hypot(fx, fy) || 1; fx /= fl; fy /= fl;
       let d1 = fs * 2.6, d2 = fs * 4.4;
       if (R.hel) { const tl = Math.hypot(tail[0], tail[1]) || 1; fx = tail[0] / tl; fy = tail[1] / tl; d1 += R.dw; d2 += R.dw; }
-      rotulos += cam('TEXTO', sText(tail[0] + fx * d1, tail[1] + fy * d1, sup ? 'DESCE' : 'SOBE', fs * 0.95, C.accent, 'middle', 0, 600) +
-        sText(tail[0] + fx * d2, tail[1] + fy * d2, sup ? nivel(R.H) : nivel(0), fs * 0.85, C.ink, 'middle', 0, 600));
+      const P1 = [tail[0] + fx * d1, tail[1] + fy * d1];
+      /* o nível fica embaixo do SOBE/DESCE, na vertical da folha. Se a seta sai na horizontal (lance de chegada das
+         escadas em L), seguir a direção dela poria um texto em cima do outro, na mesma linha */
+      const P2 = Math.abs(fy) >= Math.abs(fx) ? [tail[0] + fx * d2, tail[1] + fy * d2] : [P1[0], P1[1] - fs * 1.3];
+      rotulos += cam('TEXTO', haloTxt(sText(P1[0], P1[1], sup ? 'DESCE' : 'SOBE', fs * 0.95, C.accent, 'middle', 0, 600), C.paper, fs) +
+        haloTxt(sText(P2[0], P2[1], sup ? nivel(R.H) : nivel(0), fs * 0.85, C.ink, 'middle', 0, 600), C.paper, fs));
     }
   }
   /* numeração dos degraus */
@@ -170,29 +228,47 @@ function planSVG(R, o, C) {
     });
   }
   if (clipId) s += '</g>';
-  s += rotulos;
-  /* chamadas dos cortes A-A e B-B (só na planta do pavimento inferior) */
+  /* chamadas dos cortes A-A e B-B (só na planta do pavimento inferior), antes dos rótulos e das cotas, que ficam por cima */
   if (comCortes) s += cam('LINHA_CORTE', chamadaCorte(R, 'A', fs, C, bbEsc) + chamadaCorte(R, 'B', fs, C, bbEsc));
+  s += rotulos;
   /* ponta mais estreita dos degraus balanceados: marca no canto interno */
   if (showDims && !sup && R.bal && R.nLeque) {
     const lqs = R.polys.filter(pl => pl.kind === 'leque');
     const pm = lqs.reduce((m, pl) => pl.wIn < m.wIn ? pl : m, lqs[0]);
     const I = pm.entry[1], c = centroid(pm.pts);
     let dx = I[0] - c[0], dy = I[1] - c[1]; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
-    const T2 = [I[0] + dx * fs * 2.2, I[1] + dy * fs * 2.2];
-    s += cam('COTAS', sLine(I, T2, C.accent, 0.9) + sText(T2[0] + dx * fs * 1.6, T2[1] + dy * fs * 0.9, 'ponta ' + fmt(pm.wIn, 1), fs * 0.75, C.accent, 'middle', 0, 600));
+    /* o rótulo vai para o primeiro lugar livre: sem cair em cima de outro texto nem de uma linha de corte */
+    const txt = 'ponta ' + fmt(pm.wIn, 1), tw = [...txt].length * fs * 0.75 * 0.6, th = fs * 0.75;
+    const ocup = caixasTextos(s), linhas = comCortes ? ['A', 'B'].map(q => chamadaSegmento(R, q, fs, bbEsc)) : [];
+    const livre = (cx, cy) => {
+      const b = [cx - tw / 2 - fs * 0.2, -cy - th / 2 - fs * 0.2, cx + tw / 2 + fs * 0.2, -cy + th / 2 + fs * 0.2];
+      return !ocup.some(o2 => o2[0] < b[2] && o2[2] > b[0] && o2[1] < b[3] && o2[3] > b[1]) && !linhas.some(sg => segCruzaCaixa(sg[0], sg[1], [b[0], -b[3], b[2], -b[1]]));
+    };
+    let esc = null;
+    [2.2, 3.4].some(L => [0, 40, -40, 80, -80, 135, -135, 180].some(gr => {
+      const a = gr * Math.PI / 180, vx2 = dx * Math.cos(a) - dy * Math.sin(a), vy2 = dx * Math.sin(a) + dy * Math.cos(a);
+      const T2 = [I[0] + vx2 * fs * L, I[1] + vy2 * fs * L], cx = T2[0] + vx2 * (tw / 2 + fs * 0.3), cy = T2[1] + vy2 * fs * 0.9;
+      if (livre(cx, cy)) { esc = { T2, cx, cy }; return true; }
+      return false;
+    }));
+    if (!esc) { const T2 = [I[0] + dx * fs * 2.2, I[1] + dy * fs * 2.2]; esc = { T2, cx: T2[0] + dx * fs * 1.6, cy: T2[1] + dy * fs * 0.9 }; }
+    s += cam('COTAS', sLine(I, esc.T2, C.accent, 0.9) + haloTxt(sText(esc.cx, esc.cy, txt, fs * 0.75, C.accent, 'middle', 0, 600), C.paper, fs));
   }
   /* cotas */
   if (showDims) {
     const topGap = (bbEsc[3] - bb[3]) + fs * 5.4, rightGap = (bbEsc[2] - bb[2]) + fs * 5.4;
     if (R.hel) {
       s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, 'Ø ' + fmt(R.helix.R * 2, 0), fs, C);
-      s += cam('COTAS', sText(0, -R.helix.R - fs * 7.2, 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau', fs * 0.85, C.muted, 'middle'));
+      /* com a chamada do corte A passando pelo eixo, o texto do pilar vai para o lado, longe da linha e da seta */
+      const tp = 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau';
+      if (comCortes) { const xA = cortesDe(R).A.P0[0]; s += cam('COTAS', sText(Math.min(0, xA) - fs, -R.helix.R - fs * 6, tp, fs * 0.85, C.muted, 'end')); }
+      else s += cam('COTAS', sText(0, -R.helix.R - fs * 7.2, tp, fs * 0.85, C.muted, 'middle'));
     } else {
       s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, fmt(bb[2] - bb[0], 0), fs, C);
       s += dimLine([bb[2], bb[1]], [bb[2], bb[3]], 1, 0, rightGap, fmt(bb[3] - bb[1], 0), fs, C);
       const se = R.startEdge;
-      s += dimLine(se[0], se[1], 0, -1, fs * 7, 'L ' + fmt(R.L, 0), fs, C);
+      /* a 5,6 fs: abaixo do ±0,00 e antes da ponta grossa da chamada do corte A (que começa a 7,15 fs) */
+      s += dimLine(se[0], se[1], 0, -1, fs * 5.6, 'L ' + fmt(R.L, 0), fs, C);
       const groups = {};
       R.polys.forEach(pl => { if (pl.kind === 'reto' && pl.grp) (groups[pl.grp] = groups[pl.grp] || []).push(pl); });
       Object.keys(groups).forEach(k => {
@@ -206,13 +282,16 @@ function planSVG(R, o, C) {
       });
     }
   }
+  /* nenhum texto sai da borda: onde algum passaria (cotas da planta superior com margem curta, fs grande), o desenho cresce */
+  let vb = thumb ? [vx, vy, vw, vh - tb] : cabeTextos([vx, vy, vw, vh - tb], s, fs * 0.4);
   if (!thumb && !semT) {
-    const ymin = bbA[1] - m;
+    const ymin = -(vb[1] + vb[3]);
     const t1 = (R.hel ? 'ESCADA HELICOIDAL' : 'ESCADA ' + TIPOS.find(t => t.id === R.tipo).nome.toUpperCase()) + ' · PLANTA ' + (sup ? 'DO PAV. SUPERIOR' : 'DO PAV. INFERIOR');
     const t2 = 'H ' + fmt(R.H, 0) + ' · ' + R.N + ' espelhos de ' + fmt(R.e, 1) + ' · ' + R.contagem + (R.nReto ? ' (piso ' + fmt(R.p, 1) + ')' : '') + ' · cotas em cm' + (sup ? '' : ' · corte a ' + fmt(R.zc, 0));
-    s += titleBlock(vx, ymin, vw, fs, t1, t2, C);
+    const tt = titleBlock(vb[0], ymin, vb[2], fs, t1, t2, C);
+    s += tt.svg; vb[3] += tt.h;
   }
-  return svgWrap(vx, vy, vw, vh, s, o);
+  return svgWrap(vb[0], vb[1], vb[2], vb[3], s, o);
 }
 /* camada do degrau na planta, pelo tipo de superfície */
 function camadaDegrau(pl) { return pl.kind === 'patamar' ? 'PATAMAR' : pl.kind === 'leque' ? 'LEQUE' : 'DEGRAUS'; }
@@ -311,8 +390,9 @@ function sectionSVG(R, o, C) {
   s += sText(left + fs * 0.5, -fs * 5.6, 'degrau: espelho ' + fmt(e, 1) + ' × piso ' + fmt(R.p, 1) + ' cm  ·  ' + fmt(R.incl, 1) + '°' + (R.placas ? '  ·  degraus em balanço de ' + fmt(st.espDegrau) + ' cm' : '  ·  laje da escada ' + fmt(st.tLaje) + ' cm'), fs * 0.9, C.ink, 'start', 0, 500);
   const t1 = 'PERFIL DESENVOLVIDO · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
   const t2 = 'esquema ao longo da linha de caminhamento (não é corte A-A) · H ' + fmt(H) + ' · ' + R.N + ' espelhos de ' + fmt(e, 1) + ' · cotas em cm';
-  s += titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
-  return svgWrap(vx, vy, vw, vh, s, o, defs);
+  const tt = titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
+  s += tt.svg;
+  return svgWrap(vx, vy, vw, vh - fs * 7.5 + tt.h, s, o, defs);
 }
 
 /* ===== CORTES A-A E B-B (plano vertical de verdade, com chamada na planta) =====
@@ -526,23 +606,53 @@ function corteSVG(R, o, C, qual, lado) {
   s += sText(s0 + fs * 0.4, H + fs * 1.0, nivel(H), fs * 0.85, C.ink, 'start', 0, 600);
   s += dimLine([s1, 0], [s1, H], 1, 0, fs * 2.4, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([s1, zU], [s1, H], 1, 0, fs * 0.9, fmt(st.espLaje, 0), fs * 0.75, C);
-  if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += cam('ALTURA_LIVRE', sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500));
+  /* legenda da altura livre: embaixo do nível ±0,00 (longe do corrimão), quebrada em linhas para caber na largura do corte */
+  const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11;
+  let yLeg = -fs * 3; /* topo livre embaixo do desenho, onde começa o bloco de título */
+  if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) {
+    const lin = quebraTexto('tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, vx + vxw - fs * 0.5 - (s0 + fs * 0.4));
+    let leg = '';
+    lin.forEach((t, i) => { leg += sText(s0 + fs * 0.4, -fs * (2.35 + i * 0.95), t, fs * 0.72, C.accent, 'start', 0, 500); });
+    s += cam('ALTURA_LIVRE', leg);
+    yLeg = -fs * (2.35 + (lin.length - 1) * 0.95 + 0.65);
+  }
   const nomeT = R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase();
   const t1 = elev ? 'ELEVAÇÃO · ' + LADOS_ELEV[LADOS_ELEV[lado] ? lado : 'frente'].toUpperCase() + ' · ESCADA ' + nomeT : 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + nomeT;
   const t2 = elev ? 'vista de fora, sem cortar nada · tudo em traço fino · cm' : 'hachura: cortado · traço fino: em vista · cm';
-  const semT = !!(o && o.semTitulo), ymin = semT ? -fs * 2.5 : -fs * 9.5;
-  if (!semT) s += titleBlock(s0 - fs * 2, -fs * 3, s1 - s0 + fs * 8, fs, t1, t2, C);
-  const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11, ymax = H + (R.hel ? 0 : 92) + fs * 5;
-  return svgWrap(vx, -ymax, vxw, ymax - ymin, s, o, defs);
+  const semT = !!(o && o.semTitulo);
+  let ymin = Math.min(-fs * 2.5, yLeg - fs * 0.2);
+  if (!semT) { const yT = Math.min(-fs * 3, yLeg), tt = titleBlock(s0 - fs * 2, yT, s1 - s0 + fs * 8, fs, t1, t2, C); s += tt.svg; ymin = yT - (tt.h - fs); }
+  const ymax = H + (R.hel ? 0 : 92) + fs * 5;
+  /* nenhum texto sai da borda (com fs grande, o título e as cotas podem passar da largura): o desenho cresce só onde precisa */
+  const vb = cabeTextos([vx, -ymax, vxw, ymax - ymin], s, fs * 0.4);
+  return svgWrap(vb[0], vb[1], vb[2], vb[3], s, o, defs);
 }
 
 function modoInf(o, R) { return (o.modo || R.st.modoPlanta || 'inf') !== 'sup'; }
-/* extremos da linha de corte na planta: passam das cotas (a 5,4 fs do desenho) para as letras não caírem em cima de texto */
+/* extremos da linha de corte na planta: passam das cotas (a 5,4 fs do desenho, texto até 6,9 fs; o "L" embaixo vai até 7 fs)
+   para a ponta grossa (de 7,15 a 8,75 fs) e as letras não caírem em cima de texto */
 function chamadaExtremos(R, qual, fs, bbA) {
   const cs = cortesDe(R)[qual], P0 = cs.P0, u = cs.u;
   const S = q => (q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1];
   const cantos = [[bbA[0], bbA[1]], [bbA[2], bbA[1]], [bbA[2], bbA[3]], [bbA[0], bbA[3]]].map(S);
-  return [Math.min.apply(null, cantos) - fs * 7.5, Math.max.apply(null, cantos) + fs * 7.5];
+  return [Math.min.apply(null, cantos) - fs * 8.75, Math.max.apply(null, cantos) + fs * 8.75];
+}
+/* segmento da linha de corte na planta (de ponta a ponta), para os rótulos desviarem dela */
+function chamadaSegmento(R, qual, fs, bbA) {
+  const cs = cortesDe(R)[qual], P0 = cs.P0, u = cs.u, ex = chamadaExtremos(R, qual, fs, bbA);
+  return ex.map(sx => [P0[0] + u[0] * sx, P0[1] + u[1] * sx]);
+}
+/* o segmento AB passa dentro da caixa [x0, y0, x1, y1]? (recorte de Liang-Barsky) */
+function segCruzaCaixa(A, B, b) {
+  let t0 = 0, t1 = 1; const dx = B[0] - A[0], dy = B[1] - A[1];
+  const p = [-dx, dx, -dy, dy], q = [A[0] - b[0], b[2] - A[0], A[1] - b[1], b[3] - A[1]];
+  for (let i = 0; i < 4; i++) {
+    if (Math.abs(p[i]) < 1e-12) { if (q[i] < 0) return false; continue; }
+    const t = q[i] / p[i];
+    if (p[i] < 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t);
+    if (t0 > t1) return false;
+  }
+  return true;
 }
 /* pontos que a chamada ocupa (pontas, setas e letras), para o desenho reservar espaço */
 function chamadaPontos(R, qual, fs, bbA) {

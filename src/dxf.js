@@ -21,7 +21,8 @@ const DXF_LTYPES = [
   ['DASHED_DET', 'Tracejado fino (detalhe) _ _ _', [2, -1]],
   ['DASHDOT_DET', 'Traco e ponto fino (detalhe) _ . _', [3, -1, 0, -1]]
 ];
-const DXF_TITULOS = { planta: 'PLANTA DO PAVIMENTO INFERIOR', plantaSup: 'PLANTA DO PAVIMENTO SUPERIOR', corteA: 'CORTE A-A', corteB: 'CORTE B-B', elevacao: 'ELEVAÇÃO', detalhe: 'DETALHE DO DEGRAU (verdadeira grandeza)' };
+/* o detalhe desenha os degraus em verdadeira grandeza, mas a altura do corrimão fora de escala (cota interrompida, detail.js) */
+const DXF_TITULOS = { planta: 'PLANTA DO PAVIMENTO INFERIOR', plantaSup: 'PLANTA DO PAVIMENTO SUPERIOR', corteA: 'CORTE A-A', corteB: 'CORTE B-B', elevacao: 'ELEVAÇÃO', detalhe: 'DETALHE DO DEGRAU (degraus em 1:1; altura do corrimão fora de escala)' };
 /* tema claro (o mesmo do template.html), se ninguém passar as cores */
 const DXF_TEMA = { paper: '#eef2f4', ink: '#13242f', muted: '#5a6b78', line: '#cdd7dd', accent: '#d9531a', info: '#2a6fbb', tread: '#dbe6ec', winder: '#f6d9c4', patamar: '#cfe5d9', piso: '#e8edf0' };
 
@@ -61,10 +62,11 @@ const desescXml = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&q
 const svgPts = s => (s || '').trim().split(/\s+/).filter(Boolean).map(p => { const v = p.split(',').map(Number); return [v[0], -v[1]]; });
 /* círculo como polígono (para recorte) */
 const circPoly = (cx, cy, r, n) => { const o = []; for (let i = 0; i < (n || 72); i++) { const a = 2 * Math.PI * i / (n || 72); o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; };
-function formaPoly(nome, a) {
+/* fora: polígono circunscrito (raio / cos(π/n)), para um oclusor circular não deixar lascas entre o círculo e o polígono */
+function formaPoly(nome, a, fora) {
   /* devolve a forma em coordenadas do mundo (y para cima) */
   if (nome === 'rect') { const x = +a.x || 0, y = +a.y || 0, w = +a.width || 0, h = +a.height || 0; return [[x, -y], [x + w, -y], [x + w, -(y + h)], [x, -(y + h)]]; }
-  if (nome === 'circle') return circPoly(+a.cx || 0, -(+a.cy || 0), +a.r || 0);
+  if (nome === 'circle') return circPoly(+a.cx || 0, -(+a.cy || 0), (+a.r || 0) / (fora ? Math.cos(Math.PI / 72) : 1));
   if (nome === 'polygon' || nome === 'polyline') return svgPts(a.points);
   return null;
 }
@@ -297,7 +299,7 @@ function svgParaPrims(svg, C, det) {
     if (nome === 'polygon' || nome === 'rect' || nome === 'circle') {
       const f = a.fill || '', pm = /^url\(#([^)]+)\)$/.exec(f);
       const opaca = f && f !== 'none' && (a['fill-opacity'] === undefined || +a['fill-opacity'] >= 1) && (!pm || (padroes[pm[1]] && padroes[pm[1]].fundo));
-      const forma = opaca && formaPoly(nome, a);
+      const forma = opaca && formaPoly(nome, a, true);
       if (forma && forma.length >= 3) esconder(prims, oclusor(forma, pai.clip));
     }
     if (nome === 'line') contorno(a, [[+a.x1, -a.y1], [+a.x2, -a.y2]], false, cam);
@@ -342,9 +344,10 @@ function primsBbox(prims) {
   return b;
 }
 
-/* SVG de cada vista, sempre com o tamanho de texto da tela (o DXF é em verdadeira grandeza) */
+/* SVG de cada vista, com o tamanho de texto da tela (o DXF é em verdadeira grandeza) ou o op.fs pedido.
+   Sem o título interno nem a escala gráfica do SVG (semTitulo): cada vista recebe um só título, o do dxfDe */
 function dxfVistaSVG(R, C, v, op) {
-  const o = op.fs > 0 ? { fs: op.fs } : {};
+  const o = Object.assign({ semTitulo: true }, op.fs > 0 ? { fs: op.fs } : {});
   if (v === 'planta') return planSVG(R, Object.assign({ modo: 'inf' }, o), C);
   if (v === 'plantaSup') return planSVG(R, Object.assign({ modo: 'sup' }, o), C);
   if (v === 'corteA') return corteSVG(R, o, C, 'A');
@@ -383,7 +386,25 @@ function dxfDe(R, C, op) {
   /* a unidade, escrita no desenho (o R12 não guarda $INSUNITS) */
   const hU = Math.max(2, hMax * 0.7);
   todas.push({ t: 'text', p: [x0, topoMax + hU], h: hU, rot: 0, anc: 'start', dx: 0, cam: 'TITULO',
-    s: 'Unidade: ' + (unidade === 'm' ? 'metros (1 unidade = 1 m)' : 'centímetros (1 unidade = 1 cm)') + ' · desenho em verdadeira grandeza (1:1) · os números das cotas estão em cm' });
+    s: 'Unidade: ' + (unidade === 'm' ? 'metros (1 unidade = 1 m)' : 'centímetros (1 unidade = 1 cm)') + ' · desenho em verdadeira grandeza (1:1)' + (ordem.indexOf('detalhe') >= 0 ? ', exceto a altura do corrimão no detalhe' : '') + ' · os números das cotas estão em cm' });
+
+  /* limpeza: sem vértices repetidos em seguida, sem linhas de comprimento zero nem polilinhas que viraram quase um ponto
+     (sobras do recorte e das linhas escondidas, que atrapalham o OSNAP e a contagem de objetos no CAD) */
+  const MIN = 1e-3, dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  const limpas = [];
+  todas.forEach(p => {
+    if (p.t === 'line') { if (dist(p.a, p.b) >= MIN) limpas.push(p); return; }
+    if (p.t !== 'pline') { limpas.push(p); return; }
+    const pts = [];
+    p.pts.forEach(q => { if (!pts.length || dist(pts[pts.length - 1], q) >= MIN) pts.push(q); });
+    if (p.fechada && pts.length > 1 && dist(pts[0], pts[pts.length - 1]) < MIN) pts.pop();
+    let L = 0; for (let i = 0; i + 1 < pts.length; i++) L += dist(pts[i], pts[i + 1]);
+    /* polilinha de menos de 2 mm no total: lasca do recorte junto ao pilar (o CIRCLE do pilar já cobre esse trecho) */
+    if (pts.length < 2 || L < 0.2) return;
+    if (pts.length === 2 && !p.fechada) limpas.push({ t: 'line', a: pts[0], b: pts[1], cam: p.cam, lt: p.lt, dx: p.dx });
+    else limpas.push(Object.assign({}, p, { pts, fechada: p.fechada && pts.length > 2 }));
+  });
+  todas.length = 0; limpas.forEach(p => todas.push(p));
 
   /* ---------- escrita ---------- */
   const L = [];
@@ -435,7 +456,9 @@ function dxfDe(R, C, op) {
     if (p.t === 'line') {
       cab('LINE', p); par(10, X(p, p.a)); par(20, Y(p.a)); par(30, 0); par(11, X(p, p.b)); par(21, Y(p.b)); par(31, 0);
     } else if (p.t === 'pline') {
-      cab('POLYLINE', p); par(66, 1); par(10, 0); par(20, 0); par(30, 0); par(70, p.fechada ? 1 : 0);
+      /* 70: bit 1 = fechada; bit 128 = tipo de linha contínuo ao longo da polilinha (o tracejado não recomeça a cada vértice,
+         senão os trechos curtos das curvas da helicoidal saem cheios no AutoCAD) */
+      cab('POLYLINE', p); par(66, 1); par(10, 0); par(20, 0); par(30, 0); par(70, (p.fechada ? 1 : 0) | 128);
       p.pts.forEach(q => { par(0, 'VERTEX'); par(8, conhecidas.has(p.cam) ? p.cam : 'CONTORNO'); par(10, X(p, q)); par(20, Y(q)); par(30, 0); });
       par(0, 'SEQEND'); par(8, conhecidas.has(p.cam) ? p.cam : 'CONTORNO');
     } else if (p.t === 'solid') {

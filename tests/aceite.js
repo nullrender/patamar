@@ -631,4 +631,72 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   ok(/para 1:50, use uma folha maior ou desmarque uma vista/.test(ui3),'quando a escala automática cai para 1:75, a tela diz como voltar a 1:50');
 }
 
+/* textos dentro do desenho, chamadas de corte sem riscar texto, DESCE separado do nível e DXF limpo (revisão da prancha e do DXF) */
+{
+  const {calc,TIPOS,planSVG,corteSVG,detalheSVG,dxfDe}=require('./carregar.js');
+  /* caixa de cada <text>: largura 0,6 × tamanho × caracteres, altura = tamanho, com text-anchor e rotação */
+  const caixas=svg=>[...svg.matchAll(/<text ([^>]*)>([^<]*)<\/text>/g)].map(m=>{
+    const a=m[1], g=k=>{const r=new RegExp('(?:^|\\s)'+k+'="([^"]*)"').exec(a); return r&&r[1];};
+    const x=+g('x'), y=+g('y'), sz=+g('font-size'), an=g('text-anchor')||'start';
+    const t=m[2].replace(/&lt;/g,'<').replace(/&amp;/g,'&'), L=[...t].length*sz*0.6, xa=an==='middle'?x-L/2:an==='end'?x-L:x;
+    let pts=[[xa,y-sz/2],[xa+L,y-sz/2],[xa+L,y+sz/2],[xa,y+sz/2]];
+    const tr=/rotate\(([-\d.e]+) ([-\d.e]+) ([-\d.e]+)\)/.exec(g('transform')||'');
+    if(tr){const r=+tr[1]*Math.PI/180,cx=+tr[2],cy=+tr[3],c=Math.cos(r),sn=Math.sin(r); pts=pts.map(([px,py])=>[cx+(px-cx)*c-(py-cy)*sn,cy+(px-cx)*sn+(py-cy)*c]);}
+    /* contorno no próprio texto ou no grupo dele (números dos degraus: <g ... paint-order="stroke">) */
+    return {t, halo:/\bstroke="/.test(a)||/paint-order="stroke">$/.test(svg.slice(Math.max(0,m.index-40),m.index)), cor:g('fill'), b:[Math.min(...pts.map(q=>q[0])),Math.min(...pts.map(q=>q[1])),Math.max(...pts.map(q=>q[0])),Math.max(...pts.map(q=>q[1]))]};
+  });
+  const fora=svg=>{const v=/viewBox="([^"]+)"/.exec(svg)[1].split(' ').map(Number), tol=0.02; return caixas(svg).filter(c=>c.b[0]<v[0]-tol||c.b[1]<v[1]-tol||c.b[2]>v[0]+v[2]+tol||c.b[3]>v[1]+v[3]+tol).map(c=>c.t);};
+  const cruzaCx=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3];
+  /* segmento x caixa (Liang-Barsky) */
+  const segCx=(A,B,b)=>{let t0=0,t1=1;const dx=B[0]-A[0],dy=B[1]-A[1],p=[-dx,dx,-dy,dy],q=[A[0]-b[0],b[2]-A[0],A[1]-b[1],b[3]-A[1]];for(let i=0;i<4;i++){if(Math.abs(p[i])<1e-12){if(q[i]<0)return false;continue;}const t=q[i]/p[i];if(p[i]<0)t0=Math.max(t0,t);else t1=Math.min(t1,t);if(t0>t1)return false;}return true;};
+  const linhas=(svg,cor)=>[...svg.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)" stroke="([^"]+)" stroke-width="([\d.]+)"/g)].filter(m=>m[5]===cor).map(m=>({a:[+m[1],+m[2]],b:[+m[3],+m[4]],w:+m[6]}));
+  const ruins=[], riscos=[], desce=[], legenda=[];
+  TIPOS.forEach(T=>{ const R=calc({tipo:T.id});
+    [0,12.5,25].forEach(fs=>[false,true].forEach(semTitulo=>{
+      const o=Object.assign(fs?{fs}:{},semTitulo?{semTitulo}:{}), tag=T.id+' fs '+(fs||'auto')+(semTitulo?' semTitulo':'');
+      const vs={'planta inf':planSVG(R,Object.assign({modo:'inf'},o),C),'planta sup':planSVG(R,Object.assign({modo:'sup'},o),C),'corte A':corteSVG(R,o,C,'A'),'corte B':corteSVG(R,o,C,'B'),'elevação':corteSVG(R,o,C,'E'),'detalhe':detalheSVG(R,o,C)};
+      Object.keys(vs).forEach(k=>{ const f=fora(vs[k]); if(f.length) ruins.push(tag+' '+k+': '+f.join(' | ')); });
+      /* planta inferior: a ponta grossa e a seta das chamadas não passam sobre texto; a linha fina só passa sob texto com contorno */
+      const inf=vs['planta inf'], cx=caixas(inf).filter(c=>c.cor!==C.info);
+      linhas(inf,C.info).forEach(l=>cx.forEach(c=>{ if(segCx(l.a,l.b,c.b)&&(l.w>1||!c.halo)) riscos.push(tag+': "'+c.t+'"'); }));
+      /* rótulo da ponta dos leques: não cai em cima de outro texto */
+      const pt=cx.find(c=>/^ponta /.test(c.t)); if(pt&&cx.some(c=>c!==pt&&cruzaCx(pt.b,c.b))) riscos.push(tag+': "'+pt.t+'" sobre outro texto');
+      /* SOBE/DESCE e o nível não se sobrepõem */
+      [inf,vs['planta sup']].forEach(sv=>{ const c=caixas(sv), a=c.find(q=>q.t==='SOBE'||q.t==='DESCE'), n=a&&c.find(q=>q!==a&&/^(±0,00|\+\d)/.test(q.t)&&q.cor===C.ink&&Math.hypot((q.b[0]+q.b[2])/2-(a.b[0]+a.b[2])/2,(q.b[1]+q.b[3])/2-(a.b[1]+a.b[3])/2)<(fs||20)*6); if(a&&n&&cruzaCx(a.b,n.b)) desce.push(tag+' '+a.t); });
+      /* legenda da altura livre embaixo do nível ±0,00 (longe do corrimão) */
+      ['corte A','corte B'].forEach(k=>caixas(vs[k]).filter(c=>/tracejado laranja|sobre os degraus/.test(c.t)).forEach(c=>{ if(c.b[1]<=0) legenda.push(tag+' '+k); }));
+    }));
+  });
+  ok(!ruins.length,'nenhum texto sai do desenho: 9 tipos × planta inferior e superior, cortes A e B, elevação e detalhe × com e sem semTitulo × fs automático, 12,5 e 25'+(ruins.length?' ('+ruins.slice(0,6).join('; ')+(ruins.length>6?'; …':'')+')':''));
+  ok(!riscos.length,'planta: chamadas de corte sem riscar texto e rótulo da ponta em lugar livre'+(riscos.length?' ('+riscos.slice(0,6).join('; ')+')':''));
+  ok(!desce.length,'planta: SOBE/DESCE não fica em cima do nível (escadas em L inclusive)'+(desce.length?' ('+desce.join('; ')+')':''));
+  ok(!legenda.length,'cortes: legenda da altura livre embaixo do ±0,00'+(legenda.length?' ('+legenda.slice(0,4).join('; ')+')':''));
+  const R0=calc({tipo:'l-patamar'});
+  ok(planSVG(R0,{},C)===planSVG(R0,{fs:0,semTitulo:false},C),'sem o.fs e o.semTitulo a planta da tela é a mesma');
+  /* DXF: um título por vista, sem a escala gráfica do SVG; detalhe diz o que está fora de escala; polilinhas com bit 128; sem sobras */
+  const todas=['planta','plantaSup','corteA','corteB','elevacao','detalhe'], tit=[], b128=[], sobra=[];
+  TIPOS.forEach(T=>{
+    const s=dxfDe(calc({tipo:T.id}),C,{vistas:todas,unidade:'cm'}), l=s.split('\r\n'), ents=[]; let e=null, sec=null;
+    for(let i=0;i+1<l.length;i+=2){ const c=l[i].trim(), v=l[i+1];
+      if(c==='2'&&l[i-1]==='SECTION'){sec=v;continue;} if(sec!=='ENTITIES') continue;
+      if(c==='0'){ if(v==='VERTEX'){e.vert=true;e.pts.push([]);continue;} if(v==='SEQEND') continue; e={t:v,n:{},pts:[],vert:false}; ents.push(e); continue; }
+      if(!e) continue;
+      if(e.t==='POLYLINE'&&e.vert){ if(c==='10') e.pts[e.pts.length-1][0]=+v; if(c==='20') e.pts[e.pts.length-1][1]=+v; continue; }
+      if(c==='8') e.cam=v; else if(c==='1') e.txt=v; else if(!(c in e.n)) e.n[c]=v;
+    }
+    const tt=ents.filter(e=>e.t==='TEXT'&&e.cam==='TITULO').map(e=>e.txt);
+    const vistasT=tt.filter(t=>/^(PLANTA DO PAVIMENTO|CORTE [AB]-[AB]$|ELEVAÇÃO|DETALHE DO DEGRAU)/.test(t));
+    if(tt.some(t=>/^(0|50|100|cm|10|20)$/.test(t)||/ · PLANTA DO PAV\.|^CORTE A-A · |AMPLIADO/.test(t))||vistasT.length!==todas.length||tt.length!==todas.length+1||!tt.some(t=>/^DETALHE DO DEGRAU \(degraus em 1:1; altura do corrimão fora de escala\)$/.test(t))||!tt.some(t=>/exceto a altura do corrimão no detalhe/.test(t))) tit.push(T.id+': '+tt.join(' / '));
+    ents.filter(e=>e.t==='POLYLINE').forEach(e=>{ if(!(+e.n['70']&128)) b128.push(T.id); });
+    const d=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
+    ents.forEach(e=>{
+      if(e.t==='LINE'){ const a=[+e.n['10'],+e.n['20']], b=[+e.n['11'],+e.n['21']]; if(d(a,b)<1e-3) sobra.push(T.id+' LINE'); }
+      if(e.t==='POLYLINE'){ let L=0; for(let i=0;i+1<e.pts.length;i++){ const k=d(e.pts[i],e.pts[i+1]); L+=k; if(k<1e-3) sobra.push(T.id+' vértice repetido'); } if(L<0.2) sobra.push(T.id+' POLYLINE '+L.toFixed(3)); }
+    });
+  });
+  ok(!tit.length,'DXF: um só título por vista (sem o título interno nem a escala gráfica do SVG) e detalhe com "altura do corrimão fora de escala"'+(tit.length?' ('+tit.slice(0,2).join('; ')+')':''));
+  ok(!b128.length,'DXF: toda POLYLINE com o bit 128 (tracejado contínuo ao longo da polilinha)'+(b128.length?' ('+[...new Set(b128)].join(', ')+')':''));
+  ok(!sobra.length,'DXF: sem linhas de comprimento zero, vértices repetidos nem polilinhas de menos de 2 mm, nos 9 tipos'+(sobra.length?' ('+sobra.slice(0,6).join('; ')+')':''));
+}
+
 console.log(fail?fail+' falha(s)':'todos passaram');

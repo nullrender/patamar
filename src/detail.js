@@ -201,6 +201,8 @@ function detalheSVG(R, o, C) {
 
   /* ---------- moldura, notas e título ---------- */
   B(xMin - fs, zMin);
+  /* todos os textos entram na caixa pelo tamanho estimado (os inclinados, como o do corrimão, crescem com fs) */
+  caixasTextos(s).forEach(c => { B(c[0], -c[3]); B(c[2], -c[1]); });
   const m = fs * 2.5;
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
