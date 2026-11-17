@@ -17,6 +17,8 @@ src/draw.js      SVG da planta (inferior/superior, com as chamadas de corte), do
 src/detail.js    detalhe do degrau ampliado (detalheSVG)
 src/r3d.js       3D próprio (rasterizador com z-buffer em canvas 2D): fundo real da laje (R.zBot) e corrimãos
 src/problemas.js seção "Problemas comuns" da Explicação (o que dá errado na prática e como se resolve, com fontes)
+src/dxf.js       exportação DXF R12 (dxfDe, dxfBytes): converte os SVGs dos desenhos em entidades reais, em m ou cm, com camadas pelo data-camada
+src/prancha.js   prancha em escala (montarPrancha, pranchaSVG, pranchasSVG): A3/A2/A4, 1:50 automático, várias folhas, carimbo e régua de 100 mm
 src/explain.js   aba "Explicação": textos montados com os números do cálculo
 src/ui.js        interface, estado, localStorage (chave patamar-v1), hash #<tipo>[-planta|-corte|-3d|-explica]
 src/template.html  HTML e CSS; o build injeta o JS no lugar de /*__SCRIPT__*/
@@ -58,6 +60,7 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 - O "Perfil" é desenvolvido ao longo da linha de caminhamento. **Não é corte A-A**, e os textos não podem chamá-lo assim. Os cortes A-A e B-B (aba Cortes) são planos verticais de verdade: A ao longo do 1º lance, B atravessado a ele, deslocáveis (`corteA`, `corteB`); o que é cortado vira poché, o que está além aparece em vista.
 - `R.zBot(pl, [x, y])` dá a cota da face inferior da laje em qualquer ponto da planta (espessura `tLaje` na perpendicular à linha dos cantos internos; patamar horizontal). Cortes, 3D e quantitativos usam essa função.
 - Tipos: reta, reta-patamar, l-patamar, l-leque, u-patamar, u-leque, c-patamar, z-patamar (três lances, dois patamares) e helicoidal (com "Degraus por volta" automático ou escolhido).
+- **Prancha e DXF**: os desenhos aceitam `o.fs` (tamanho do texto em cm) e `o.semTitulo` (sem bloco de título; a prancha e o DXF põem o seu). Na prancha, `width_mm = viewBox_cm × 10 / escala` garante a escala; o padrão é várias folhas mantendo 1:50 (`folhas: 'varias'`), com a opção de uma folha só reduzindo a escala. O DXF é R12 (AC1009), em windows-1252, em verdadeira grandeza (o corrimão do detalhe é fora de escala e o título diz isso). Nenhum texto pode sair do viewBox: há teste nos 9 tipos.
 - O artefato do claude.ai não permite download; o "Baixar PNG" só funciona no Pages ou no arquivo local.
 
 ## Pendências conhecidas

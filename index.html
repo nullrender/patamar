@@ -409,6 +409,51 @@ body.travado{overflow:hidden}
 .tab td{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tabq td:first-child{white-space:normal;font-family:var(--body)}
 .tabq td{vertical-align:top}
+/* prancha em escala e DXF: formulário à esquerda, folha à direita; no celular, tela cheia com a folha em cima */
+.pmodal .pbox{width:min(1360px,100%);height:100%;padding:0;gap:0;overflow:hidden}
+.phead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.phead h2{flex:1;margin:0;font:600 20px/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.pcorpo{flex:1;min-height:0;display:grid;grid-template-columns:330px minmax(0,1fr)}
+.pform{overflow:auto;padding:12px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.pform fieldset{border:1px solid var(--line);border-radius:8px;margin:0;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pform legend{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+.pf{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:500}
+.pf input,.pf select{width:100%;min-height:42px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);padding:8px 10px;font:inherit;font-weight:400;font-size:15px}
+.pf input:focus-visible,.pf select:focus-visible,.pc input:focus-visible{outline:2px solid var(--btn);outline-offset:1px}
+.pdois{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pc{display:flex;align-items:center;gap:8px;font-size:14px;min-height:36px;cursor:pointer}
+.pc input{accent-color:var(--btn);width:18px;height:18px;margin:0;flex:none}
+.pbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.pbtns .btn{flex:1 1 auto}
+.pun{flex:0 0 130px}
+.pprev{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px}
+.paviso{margin:0;font-size:13px;line-height:1.45;padding:6px 10px;border-left:3px solid var(--info);background:var(--panel);border-radius:0 6px 6px 0}
+.paviso.alerta{border-left-color:var(--warn)}
+.pfolha{display:flex;flex-direction:column;gap:14px}
+.pfig{margin:0;display:flex;flex-direction:column;gap:4px}
+.pfig figcaption{font-size:13px;font-weight:600;color:var(--muted)}
+/* cada folha é um botão: tocar (ou clicar) abre ela grande, com rolagem e pinça */
+.pamp{position:relative;display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in;text-align:left}
+.pamp:focus-visible{outline:3px solid var(--btn);outline-offset:3px}
+.pamp svg{display:block;width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.pampTxt{position:absolute;top:6px;right:6px;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font-size:13px;font-weight:500;box-shadow:var(--shadow)}
+.perr{margin:0;font-size:13px;color:var(--bad)}
+.pfs{display:flex;flex-direction:column;gap:2px;font-size:13px;font-weight:500}
+.pfs .pc{font-weight:400}
+.pbtns>.pbtns{display:contents}
+@media (min-width:700px) and (max-width:1023px){.pcorpo{grid-template-columns:290px minmax(0,1fr)} .pdois{grid-template-columns:1fr}}
+@media (max-width:699px){
+  .modal.pmodal{padding:0}
+  .pmodal .pbox{border-radius:0;max-height:none;overflow:auto;display:block}
+  .phead{position:sticky;top:0;z-index:2;background:var(--panel);padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  .pcorpo{display:flex;flex-direction:column}
+  .pprev{order:-1;overflow:visible;padding:10px}
+  .pform{overflow:visible;border-right:0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  .pf input,.pf select{min-height:44px}
+  .pc{min-height:44px}
+  .phead h2{font-size:18px}
+  .phead .btn{flex:none}
+}
 /* ---- relatório para imprimir ou salvar em PDF ---- */
 .printArea{display:none}
 @media print{
@@ -442,8 +487,14 @@ body.travado{overflow:hidden}
   .printArea .ex>summary::after{content:none}
   .printArea .ex .exb{padding:4pt 0 0;font-size:10pt}
   .printArea .rodape{margin-top:12pt;font-size:8pt;color:#555;border-top:1px solid #bbb;padding-top:4pt}
+  /* prancha em escala: a folha inteira, sem margem (o @page com o tamanho dela vai em #pagePrancha, montado na hora) */
+  html.imprPrancha,html.imprPrancha body{margin:0;padding:0;background:#fff}
+  #printArea.prancha .pimp{overflow:hidden;break-inside:avoid;break-after:page}
+  #printArea.prancha .pimp:last-child{break-after:auto}
+  #printArea.prancha svg{display:block;width:100%;height:100%}
 }
 </style>
+<style id="pagePrancha"></style>
 </head>
 <body>
 <a class="skip" href="#painel-desenho">Pular para o desenho</a>
@@ -487,6 +538,7 @@ body.travado{overflow:hidden}
         <div class="actions">
           <button type="button" class="btn pri" id="btnImg">Gerar imagem</button>
           <button type="button" class="btn" id="btnSvg">Copiar SVG</button>
+          <button type="button" class="btn" id="btnPrancha">Prancha e DXF</button>
           <button type="button" class="btn" id="btnResumo">Copiar resumo</button>
           <button type="button" class="btn" id="btnPrint">Imprimir / PDF</button>
           <label class="chkPrint"><input type="checkbox" id="printExp"> imprimir com a explicação completa</label>
@@ -516,6 +568,52 @@ body.travado{overflow:hidden}
 <div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Desenho ampliado">
   <div class="zbar"><span class="zdica">Arraste para mover. Pinça com dois dedos, Ctrl + roda do mouse ou os botões mudam o tamanho.</span><button type="button" class="btn" id="zMenos" aria-label="Diminuir">−</button><button type="button" class="btn" id="zMais" aria-label="Aumentar">+</button><button type="button" class="btn pri" id="btnAjustar">Ajustar</button></div>
   <div class="zarea" id="zArea"></div>
+</div>
+<div class="modal pmodal" id="prancha" hidden role="dialog" aria-modal="true" aria-labelledby="prTitulo">
+  <div class="box pbox">
+    <div class="phead"><h2 id="prTitulo">Prancha em escala e DXF</h2><button type="button" class="btn" id="prFechar">Fechar</button></div>
+    <div class="pcorpo">
+      <form class="pform" id="prForm" novalidate>
+        <fieldset><legend>Carimbo</legend>
+          <label class="pf">Título <input id="prTit" type="text" maxlength="60" autocomplete="off"></label>
+          <label class="pf">Nome da aluna ou aluno <input id="prAluno" type="text" maxlength="60" autocomplete="name"></label>
+          <label class="pf">Disciplina <input id="prDisc" type="text" maxlength="60" autocomplete="off"></label>
+          <label class="pf">Professor(a) <input id="prProf" type="text" maxlength="60" autocomplete="off"></label>
+          <label class="pf">Data <input id="prData" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="prDataErro"></label>
+          <p class="perr" id="prDataErro" hidden>Data inválida: use dd/mm/aaaa (ex.: 05/03/2027). Enquanto isso, o carimbo usa a data de hoje.</p>
+        </fieldset>
+        <fieldset><legend>Folha</legend>
+          <div class="pdois">
+            <label class="pf">Formato <select id="prFormato"><option value="A3">A3</option><option value="A2">A2 (maior)</option><option value="A4">A4 (menor)</option></select></label>
+            <label class="pf">Escala <select id="prEscala"><option value="auto">Automática</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option></select></label>
+          </div>
+          <div class="pfs" role="radiogroup" aria-labelledby="prFolhasNome" id="prFolhas"><span id="prFolhasNome">Folhas</span>
+            <label class="pc"><input type="radio" name="prFolhas" value="varias"> Várias, mantendo a escala (recomendado)</label>
+            <label class="pc"><input type="radio" name="prFolhas" value="uma"> Uma só, reduzindo a escala</label>
+          </div>
+          <p class="note">Com “Várias”, a escala fica (na automática, quase sempre 1:50) e as vistas se dividem em quantas folhas forem precisas, todas do mesmo formato. Com “Uma só”, tudo vai numa folha e a escala automática cai para 1:75 ou 1:100 se for preciso. O detalhe do degrau sai ampliado (1:5 ou 1:10; se não couber, 1:20 ou 1:25).</p>
+        </fieldset>
+        <fieldset id="prVistas"><legend>Vistas (valem para a prancha e para o DXF)</legend>
+          <label class="pc"><input type="checkbox" data-v="planta"> Planta do pavimento inferior</label>
+          <label class="pc"><input type="checkbox" data-v="plantaSup"> Planta do pavimento superior</label>
+          <label class="pc"><input type="checkbox" data-v="corteA"> Corte A-A</label>
+          <label class="pc"><input type="checkbox" data-v="corteB"> Corte B-B</label>
+          <label class="pc"><input type="checkbox" data-v="elevacao"> <span id="prElevNome">Elevação</span></label>
+          <label class="pc"><input type="checkbox" data-v="detalhe"> Detalhe do degrau</label>
+        </fieldset>
+        <fieldset><legend>Prancha</legend>
+          <div class="pbtns"><span class="pbtns" id="prSvgs"></span><button type="button" class="btn" id="prImp">Imprimir / PDF</button></div>
+          <p class="paviso alerta" id="prMotivo" role="status" hidden></p>
+          <p class="note" id="prDicaImp">Na janela de impressão, escolha o papel A3, orientação paisagem, margens “nenhuma” e escala 100% (ou “Tamanho real”). Com “Ajustar à página” a prancha sai fora de escala. Depois de imprimir, confira a régua de 100 mm do carimbo.</p>
+        </fieldset>
+        <fieldset><legend>DXF (para AutoCAD, LibreCAD e outros programas de CAD)</legend>
+          <div class="pbtns"><label class="pf pun">Unidade <select id="prUnid"><option value="m">metros</option><option value="cm">centímetros</option></select></label><button type="button" class="btn" id="prDxf">Baixar DXF</button></div>
+          <p class="note" id="prDxfNota"></p>
+        </fieldset>
+      </form>
+      <div class="pprev"><p class="paviso" id="prAviso"></p><div class="pfolha" id="prFolha"></div></div>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <div id="printArea" class="printArea" aria-hidden="true"></div>
@@ -1425,6 +1523,11 @@ const escXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const NS = 'vector-effect="non-scaling-stroke"';
 let HCH = 0;
 const FONT = "'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace";
+/* camada: marca um trecho do desenho com o nome da camada que ele recebe na exportação DXF (data-camada).
+   Um <g> sem estilo não muda nada na tela. */
+function cam(nome, s) { return s ? '<g data-camada="' + nome + '">' + s + '</g>' : ''; }
+/* tamanho base do texto (cm no desenho): o.fs, quando a prancha em escala pede um tamanho fixo; senão, o automático */
+const fsDe = (o, auto) => (o && o.fs > 0 ? o.fs : auto);
 
 function sLine(a, b, col, w, dash) {
   return '<line x1="' + r2(a[0]) + '" y1="' + r2(-a[1]) + '" x2="' + r2(b[0]) + '" y2="' + r2(-b[1]) + '" stroke="' + col + '" stroke-width="' + w + '" ' + NS + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
@@ -1458,8 +1561,9 @@ function dimLine(a, b, ux, uy, dist, label, fs, C) {
   s += sLine([B[0] - tx, B[1] - ty], [B[0] + tx, B[1] + ty], C.ink, 1.3);
   let ang = deg(Math.atan2(-dy, dx)); if (ang > 90) ang -= 180; if (ang <= -90) ang += 180;
   const mxp = (A[0] + B[0]) / 2 + ux * fs * 0.95, myp = (A[1] + B[1]) / 2 + uy * fs * 0.95;
-  s += sText(mxp, myp, label, fs * 0.95, C.ink, 'middle', ang, 500);
-  return s;
+  /* contorno da cor do papel: a linha de corte que cruza a cota não risca o número */
+  s += haloTxt(sText(mxp, myp, label, fs * 0.95, C.ink, 'middle', ang, 500), C.paper, fs);
+  return cam('COTAS', s);
 }
 
 function treadFill(kind, C) { return kind === 'leque' ? C.winder : kind === 'patamar' ? C.patamar : C.tread; }
@@ -1469,6 +1573,52 @@ const nivel = cm => (cm === 0 ? '±0,00' : '+' + (cm / 100).toLocaleString('pt-B
 function svgWrap(vx, vy, vw, vh, body, o, extraDefs) {
   const size = o && o.pxW ? ' width="' + Math.round(o.pxW) + '" height="' + Math.round(o.pxW * vh / vw) + '"' : o && o.thumb ? ' preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block"' : ' style="width:100%;height:auto;display:block"';
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + r2(vx) + ' ' + r2(vy) + ' ' + r2(vw) + ' ' + r2(vh) + '"' + size + ' role="img">' + (extraDefs || '') + body + '</svg>';
+}
+
+/* contorno da cor do fundo em volta das letras: a linha que passa embaixo (chamada de corte, cota) não risca o texto */
+function haloTxt(t, cor, fs) {
+  return t.replace('<text ', '<text stroke="' + cor + '" stroke-width="' + r2(fs * 0.3) + '" stroke-linejoin="round" paint-order="stroke" ');
+}
+/* caixa estimada de um texto (largura = 0,6 × tamanho × caracteres, a da fonte mono; altura = tamanho),
+   em coordenadas do SVG (y para baixo), já com o text-anchor e a rotação */
+function caixaTexto(attrs, conteudo) {
+  const g = k => { const m = new RegExp('(?:^|\\s)' + k + '="([^"]*)"').exec(attrs); return m ? m[1] : null; };
+  const x = +g('x'), y = +g('y'), sz = +g('font-size') || 0, an = g('text-anchor') || 'start';
+  const t = conteudo.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  const L = [...t].length * sz * 0.6, xa = an === 'middle' ? x - L / 2 : an === 'end' ? x - L : x;
+  let pts = [[xa, y - sz / 2], [xa + L, y - sz / 2], [xa + L, y + sz / 2], [xa, y + sz / 2]];
+  const tr = /rotate\(([-\d.e]+) ([-\d.e]+) ([-\d.e]+)\)/.exec(g('transform') || '');
+  if (tr) { const a = +tr[1] * Math.PI / 180, cx = +tr[2], cy = +tr[3], c = Math.cos(a), sn = Math.sin(a); pts = pts.map(q => [cx + (q[0] - cx) * c - (q[1] - cy) * sn, cy + (q[0] - cx) * sn + (q[1] - cy) * c]); }
+  return [Math.min(pts[0][0], pts[1][0], pts[2][0], pts[3][0]), Math.min(pts[0][1], pts[1][1], pts[2][1], pts[3][1]), Math.max(pts[0][0], pts[1][0], pts[2][0], pts[3][0]), Math.max(pts[0][1], pts[1][1], pts[2][1], pts[3][1])];
+}
+/* caixas de todos os textos de um trecho de SVG */
+function caixasTextos(s) { const out = []; for (const m of s.matchAll(/<text ([^>]*)>([^<]*)<\/text>/g)) out.push(caixaTexto(m[1], m[2])); return out; }
+/* aumenta o viewBox [vx, vy, vw, vh] só onde algum texto passaria da borda (com folga pad); onde tudo cabe, não muda nada */
+function cabeTextos(vb, s, pad) {
+  let x0 = vb[0], y0 = vb[1], x1 = vb[0] + vb[2], y1 = vb[1] + vb[3];
+  caixasTextos(s).forEach(b => {
+    if (b[0] < x0) x0 = b[0] - pad; if (b[1] < y0) y0 = b[1] - pad;
+    if (b[2] > x1) x1 = b[2] + pad; if (b[3] > y1) y1 = b[3] + pad;
+  });
+  return [x0, y0, x1 - x0, y1 - y0];
+}
+/* quebra um texto em linhas de até maxW (largura estimada 0,6 × tamanho), de preferência nos " · " */
+function quebraTexto(txt, size, maxW) {
+  const cabe = t => [...t].length * size * 0.6 <= maxW;
+  if (cabe(txt)) return [txt];
+  const linhas = []; let cur = '';
+  const partes = txt.split(' · ');
+  partes.forEach((p, i) => {
+    const sep = i < partes.length - 1 ? ' ·' : '';
+    const tenta = cur ? cur + ' ' + p + sep : p + sep;
+    if (cabe(tenta)) { cur = tenta; return; }
+    if (cur) linhas.push(cur);
+    /* a parte sozinha não cabe: quebra nas palavras */
+    cur = '';
+    (p + sep).split(' ').forEach(w => { const t2 = cur ? cur + ' ' + w : w; if (cabe(t2) || !cur) cur = t2; else { linhas.push(cur); cur = w; } });
+  });
+  if (cur) linhas.push(cur);
+  return linhas;
 }
 
 /* linha de ruptura (zigue-zague) ao longo de um segmento */
@@ -1481,16 +1631,21 @@ function breakLine(e0, e1, fs, C) {
 }
 
 /* bloco de título + escala gráfica */
+/* devolve { svg, h }: h é a altura ocupada abaixo de ymin (7,5 fs quando cada linha cabe inteira; as linhas longas
+   quebram em vez de passar da largura vw, e o bloco cresce para baixo) */
 function titleBlock(vx, ymin, vw, fs, l1, l2, C) {
   let s = sLine([vx + fs * 0.5, ymin], [vx + vw - fs * 0.5, ymin], C.ink, 1.2);
-  s += sText(vx + fs, ymin - fs * 1.4, l1, fs * 0.9, C.ink, 'start', 0, 600);
-  s += sText(vx + fs, ymin - fs * 2.9, l2, fs * 0.8, C.muted, 'start', 0, 400);
+  const maxW = vw - fs * 1.5, a1 = quebraTexto(l1, fs * 0.9, maxW), a2 = quebraTexto(l2, fs * 0.8, maxW);
+  let y = 1.4;
+  a1.forEach((t, i) => { if (i) y += 1.15; s += sText(vx + fs, ymin - fs * y, t, fs * 0.9, C.ink, 'start', 0, 600); });
+  y += 1.5;
+  a2.forEach((t, i) => { if (i) y += 1.05; s += sText(vx + fs, ymin - fs * y, t, fs * 0.8, C.muted, 'start', 0, 400); });
   /* escala gráfica: 0 - 50 - 100 cm, em tamanho real do desenho */
-  const x0 = vx + fs, y0 = ymin - fs * 5.2, h = fs * 0.55;
+  const x0 = vx + fs, y0 = ymin - fs * (y + 2.3), h = fs * 0.55;
   [0, 1].forEach(i => { s += '<rect x="' + r2(x0 + i * 50) + '" y="' + r2(-y0 - h) + '" width="50" height="' + r2(h) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
   [0, 50, 100].forEach(v => { s += sText(x0 + v, y0 - fs * 0.9, String(v), fs * 0.7, C.muted, 'middle'); });
   s += sText(x0 + 108, y0 - fs * 0.15, 'cm', fs * 0.7, C.muted, 'start');
-  return s;
+  return { svg: cam('TITULO', s), h: fs * (y + 4.6) };
 }
 
 function planSVG(R, o, C) {
@@ -1500,13 +1655,16 @@ function planSVG(R, o, C) {
   const sup = modo === 'sup';
   let bbA = thumb ? R.bbox : R.bboxAll; const bb = R.bbox;
   const span0 = Math.max(bbA[2] - bbA[0], bbA[3] - bbA[1]);
-  const fs = thumb ? span0 / 14 : clamp(span0 / 40, 5, 14);
+  const fs = thumb ? span0 / 14 : fsDe(o, clamp(span0 / 40, 5, 14));
   /* as chamadas de corte deslocadas podem cair fora da escada: o desenho cresce para mostrá-las */
   const comCortes = !thumb && modoInf(o, R) && (o.cortes === true || (o.cortes !== false && R.st.showCortes !== false));
   const bbEsc = bbA;
   if (comCortes) { const ext = ['A', 'B'].map(q => chamadaPontos(R, q, fs, bbEsc)).flat(); bbA = bboxOf(ext.concat([[bbA[0], bbA[1]], [bbA[2], bbA[3]]])); }
   const w = bbA[2] - bbA[0], h = bbA[3] - bbA[1], span = Math.max(w, h);
-  const m = thumb ? span * 0.07 : comCortes ? fs * 3.5 : fs * 10, tb = thumb ? 0 : fs * 7.5;
+  /* o.semTitulo (prancha): sem o bloco de título e a escala gráfica, que a prancha já põe embaixo de cada vista */
+  const semT = !!(o && o.semTitulo);
+  /* na prancha (semT) a margem é curta: o que passa dela (cotas, rótulos) faz o desenho crescer só ali (cabeTextos, abaixo) */
+  const m = thumb ? span * 0.07 : semT ? fs * 1.2 : comCortes ? fs * 3.5 : fs * 10, tb = thumb || semT ? 0 : fs * 7.5;
   const vx = bbA[0] - m, vy = -(bbA[3] + m), vw = w + 2 * m, vh = h + 2 * m + tb;
   const showDims = !thumb && o.dims !== false && R.st.showDims !== false;
   const showNums = !thumb && o.nums !== false && R.st.showNums !== false;
@@ -1517,10 +1675,11 @@ function planSVG(R, o, C) {
   let s = '';
   if (!thumb) {
     const arr = R.arrival, ac = centroid(arr.pts);
-    s += sSolidArrival(arr.pts, sup, C);
+    s += cam('PISO_SUPERIOR', sSolidArrival(arr.pts, sup, C));
     if (!sup) {
-      s += sText(ac[0], ac[1] + fs * 0.6, R.hel ? 'PISO SUP.' : 'PISO SUPERIOR', fs * 0.72, C.muted, 'middle', 0, 500);
-      s += sText(ac[0], ac[1] - fs * 0.7, nivel(R.H), fs * 0.8, C.ink, 'middle', 0, 600);
+      /* contorno da cor do piso: a linha do corte A, que passa por aqui, não risca o texto */
+      s += cam('TEXTO', haloTxt(sText(ac[0], ac[1] + fs * 0.6, R.hel ? 'PISO SUP.' : 'PISO SUPERIOR', fs * 0.72, C.muted, 'middle', 0, 500), C.piso, fs) +
+        haloTxt(sText(ac[0], ac[1] - fs * 0.7, nivel(R.H), fs * 0.8, C.ink, 'middle', 0, 600), C.piso, fs));
     }
   }
   let clipId = null;
@@ -1529,15 +1688,15 @@ function planSVG(R, o, C) {
     const cid = clipId = 'cl' + Math.random().toString(36).slice(2, 8);
     const shape = op.circle ? '<circle cx="0" cy="0" r="' + r2(op.circle) + '"/>' : '<rect x="' + r2(op.bbox[0]) + '" y="' + r2(-op.bbox[3]) + '" width="' + r2(op.bbox[2] - op.bbox[0]) + '" height="' + r2(op.bbox[3] - op.bbox[1]) + '"/>';
     s += '<defs><clipPath id="' + cid + '">' + shape + '</clipPath></defs><g clip-path="url(#' + cid + ')">';
-    R.polys.forEach(pl => { s += sPoly(pl.pts, treadFill(pl.kind, C), C.ink, 1.5); });
+    R.polys.forEach(pl => { s += cam(camadaDegrau(pl), sPoly(pl.pts, treadFill(pl.kind, C), C.ink, 1.5)); });
     s += '</g>';
   } else {
     /* pavimento inferior: primeiro o que está abaixo do corte (traço cheio), depois a projeção do que está acima (tracejado, por cima) */
     const on = pl => !useCut ? true : visible(pl);
-    R.polys.forEach(pl => { if (on(pl)) s += sPoly(pl.pts, treadFill(pl.kind, C), C.ink, thumb ? 1 : 1.5); });
-    R.polys.forEach(pl => { if (!on(pl)) s += sPoly(pl.pts, treadFill(pl.kind, C), C.muted, 1.1, '6 4', R.hel ? 0 : 0.28); });
+    R.polys.forEach(pl => { if (on(pl)) s += cam(camadaDegrau(pl), sPoly(pl.pts, treadFill(pl.kind, C), C.ink, thumb ? 1 : 1.5)); });
+    R.polys.forEach(pl => { if (!on(pl)) s += cam('PROJECAO', sPoly(pl.pts, treadFill(pl.kind, C), C.muted, 1.1, '6 4', R.hel ? 0 : 0.28)); });
   }
-  if (R.hel) s += sCircle(0, 0, R.helix.rc, C.ink, C.ink, 1);
+  if (R.hel) s += cam('PILAR', sCircle(0, 0, R.helix.rc, C.ink, C.ink, 1));
   if (!thumb && !sup && useCut && kCut >= 1 && kCut < T) {
     const nx = R.polys[kCut];
     if (nx && nx.entry) s += breakLine(nx.entry[0], nx.entry[1], fs, C);
@@ -1545,28 +1704,34 @@ function planSVG(R, o, C) {
   /* vão na laje */
   if (!thumb && o.opening !== false && op) {
     const dash = sup ? null : '7 5', col = sup ? C.ink : C.info, wd = sup ? 2.8 : 1.8;
-    if (op.circle) s += '<circle cx="0" cy="0" r="' + r2(op.circle) + '" fill="none" stroke="' + col + '" stroke-width="' + wd + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' ' + NS + '/>';
-    else { const q = op.bbox; s += sPoly([[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]], 'none', col, wd, dash); }
+    if (op.circle) s += cam('VAO_LAJE', '<circle cx="0" cy="0" r="' + r2(op.circle) + '" fill="none" stroke="' + col + '" stroke-width="' + wd + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' ' + NS + '/>');
+    else { const q = op.bbox; s += cam('VAO_LAJE', sPoly([[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]], 'none', col, wd, dash)); }
   }
   /* linha de caminhamento + seta (na planta superior, recortadas pela abertura junto com os números) */
   let rotulos = '';
   if (clipId) s += '<g clip-path="url(#' + clipId + ')">';
   if (o.walk !== false && R.walk.length) {
-    R.walk.forEach(wl => { s += sPolyline(wl, C.accent, thumb ? 1.6 : 2.3); });
+    let wk = '';
+    R.walk.forEach(wl => { wk += sPolyline(wl, C.accent, thumb ? 1.6 : 2.3); });
     const all = [].concat.apply([], R.walk);
     const first = all[0], f2 = all.find(q => Math.hypot(q[0] - first[0], q[1] - first[1]) > 1) || first;
     const end = all[all.length - 1], pre = all.slice().reverse().find(q => Math.hypot(q[0] - end[0], q[1] - end[1]) > 1) || end;
     const head = sup ? first : end, hpre = sup ? f2 : pre, tail = sup ? end : first, tnext = sup ? pre : f2;
     let ux = head[0] - hpre[0], uy = head[1] - hpre[1]; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
     const hs = fs * (thumb ? 1.3 : 1.2), base = [head[0] - ux * hs, head[1] - uy * hs];
-    s += sPoly([[head[0] + ux * hs * 0.2, head[1] + uy * hs * 0.2], [base[0] - uy * hs * 0.5, base[1] + ux * hs * 0.5], [base[0] + uy * hs * 0.5, base[1] - ux * hs * 0.5]], C.accent, C.accent, 1);
-    s += sCircle(tail[0], tail[1], fs * 0.5, C.accent);
+    wk += sPoly([[head[0] + ux * hs * 0.2, head[1] + uy * hs * 0.2], [base[0] - uy * hs * 0.5, base[1] + ux * hs * 0.5], [base[0] + uy * hs * 0.5, base[1] - ux * hs * 0.5]], C.accent, C.accent, 1);
+    wk += sCircle(tail[0], tail[1], fs * 0.5, C.accent);
+    s += cam('LINHA_CAMINHAMENTO', wk);
     if (!thumb) {
       let fx = tail[0] - tnext[0], fy = tail[1] - tnext[1]; const fl = Math.hypot(fx, fy) || 1; fx /= fl; fy /= fl;
       let d1 = fs * 2.6, d2 = fs * 4.4;
       if (R.hel) { const tl = Math.hypot(tail[0], tail[1]) || 1; fx = tail[0] / tl; fy = tail[1] / tl; d1 += R.dw; d2 += R.dw; }
-      rotulos += sText(tail[0] + fx * d1, tail[1] + fy * d1, sup ? 'DESCE' : 'SOBE', fs * 0.95, C.accent, 'middle', 0, 600);
-      rotulos += sText(tail[0] + fx * d2, tail[1] + fy * d2, sup ? nivel(R.H) : nivel(0), fs * 0.85, C.ink, 'middle', 0, 600);
+      const P1 = [tail[0] + fx * d1, tail[1] + fy * d1];
+      /* o nível fica embaixo do SOBE/DESCE, na vertical da folha. Se a seta sai na horizontal (lance de chegada das
+         escadas em L), seguir a direção dela poria um texto em cima do outro, na mesma linha */
+      const P2 = Math.abs(fy) >= Math.abs(fx) ? [tail[0] + fx * d2, tail[1] + fy * d2] : [P1[0], P1[1] - fs * 1.3];
+      rotulos += cam('TEXTO', haloTxt(sText(P1[0], P1[1], sup ? 'DESCE' : 'SOBE', fs * 0.95, C.accent, 'middle', 0, 600), C.paper, fs) +
+        haloTxt(sText(P2[0], P2[1], sup ? nivel(R.H) : nivel(0), fs * 0.85, C.ink, 'middle', 0, 600), C.paper, fs));
     }
   }
   /* numeração dos degraus */
@@ -1578,33 +1743,51 @@ function planSVG(R, o, C) {
       if (R.hel) { const mid = pl.arc.outer.length >> 1; const ph = Math.atan2(pl.arc.outer[mid][1], pl.arc.outer[mid][0]); cx = R.helix.rw * Math.cos(ph); cy = R.helix.rw * Math.sin(ph); }
       else { const c = centroid(pl.pts); cx = c[0]; cy = c[1]; }
       const on = !useCut && !sup ? true : visible(pl);
-      s += '<g stroke="' + treadFill(pl.kind, C) + '" stroke-width="' + r2(fs * 0.45) + '" stroke-linejoin="round" paint-order="stroke">' + sText(cx, cy, String(pl.k), fs * 0.85, on ? C.ink : C.muted, 'middle', 0, 500) + '</g>';
+      s += '<g data-camada="NUMEROS" stroke="' + treadFill(pl.kind, C) + '" stroke-width="' + r2(fs * 0.45) + '" stroke-linejoin="round" paint-order="stroke">' + sText(cx, cy, String(pl.k), fs * 0.85, on ? C.ink : C.muted, 'middle', 0, 500) + '</g>';
     });
   }
   if (clipId) s += '</g>';
+  /* chamadas dos cortes A-A e B-B (só na planta do pavimento inferior), antes dos rótulos e das cotas, que ficam por cima */
+  if (comCortes) s += cam('LINHA_CORTE', chamadaCorte(R, 'A', fs, C, bbEsc) + chamadaCorte(R, 'B', fs, C, bbEsc));
   s += rotulos;
-  /* chamadas dos cortes A-A e B-B (só na planta do pavimento inferior) */
-  if (comCortes) s += chamadaCorte(R, 'A', fs, C, bbEsc) + chamadaCorte(R, 'B', fs, C, bbEsc);
   /* ponta mais estreita dos degraus balanceados: marca no canto interno */
   if (showDims && !sup && R.bal && R.nLeque) {
     const lqs = R.polys.filter(pl => pl.kind === 'leque');
     const pm = lqs.reduce((m, pl) => pl.wIn < m.wIn ? pl : m, lqs[0]);
     const I = pm.entry[1], c = centroid(pm.pts);
     let dx = I[0] - c[0], dy = I[1] - c[1]; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
-    const T2 = [I[0] + dx * fs * 2.2, I[1] + dy * fs * 2.2];
-    s += sLine(I, T2, C.accent, 0.9) + sText(T2[0] + dx * fs * 1.6, T2[1] + dy * fs * 0.9, 'ponta ' + fmt(pm.wIn, 1), fs * 0.75, C.accent, 'middle', 0, 600);
+    /* o rótulo vai para o primeiro lugar livre: sem cair em cima de outro texto nem de uma linha de corte */
+    const txt = 'ponta ' + fmt(pm.wIn, 1), tw = [...txt].length * fs * 0.75 * 0.6, th = fs * 0.75;
+    const ocup = caixasTextos(s), linhas = comCortes ? ['A', 'B'].map(q => chamadaSegmento(R, q, fs, bbEsc)) : [];
+    const livre = (cx, cy) => {
+      const b = [cx - tw / 2 - fs * 0.2, -cy - th / 2 - fs * 0.2, cx + tw / 2 + fs * 0.2, -cy + th / 2 + fs * 0.2];
+      return !ocup.some(o2 => o2[0] < b[2] && o2[2] > b[0] && o2[1] < b[3] && o2[3] > b[1]) && !linhas.some(sg => segCruzaCaixa(sg[0], sg[1], [b[0], -b[3], b[2], -b[1]]));
+    };
+    let esc = null;
+    [2.2, 3.4].some(L => [0, 40, -40, 80, -80, 135, -135, 180].some(gr => {
+      const a = gr * Math.PI / 180, vx2 = dx * Math.cos(a) - dy * Math.sin(a), vy2 = dx * Math.sin(a) + dy * Math.cos(a);
+      const T2 = [I[0] + vx2 * fs * L, I[1] + vy2 * fs * L], cx = T2[0] + vx2 * (tw / 2 + fs * 0.3), cy = T2[1] + vy2 * fs * 0.9;
+      if (livre(cx, cy)) { esc = { T2, cx, cy }; return true; }
+      return false;
+    }));
+    if (!esc) { const T2 = [I[0] + dx * fs * 2.2, I[1] + dy * fs * 2.2]; esc = { T2, cx: T2[0] + dx * fs * 1.6, cy: T2[1] + dy * fs * 0.9 }; }
+    s += cam('COTAS', sLine(I, esc.T2, C.accent, 0.9) + haloTxt(sText(esc.cx, esc.cy, txt, fs * 0.75, C.accent, 'middle', 0, 600), C.paper, fs));
   }
   /* cotas */
   if (showDims) {
     const topGap = (bbEsc[3] - bb[3]) + fs * 5.4, rightGap = (bbEsc[2] - bb[2]) + fs * 5.4;
     if (R.hel) {
       s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, 'Ø ' + fmt(R.helix.R * 2, 0), fs, C);
-      s += sText(0, -R.helix.R - fs * 7.2, 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau', fs * 0.85, C.muted, 'middle');
+      /* com a chamada do corte A passando pelo eixo, o texto do pilar vai para o lado, longe da linha e da seta */
+      const tp = 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau';
+      if (comCortes) { const xA = cortesDe(R).A.P0[0]; s += cam('COTAS', sText(Math.min(0, xA) - fs, -R.helix.R - fs * 6, tp, fs * 0.85, C.muted, 'end')); }
+      else s += cam('COTAS', sText(0, -R.helix.R - fs * 7.2, tp, fs * 0.85, C.muted, 'middle'));
     } else {
       s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, fmt(bb[2] - bb[0], 0), fs, C);
       s += dimLine([bb[2], bb[1]], [bb[2], bb[3]], 1, 0, rightGap, fmt(bb[3] - bb[1], 0), fs, C);
       const se = R.startEdge;
-      s += dimLine(se[0], se[1], 0, -1, fs * 7, 'L ' + fmt(R.L, 0), fs, C);
+      /* a 5,6 fs: abaixo do ±0,00 e antes da ponta grossa da chamada do corte A (que começa a 7,15 fs) */
+      s += dimLine(se[0], se[1], 0, -1, fs * 5.6, 'L ' + fmt(R.L, 0), fs, C);
       const groups = {};
       R.polys.forEach(pl => { if (pl.kind === 'reto' && pl.grp) (groups[pl.grp] = groups[pl.grp] || []).push(pl); });
       Object.keys(groups).forEach(k => {
@@ -1618,14 +1801,19 @@ function planSVG(R, o, C) {
       });
     }
   }
-  if (!thumb) {
-    const ymin = bbA[1] - m;
+  /* nenhum texto sai da borda: onde algum passaria (cotas da planta superior com margem curta, fs grande), o desenho cresce */
+  let vb = thumb ? [vx, vy, vw, vh - tb] : cabeTextos([vx, vy, vw, vh - tb], s, fs * 0.4);
+  if (!thumb && !semT) {
+    const ymin = -(vb[1] + vb[3]);
     const t1 = (R.hel ? 'ESCADA HELICOIDAL' : 'ESCADA ' + TIPOS.find(t => t.id === R.tipo).nome.toUpperCase()) + ' · PLANTA ' + (sup ? 'DO PAV. SUPERIOR' : 'DO PAV. INFERIOR');
     const t2 = 'H ' + fmt(R.H, 0) + ' · ' + R.N + ' espelhos de ' + fmt(R.e, 1) + ' · ' + R.contagem + (R.nReto ? ' (piso ' + fmt(R.p, 1) + ')' : '') + ' · cotas em cm' + (sup ? '' : ' · corte a ' + fmt(R.zc, 0));
-    s += titleBlock(vx, ymin, vw, fs, t1, t2, C);
+    const tt = titleBlock(vb[0], ymin, vb[2], fs, t1, t2, C);
+    s += tt.svg; vb[3] += tt.h;
   }
-  return svgWrap(vx, vy, vw, vh, s, o);
+  return svgWrap(vb[0], vb[1], vb[2], vb[3], s, o);
 }
+/* camada do degrau na planta, pelo tipo de superfície */
+function camadaDegrau(pl) { return pl.kind === 'patamar' ? 'PATAMAR' : pl.kind === 'leque' ? 'LEQUE' : 'DEGRAUS'; }
 function sSolidArrival(pts, sup, C) {
   return sup ? sPoly(pts, C.piso, C.ink, 1.6) : sPoly(pts, C.piso, C.muted, 1, '5 4');
 }
@@ -1635,7 +1823,7 @@ function sectionSVG(R, o, C) {
   const H = R.H, e = R.e, X = R.Wtot, st = R.st;
   const left = -70, slabR = 110, right = X + slabR;
   const span = Math.max(right - left, H + 90);
-  const fs = clamp(span / 46, 5, 13);
+  const fs = fsDe(o, clamp(span / 46, 5, 13));
   const xmin = left - fs * 4, xmax = right + fs * 8;
   const ymin = -fs * 15.5, ymax = H + 92 + fs * 3;
   const vx = xmin, vy = -ymax, vw = xmax - xmin, vh = ymax - ymin;
@@ -1683,7 +1871,7 @@ function sectionSVG(R, o, C) {
     alturas.forEach(hR => {
       const pl = nos.concat([[X, H]]).map(q => [q[0], q[1] + hR]);
       if (ext) { pl.unshift([pl[0][0] - ext, pl[0][1]]); pl.push([pl[pl.length - 1][0] + ext, pl[pl.length - 1][1]]); }
-      s += sPolyline(pl, C.ink, 1.1);
+      s += cam('CORRIMAO', sPolyline(pl, C.ink, 1.1));
     });
     if (ext) s += sText(X + ext / 2, H + 92 + fs * 1.1, '+30', fs * 0.7, C.muted, 'middle');
     s += sLine([nos[0][0], nos[0][1] + 92], [nos[0][0], nos[0][1]], C.muted, 0.8, '3 3');
@@ -1697,7 +1885,7 @@ function sectionSVG(R, o, C) {
     if (z1 > zU && last[1] < zU) { const t = (zU - last[1]) / (z1 - last[1]); hp.push([last[0] + (kcPoly.x0 - last[0]) * t, zU]); }
   }
   if (hp.length > 1) {
-    s += sPolyline(hp, C.accent, 1.7, '6 4');
+    s += cam('ALTURA_LIVRE', sPolyline(hp, C.accent, 1.7, '6 4'));
     const lp = hp[Math.max(0, hp.length - 2)];
     s += sText(lp[0] + fs * 0.8, lp[1] - fs * 1.6, 'altura livre ' + fmt(st.hLivre, 0), fs * 0.85, C.accent, 'start', 0, 500);
   }
@@ -1721,8 +1909,9 @@ function sectionSVG(R, o, C) {
   s += sText(left + fs * 0.5, -fs * 5.6, 'degrau: espelho ' + fmt(e, 1) + ' × piso ' + fmt(R.p, 1) + ' cm  ·  ' + fmt(R.incl, 1) + '°' + (R.placas ? '  ·  degraus em balanço de ' + fmt(st.espDegrau) + ' cm' : '  ·  laje da escada ' + fmt(st.tLaje) + ' cm'), fs * 0.9, C.ink, 'start', 0, 500);
   const t1 = 'PERFIL DESENVOLVIDO · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
   const t2 = 'esquema ao longo da linha de caminhamento (não é corte A-A) · H ' + fmt(H) + ' · ' + R.N + ' espelhos de ' + fmt(e, 1) + ' · cotas em cm';
-  s += titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
-  return svgWrap(vx, vy, vw, vh, s, o, defs);
+  const tt = titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
+  s += tt.svg;
+  return svgWrap(vx, vy, vw, vh - fs * 7.5 + tt.h, s, o, defs);
 }
 
 /* ===== CORTES A-A E B-B (plano vertical de verdade, com chamada na planta) =====
@@ -1794,7 +1983,7 @@ function corteSVG(R, o, C, qual, lado) {
   const todos = []; R.polys.forEach(pl => pl.pts.forEach(q => todos.push(S(q)))); R.arrival.pts.forEach(q => todos.push(S(q)));
   if (R.hel) todos.push(-R.helix.R, R.helix.R);
   const s0 = Math.min.apply(null, todos) - 70, s1 = Math.max.apply(null, todos) + 70;
-  const span = Math.max(s1 - s0, H + 60), fs = clamp(span / 46, 5, 13);
+  const span = Math.max(s1 - s0, H + 60), fs = fsDe(o, clamp(span / 46, 5, 13));
   const hid = 'hch' + (++HCH), hid2 = 'hcc' + HCH;
   const defs = '<defs><pattern id="' + hid + '" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="' + C.muted + '" stroke-width="1"/></pattern>' +
     '<pattern id="' + hid2 + '" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="' + C.tread + '"/><line x1="0" y1="0" x2="0" y2="9" stroke="' + C.ink + '" stroke-width="0.9"/></pattern></defs>';
@@ -1833,7 +2022,7 @@ function corteSVG(R, o, C, qual, lado) {
   const fundoEm = (it, sx) => { const f = it.fundo; if (sx <= f[0][0]) return f[0][1]; for (let i = 1; i < f.length; i++) if (sx <= f[i][0]) { const a = f[i - 1], b = f[i], t = (sx - a[0]) / ((b[0] - a[0]) || 1); return a[1] + (b[1] - a[1]) * t; } return f[f.length - 1][1]; };
   grupos2.forEach(g => {
     const prof = Math.min.apply(null, g.map(it => it.prof));
-    if (g.length === 1) { const it = g[0]; vistas.push({ prof, svg: sPoly([[it.ta, it.top], [it.tb, it.top]].concat(it.fundo.slice().reverse()), treadFill(it.kind, C), C.ink, 0.9) }); return; }
+    if (g.length === 1) { const it = g[0]; vistas.push({ prof, svg: cam('VISTA', sPoly([[it.ta, it.top], [it.tb, it.top]].concat(it.fundo.slice().reverse()), treadFill(it.kind, C), C.ink, 0.9)) }); return; }
     /* contorno da união: em cada trecho entre bordas, topo = o mais alto e fundo = o mais baixo dos degraus que cobrem o trecho */
     const bps = []; g.forEach(it => { bps.push(it.ta, it.tb); it.fundo.forEach(q => bps.push(q[0])); });
     bps.sort((a, b) => a - b);
@@ -1849,22 +2038,22 @@ function corteSVG(R, o, C, qual, lado) {
     let svg = sPoly(topo.concat(baixo.reverse()), treadFill(g[0].kind, C), C.ink, 0.9);
     /* de frente: as linhas dos bocéis (topo de cada degrau) aparecem; de lado e por baixo, não */
     if (g[0].cls === 'frente') g.forEach(it => { svg += sLine([it.ta, it.top], [it.tb, it.top], C.ink, 0.7); });
-    vistas.push({ prof, svg });
+    vistas.push({ prof, svg: cam('VISTA', svg) });
   });
   /* dente da chegada (espelho do último degrau sob a laje de cima) em vista */
   if (R.dente) {
     const lado = ladoDeLa(R.dente.pts, P0, n);
-    if (lado.length >= 3) { const ss = lado.map(S), ta = Math.min.apply(null, ss), tb = Math.max.apply(null, ss); if (tb - ta > 1e-6) vistas.push({ prof: Math.min.apply(null, lado.map(Dp)), svg: sPoly([[ta, R.dente.z1], [tb, R.dente.z1], [tb, R.dente.z0], [ta, R.dente.z0]], C.tread, C.ink, 0.9) }); }
+    if (lado.length >= 3) { const ss = lado.map(S), ta = Math.min.apply(null, ss), tb = Math.max.apply(null, ss); if (tb - ta > 1e-6) vistas.push({ prof: Math.min.apply(null, lado.map(Dp)), svg: cam('VISTA', sPoly([[ta, R.dente.z1], [tb, R.dente.z1], [tb, R.dente.z0], [ta, R.dente.z0]], C.tread, C.ink, 0.9)) }); }
   }
   /* pilar da helicoidal em vista, quando fica além do plano: entra na ordem de profundidade como os degraus */
   const zU0 = H - st.espLaje;
-  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (d > R.pole.r) vistas.push({ prof: d - R.pole.r, svg: '<rect x="' + r2(c - R.pole.r) + '" y="' + r2(-zU0) + '" width="' + r2(2 * R.pole.r) + '" height="' + r2(zU0) + '" fill="' + C.paper + '" stroke="' + C.ink + '" stroke-width="0.9" ' + NS + '/>' }); }
+  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (d > R.pole.r) vistas.push({ prof: d - R.pole.r, svg: cam('PILAR', '<rect x="' + r2(c - R.pole.r) + '" y="' + r2(-zU0) + '" width="' + r2(2 * R.pole.r) + '" height="' + r2(zU0) + '" fill="' + C.paper + '" stroke="' + C.ink + '" stroke-width="0.9" ' + NS + '/>') }); }
   vistas.sort((a, b) => b.prof - a.prof);
   vistas.forEach(v => { s += v.svg; });
   if (elev) {
     /* na elevação nada é cortado: a laje do piso de cima aparece em vista, como a faixa da borda dela (traço fino, sem hachura).
        Ela passa na frente do que fica atrás dela nessa altura; por isso é desenhada depois das vistas da escada, mas antes dos corrimãos, que ficam visíveis. */
-    s += '<rect x="' + r2(s0) + '" y="' + r2(-H) + '" width="' + r2(s1 - s0) + '" height="' + r2(st.espLaje) + '" fill="' + C.piso + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>';
+    s += cam('VISTA', '<rect x="' + r2(s0) + '" y="' + r2(-H) + '" width="' + r2(s1 - s0) + '" height="' + r2(st.espLaje) + '" fill="' + C.piso + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>');
     s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior: laje de ' + fmt(st.espLaje) + ' cm, em vista', fs * 0.72, C.muted, 'start', 0, 500);
   }
   /* corrimãos em vista: os dois lados, pelo mesmo caminho do 3D (railLado: contorna os patamares na horizontal),
@@ -1873,7 +2062,7 @@ function corteSVG(R, o, C, qual, lado) {
     const listas = R.hel ? [railHel(R, 4).pts] : [].concat.apply([], (R.nm.acess ? [92, 70] : [92]).map(hR => [0, 1].map(lado => railLado(R, lado, hR))));
     listas.forEach(pts => {
       let tr = [];
-      const fecha = () => { if (tr.length > 1) s += sPolyline(tr, C.ink, 1.2); tr = []; };
+      const fecha = () => { if (tr.length > 1) s += cam('CORRIMAO', sPolyline(tr, C.ink, 1.2)); tr = []; };
       for (let i = 0; i < pts.length; i++) {
         const A = pts[i], dA = Dp(A);
         if (dA > 0) tr.push([S(A), A[2]]);
@@ -1924,11 +2113,11 @@ function corteSVG(R, o, C, qual, lado) {
     s += sPoly(poly, 'url(#' + hid2 + ')', C.ink, 2);
   });
   /* pilar da helicoidal cortado */
-  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (Math.abs(d) < R.pole.r) { const hw = Math.sqrt(R.pole.r * R.pole.r - d * d); s += '<rect x="' + r2(c - hw) + '" y="' + r2(-zU) + '" width="' + r2(2 * hw) + '" height="' + r2(zU) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="2" ' + NS + '/>'; } }
+  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (Math.abs(d) < R.pole.r) { const hw = Math.sqrt(R.pole.r * R.pole.r - d * d); s += cam('PILAR', '<rect x="' + r2(c - hw) + '" y="' + r2(-zU) + '" width="' + r2(2 * hw) + '" height="' + r2(zU) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="2" ' + NS + '/>'); } }
   /* a linha não atravessa a escada: avisa em vez de mostrar um corte vazio sem explicação */
   if (!pecas.length && !vistas.length) s += sText((s0 + s1) / 2, H / 2, 'A linha deste corte não passa pela escada nem por trás dela: desloque-a de volta.', fs * 0.9, C.accent, 'middle', 0, 600);
   /* altura livre sobre os degraus cortados */
-  pecas.forEach(pc => { const z = pc.top + st.hLivre; if (z <= H + 1e-6) s += sLine([pc.a, z], [pc.b, z], C.accent, 1.4, '5 4'); });
+  pecas.forEach(pc => { const z = pc.top + st.hLivre; if (z <= H + 1e-6) s += cam('ALTURA_LIVRE', sLine([pc.a, z], [pc.b, z], C.accent, 1.4, '5 4')); });
   /* números dos degraus cortados */
   pecas.forEach(pc => { if (pc.b - pc.a >= fs * 1.2) s += sText((pc.a + pc.b) / 2, pc.top - Math.min(e, 12) / 2 - 1, String(pc.k), fs * 0.7, C.ink, 'middle', 0, 600); });
   /* ---- níveis, cotas, título ---- */
@@ -1936,23 +2125,53 @@ function corteSVG(R, o, C, qual, lado) {
   s += sText(s0 + fs * 0.4, H + fs * 1.0, nivel(H), fs * 0.85, C.ink, 'start', 0, 600);
   s += dimLine([s1, 0], [s1, H], 1, 0, fs * 2.4, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([s1, zU], [s1, H], 1, 0, fs * 0.9, fmt(st.espLaje, 0), fs * 0.75, C);
-  if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500);
+  /* legenda da altura livre: embaixo do nível ±0,00 (longe do corrimão), quebrada em linhas para caber na largura do corte */
+  const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11;
+  let yLeg = -fs * 3; /* topo livre embaixo do desenho, onde começa o bloco de título */
+  if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) {
+    const lin = quebraTexto('tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, vx + vxw - fs * 0.5 - (s0 + fs * 0.4));
+    let leg = '';
+    lin.forEach((t, i) => { leg += sText(s0 + fs * 0.4, -fs * (2.35 + i * 0.95), t, fs * 0.72, C.accent, 'start', 0, 500); });
+    s += cam('ALTURA_LIVRE', leg);
+    yLeg = -fs * (2.35 + (lin.length - 1) * 0.95 + 0.65);
+  }
   const nomeT = R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase();
   const t1 = elev ? 'ELEVAÇÃO · ' + LADOS_ELEV[LADOS_ELEV[lado] ? lado : 'frente'].toUpperCase() + ' · ESCADA ' + nomeT : 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + nomeT;
   const t2 = elev ? 'vista de fora, sem cortar nada · tudo em traço fino · cm' : 'hachura: cortado · traço fino: em vista · cm';
-  const ymin = -fs * 9.5;
-  s += titleBlock(s0 - fs * 2, -fs * 3, s1 - s0 + fs * 8, fs, t1, t2, C);
-  const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11, ymax = H + (R.hel ? 0 : 92) + fs * 5;
-  return svgWrap(vx, -ymax, vxw, ymax - ymin, s, o, defs);
+  const semT = !!(o && o.semTitulo);
+  let ymin = Math.min(-fs * 2.5, yLeg - fs * 0.2);
+  if (!semT) { const yT = Math.min(-fs * 3, yLeg), tt = titleBlock(s0 - fs * 2, yT, s1 - s0 + fs * 8, fs, t1, t2, C); s += tt.svg; ymin = yT - (tt.h - fs); }
+  const ymax = H + (R.hel ? 0 : 92) + fs * 5;
+  /* nenhum texto sai da borda (com fs grande, o título e as cotas podem passar da largura): o desenho cresce só onde precisa */
+  const vb = cabeTextos([vx, -ymax, vxw, ymax - ymin], s, fs * 0.4);
+  return svgWrap(vb[0], vb[1], vb[2], vb[3], s, o, defs);
 }
 
 function modoInf(o, R) { return (o.modo || R.st.modoPlanta || 'inf') !== 'sup'; }
-/* extremos da linha de corte na planta: passam das cotas (a 5,4 fs do desenho) para as letras não caírem em cima de texto */
+/* extremos da linha de corte na planta: passam das cotas (a 5,4 fs do desenho, texto até 6,9 fs; o "L" embaixo vai até 7 fs)
+   para a ponta grossa (de 7,15 a 8,75 fs) e as letras não caírem em cima de texto */
 function chamadaExtremos(R, qual, fs, bbA) {
   const cs = cortesDe(R)[qual], P0 = cs.P0, u = cs.u;
   const S = q => (q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1];
   const cantos = [[bbA[0], bbA[1]], [bbA[2], bbA[1]], [bbA[2], bbA[3]], [bbA[0], bbA[3]]].map(S);
-  return [Math.min.apply(null, cantos) - fs * 7.5, Math.max.apply(null, cantos) + fs * 7.5];
+  return [Math.min.apply(null, cantos) - fs * 8.75, Math.max.apply(null, cantos) + fs * 8.75];
+}
+/* segmento da linha de corte na planta (de ponta a ponta), para os rótulos desviarem dela */
+function chamadaSegmento(R, qual, fs, bbA) {
+  const cs = cortesDe(R)[qual], P0 = cs.P0, u = cs.u, ex = chamadaExtremos(R, qual, fs, bbA);
+  return ex.map(sx => [P0[0] + u[0] * sx, P0[1] + u[1] * sx]);
+}
+/* o segmento AB passa dentro da caixa [x0, y0, x1, y1]? (recorte de Liang-Barsky) */
+function segCruzaCaixa(A, B, b) {
+  let t0 = 0, t1 = 1; const dx = B[0] - A[0], dy = B[1] - A[1];
+  const p = [-dx, dx, -dy, dy], q = [A[0] - b[0], b[2] - A[0], A[1] - b[1], b[3] - A[1]];
+  for (let i = 0; i < 4; i++) {
+    if (Math.abs(p[i]) < 1e-12) { if (q[i] < 0) return false; continue; }
+    const t = q[i] / p[i];
+    if (p[i] < 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t);
+    if (t0 > t1) return false;
+  }
+  return true;
 }
 /* pontos que a chamada ocupa (pontas, setas e letras), para o desenho reservar espaço */
 function chamadaPontos(R, qual, fs, bbA) {
@@ -2001,7 +2220,7 @@ function detalheSVG(R, o, C) {
   const tl = plc ? 0 : Math.max(0, st.tLaje);
   const tD = plc ? st.espDegrau : 0;
   const span = Math.max(3.6 * p + 30, 4 * e + 50);
-  const fs = clamp(span / 42, 2, 4.5);
+  const fs = fsDe(o, clamp(span / 42, 2, 4.5));
   const id = 'dtl' + (++DTL);
   const halo = t => t.replace('<text ', '<text stroke="' + C.paper + '" stroke-width="' + r2(fs * 0.28) + '" stroke-linejoin="round" paint-order="stroke" ');
   /* caixa envolvente: cada elemento informa os pontos que ocupa */
@@ -2036,7 +2255,7 @@ function detalheSVG(R, o, C) {
     const tx = x + side * fs * 0.95, tz = brk ? z0 + (z1 - z0) * brk * 0.5 : (z0 + z1) / 2; /* com interrupção, o texto fica no trecho de baixo */
     d += halo(sText(tx, tz, label, fs * 0.9, C.ink, 'middle', -90, 500));
     B(tx - fs, tz); B(tx + fs, tz); B(x, z0); B(x, z1);
-    return d;
+    return cam('COTAS', d);
   };
   /* cota horizontal própria */
   const hDim = (x0, x1, z, label, za0, za1, txtSide) => {
@@ -2050,7 +2269,7 @@ function detalheSVG(R, o, C) {
     else if (txtSide === 'left') { d += halo(sText(x0 - fs * 0.6, z, label, fs * 0.85, C.ink, 'end', 0, 500)); B(x0 - fs * 0.6 - tW(label, fs * 0.85), z); }
     else { d += halo(sText((x0 + x1) / 2, z + fs * 0.9, label, fs * 0.9, C.ink, 'middle', 0, 500)); B((x0 + x1) / 2 - tW(label, fs * 0.9) / 2, z + fs * 1.4); B((x0 + x1) / 2 + tW(label, fs * 0.9) / 2, z); }
     B(x0, z); B(x1, z);
-    return d;
+    return cam('COTAS', d);
   };
 
   /* ---------- degraus ---------- */
@@ -2130,16 +2349,15 @@ function detalheSVG(R, o, C) {
 
   /* linha dos bocéis */
   const xa = -0.85 * p, xb = 3 * p + b + fs;
-  s += sLine([xa, zn(xa)], [xb, zn(xb)], C.info, 1.2, '7 4');
-  { const xl = 2 * p + fs * 1.6, dl = fs * 0.9 / ca; s += halo(sText(xl, zn(xl) - dl, 'linha dos bocéis', fs * 0.75, C.info, 'start', -R.incl, 500)); }
+  { const xl = 2 * p + fs * 1.6, dl = fs * 0.9 / ca; s += cam('LINHA_BOCEIS', sLine([xa, zn(xa)], [xb, zn(xb)], C.info, 1.2, '7 4') + halo(sText(xl, zn(xl) - dl, 'linha dos bocéis', fs * 0.75, C.info, 'start', -R.incl, 500))); }
   B(xa, zn(xa)); B(xb, zn(xb));
 
   /* ângulo de inclinação, no bocel do degrau 2 */
   const rA = p * 0.55, V = [p, 2 * e];
   const A0 = [V[0] + rA, V[1]], A1 = [V[0] + rA * ca, V[1] + rA * sa];
-  s += '<path d="M' + r2(A0[0]) + ',' + r2(-A0[1]) + ' A' + r2(rA) + ',' + r2(rA) + ' 0 0 0 ' + r2(A1[0]) + ',' + r2(-A1[1]) + '" fill="none" stroke="' + C.accent + '" stroke-width="1.3" ' + NS + '/>';
+  s += cam('COTAS', '<path d="M' + r2(A0[0]) + ',' + r2(-A0[1]) + ' A' + r2(rA) + ',' + r2(rA) + ' 0 0 0 ' + r2(A1[0]) + ',' + r2(-A1[1]) + '" fill="none" stroke="' + C.accent + '" stroke-width="1.3" ' + NS + '/>');
   const am = a / 2, rT = rA + fs * 1.6;
-  s += halo(sText(V[0] + rT * Math.cos(am), V[1] + rT * Math.sin(am), fmt(R.incl, 1) + '°', fs * 0.9, C.accent, 'middle', 0, 600));
+  s += cam('COTAS', halo(sText(V[0] + rT * Math.cos(am), V[1] + rT * Math.sin(am), fmt(R.incl, 1) + '°', fs * 0.9, C.accent, 'middle', 0, 600)));
 
   /* corrimão: altura medida na vertical a partir da linha dos bocéis; desenhada fora de escala (cota interrompida) */
   const Hd = h => h * 0.4;
@@ -2153,7 +2371,7 @@ function detalheSVG(R, o, C) {
   alturas.forEach((h, i) => {
     const L0 = [xr0, zn(xr0) + Hd(h)], L1 = [xr1, zn(xr1) + Hd(h)];
     const band = [add(L0, n, rr), add(L1, n, rr), add(L1, n, -rr), add(L0, n, -rr)];
-    s += sPoly(band, C.piso, C.ink, 1.3);
+    s += cam('CORRIMAO', sPoly(band, C.piso, C.ink, 1.3));
     band.forEach(q => B(q[0], q[1]));
     const xd = 3 * p - (alturas.length - 1 - i) * Math.max(p * 0.42, fs * 3.2);
     s += sCircle(xd, zn(xd), fs * 0.18, C.ink);
@@ -2168,7 +2386,7 @@ function detalheSVG(R, o, C) {
   const zi = Math.min(zTopLim - fs * 2.2 - 8, -2);
   s += '<rect x="' + r2(xw - 3) + '" y="' + r2(-(zi + 8)) + '" width="3" height="16" fill="url(#' + id + ')" stroke="' + C.ink + '" stroke-width="1.3" ' + NS + '/>';
   const cx = xw + 4 + rr;
-  s += sCircle(cx, zi, rr, C.piso, C.ink, 1.4);
+  s += cam('CORRIMAO', sCircle(cx, zi, rr, C.piso, C.ink, 1.4));
   s += sLine([cx - rr - 1, zi], [cx + rr + 1, zi], C.muted, 0.7, '2 2') + sLine([cx, zi - rr - 1], [cx, zi + rr + 1], C.muted, 0.7, '2 2');
   s += hDim(xw, xw + 4, zi - rr - fs * 1.4, '', zi - 8, zi - rr * 0.2);
   s += halo(sText(xw + 2, zi - rr - fs * 2.6, '≥ 4', fs * 0.85, C.ink, 'middle', 0, 500));
@@ -2181,6 +2399,8 @@ function detalheSVG(R, o, C) {
 
   /* ---------- moldura, notas e título ---------- */
   B(xMin - fs, zMin);
+  /* todos os textos entram na caixa pelo tamanho estimado (os inclinados, como o do corrimão, crescem com fs) */
+  caixasTextos(s).forEach(c => { B(c[0], -c[3]); B(c[2], -c[1]); });
   const m = fs * 2.5;
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
@@ -2210,15 +2430,18 @@ function detalheSVG(R, o, C) {
   const zN0 = bb[1] - fs * 2;
   notas.forEach((t, i) => { s += sText(vx + fs * 1.2, zN0 - i * lh, t, fN, C.ink, 'start', 0, i === 0 ? 600 : 400); });
   const yT = zN0 - notas.length * lh - fs * 0.6;
-  s += sLine([vx + fs * 0.5, yT], [vx + vw - fs * 0.5, yT], C.ink, 1.2);
-  s += sText(vx + fs * 1.2, yT - fs * 1.5, tb1, fs * 0.95, C.ink, 'start', 0, 600);
-  s += sText(vx + fs * 1.2, yT - fs * 3.0, tb2, fs * 0.8, C.muted, 'start', 0, 400);
+  let tt = sLine([vx + fs * 0.5, yT], [vx + vw - fs * 0.5, yT], C.ink, 1.2);
+  tt += sText(vx + fs * 1.2, yT - fs * 1.5, tb1, fs * 0.95, C.ink, 'start', 0, 600);
+  tt += sText(vx + fs * 1.2, yT - fs * 3.0, tb2, fs * 0.8, C.muted, 'start', 0, 400);
   /* escala gráfica 0-10-20 cm em tamanho real do desenho */
   const x0 = vx + fs * 1.2, y0 = yT - fs * 5.0, hh = fs * 0.5;
-  [0, 1].forEach(i => { s += '<rect x="' + r2(x0 + i * 10) + '" y="' + r2(-y0 - hh) + '" width="10" height="' + r2(hh) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
-  [0, 10, 20].forEach(v => { s += sText(x0 + v, y0 - fs * 0.85, String(v), fs * 0.7, C.muted, 'middle'); });
-  s += sText(x0 + 22, y0 + hh / 2, 'cm', fs * 0.7, C.muted, 'start');
-  const ymin = y0 - fs * 2.2, ymax = bb[3] + m;
+  [0, 1].forEach(i => { tt += '<rect x="' + r2(x0 + i * 10) + '" y="' + r2(-y0 - hh) + '" width="10" height="' + r2(hh) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
+  [0, 10, 20].forEach(v => { tt += sText(x0 + v, y0 - fs * 0.85, String(v), fs * 0.7, C.muted, 'middle'); });
+  tt += sText(x0 + 22, y0 + hh / 2, 'cm', fs * 0.7, C.muted, 'start');
+  /* o.semTitulo (prancha): sem título nem escala gráfica, que a prancha já põe embaixo da vista */
+  const semT = !!(o && o.semTitulo);
+  if (!semT) s += cam('TITULO', tt);
+  const ymin = semT ? yT + fs * 0.4 : y0 - fs * 2.2, ymax = bb[3] + m;
   const bg = '<rect x="' + r2(vx) + '" y="' + r2(-ymax) + '" width="' + r2(vw) + '" height="' + r2(ymax - ymin) + '" fill="' + C.paper + '"/>';
   return svgWrap(vx, -ymax, vw, ymax - ymin, bg + s, o, defs);
 }
@@ -3202,6 +3425,773 @@ function explicacao(R, S, C) {
   return h;
 }
 
+/* ===== EXPORTAÇÃO DXF (AutoCAD R12, ASCII) =====
+   Converte os SVGs dos nossos próprios desenhos (planta, cortes, elevação, detalhe) em entidades DXF em unidades reais.
+   Os desenhos já estão em centímetros reais (viewBox em cm, y para baixo); aqui o y volta para cima e a unidade
+   vira metro (padrão) ou centímetro. O formato é o R12 (AC1009), o mais aceito: AutoCAD, LibreCAD, QCAD, BricsCAD, SketchUp.
+   O R12 não tem $INSUNITS: a unidade fica escrita no próprio desenho ("Unidade: metros").
+   Função pura (sem DOM): dxfDe(R, C, op) devolve o texto do DXF; dxfBytes(texto) devolve os bytes em windows-1252. */
+
+/* camadas: nome, cor ACI e tipo de linha padrão */
+const DXF_CAMADAS = [
+  ['0', 7, 'CONTINUOUS'], ['CONTORNO', 7, 'CONTINUOUS'], ['DEGRAUS', 7, 'CONTINUOUS'], ['PATAMAR', 3, 'CONTINUOUS'],
+  ['LEQUE', 40, 'CONTINUOUS'], ['VISTA', 8, 'CONTINUOUS'], ['PROJECAO', 8, 'CONTINUOUS'], ['PISO_SUPERIOR', 8, 'CONTINUOUS'],
+  ['LINHA_CAMINHAMENTO', 30, 'CONTINUOUS'], ['VAO_LAJE', 5, 'CONTINUOUS'], ['LINHA_CORTE', 5, 'CONTINUOUS'],
+  ['ALTURA_LIVRE', 30, 'CONTINUOUS'], ['LINHA_BOCEIS', 5, 'CONTINUOUS'], ['COTAS', 1, 'CONTINUOUS'], ['TEXTO', 7, 'CONTINUOUS'],
+  ['NUMEROS', 8, 'CONTINUOUS'], ['TITULO', 7, 'CONTINUOUS'], ['HACHURA', 8, 'CONTINUOUS'], ['PILAR', 7, 'CONTINUOUS'],
+  ['CORRIMAO', 6, 'CONTINUOUS']
+];
+/* tipos de linha, em cm (convertidos para a unidade pedida); os "_DET" são para o detalhe ampliado, que é pequeno */
+const DXF_LTYPES = [
+  ['DASHED', 'Tracejado __ __ __', [12, -6]],
+  ['DASHDOT', 'Traco e ponto __ . __ .', [20, -5, 0, -5]],
+  ['DASHED_DET', 'Tracejado fino (detalhe) _ _ _', [2, -1]],
+  ['DASHDOT_DET', 'Traco e ponto fino (detalhe) _ . _', [3, -1, 0, -1]]
+];
+/* o detalhe desenha os degraus em verdadeira grandeza, mas a altura do corrimão fora de escala (cota interrompida, detail.js) */
+const DXF_TITULOS = { planta: 'PLANTA DO PAVIMENTO INFERIOR', plantaSup: 'PLANTA DO PAVIMENTO SUPERIOR', corteA: 'CORTE A-A', corteB: 'CORTE B-B', elevacao: 'ELEVAÇÃO', detalhe: 'DETALHE DO DEGRAU (degraus em 1:1; altura do corrimão fora de escala)' };
+/* tema claro (o mesmo do template.html), se ninguém passar as cores */
+const DXF_TEMA = { paper: '#eef2f4', ink: '#13242f', muted: '#5a6b78', line: '#cdd7dd', accent: '#d9531a', info: '#2a6fbb', tread: '#dbe6ec', winder: '#f6d9c4', patamar: '#cfe5d9', piso: '#e8edf0' };
+
+/* windows-1252: de 0x80 a 0x9F não é igual ao Latin-1 */
+const CP1252_ALTO = { 0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97, 0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F };
+function byte1252(cp) {
+  if (cp < 0x80 || (cp >= 0xA0 && cp <= 0xFF)) return cp;
+  return CP1252_ALTO[cp] === undefined ? -1 : CP1252_ALTO[cp];
+}
+/* texto para o DXF: ≥ e ≤ (que não existem no windows-1252) viram >= e <=, legíveis em qualquer programa;
+   outro caractere fora do windows-1252 vira \U+XXXX (notação do AutoCAD) */
+function dxfTexto(s) {
+  let out = '';
+  for (const ch of String(s).replace(/[\r\n]+/g, ' ').replace(/≥/g, '>=').replace(/≤/g, '<=')) {
+    const cp = ch.codePointAt(0);
+    out += byte1252(cp) >= 0 ? ch : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0');
+  }
+  return out;
+}
+/* bytes do DXF em windows-1252 (o cabeçalho diz $DWGCODEPAGE ANSI_1252), para a interface baixar o arquivo */
+function dxfBytes(str) {
+  const out = [];
+  for (const ch of String(str)) {
+    const b = byte1252(ch.codePointAt(0));
+    out.push(b >= 0 ? b : 0x3F);
+  }
+  return Uint8Array.from(out);
+}
+
+/* ---------- leitura do SVG dos nossos desenhos ---------- */
+function svgAttrs(tag) {
+  const a = {}; let m; const re = /([\w:-]+)="([^"]*)"/g;
+  while ((m = re.exec(tag))) a[m[1]] = m[2];
+  return a;
+}
+const desescXml = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+const svgPts = s => (s || '').trim().split(/\s+/).filter(Boolean).map(p => { const v = p.split(',').map(Number); return [v[0], -v[1]]; });
+/* círculo como polígono (para recorte) */
+const circPoly = (cx, cy, r, n) => { const o = []; for (let i = 0; i < (n || 72); i++) { const a = 2 * Math.PI * i / (n || 72); o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; };
+/* fora: polígono circunscrito (raio / cos(π/n)), para um oclusor circular não deixar lascas entre o círculo e o polígono */
+function formaPoly(nome, a, fora) {
+  /* devolve a forma em coordenadas do mundo (y para cima) */
+  if (nome === 'rect') { const x = +a.x || 0, y = +a.y || 0, w = +a.width || 0, h = +a.height || 0; return [[x, -y], [x + w, -y], [x + w, -(y + h)], [x, -(y + h)]]; }
+  if (nome === 'circle') return circPoly(+a.cx || 0, -(+a.cy || 0), (+a.r || 0) / (fora ? Math.cos(Math.PI / 72) : 1));
+  if (nome === 'polygon' || nome === 'polyline') return svgPts(a.points);
+  return null;
+}
+
+/* recorte de um segmento por um polígono convexo (Cyrus-Beck); devolve [t0, t1] ou null */
+function recorteSeg(A, B, clip) {
+  let t0 = 0, t1 = 1;
+  /* orientação do polígono: normais para dentro */
+  let area = 0; for (let i = 0; i < clip.length; i++) { const p = clip[i], q = clip[(i + 1) % clip.length]; area += p[0] * q[1] - q[0] * p[1]; }
+  const sg = area >= 0 ? 1 : -1, dx = B[0] - A[0], dy = B[1] - A[1];
+  for (let i = 0; i < clip.length; i++) {
+    const p = clip[i], q = clip[(i + 1) % clip.length];
+    const nx = -(q[1] - p[1]) * sg, ny = (q[0] - p[0]) * sg; /* normal para dentro */
+    const num = (A[0] - p[0]) * nx + (A[1] - p[1]) * ny, den = dx * nx + dy * ny;
+    if (Math.abs(den) < 1e-12) { if (num < -1e-9) return null; continue; }
+    const t = -num / den;
+    if (den > 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t);
+    if (t0 > t1 + 1e-12) return null;
+  }
+  return t1 - t0 > 1e-9 ? [t0, t1] : null;
+}
+function dentroConvexo(P, clip) { const A = P, B = [P[0] + 1e-9, P[1]]; return !!recorteSeg(A, B, clip); }
+
+/* ---------- linhas escondidas ----------
+   No SVG, o que é desenhado depois com preenchimento opaco cobre o que veio antes (é assim que os cortes e a elevação
+   escondem o que fica atrás). No DXF não há preenchimento: as partes das linhas anteriores que caem dentro de uma
+   figura opaca são apagadas. Em cima da borda não se apaga nada (a própria figura redesenha a borda). */
+function dentroPoligono(P, pts) {
+  let d = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i], b = pts[j];
+    if ((a[1] > P[1]) !== (b[1] > P[1]) && P[0] < (b[0] - a[0]) * (P[1] - a[1]) / (b[1] - a[1]) + a[0]) d = !d;
+  }
+  return d;
+}
+function distBorda(P, pts) {
+  let m = Infinity;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[j], b = pts[i], dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1e-18;
+    const t = Math.max(0, Math.min(1, ((P[0] - a[0]) * dx + (P[1] - a[1]) * dy) / l2));
+    m = Math.min(m, Math.hypot(P[0] - a[0] - dx * t, P[1] - a[1] - dy * t));
+  }
+  return m;
+}
+/* oclusor: polígono (e o recorte convexo ativo, se houver); devolve a função "está escondido?" e as bordas */
+function oclusor(poly, clip) {
+  const bordas = [];
+  [poly, clip].forEach(p => { if (p) for (let i = 0; i < p.length; i++) bordas.push([p[i], p[(i + 1) % p.length]]); });
+  const bb = [Infinity, Infinity, -Infinity, -Infinity];
+  poly.forEach(q => { bb[0] = Math.min(bb[0], q[0]); bb[1] = Math.min(bb[1], q[1]); bb[2] = Math.max(bb[2], q[0]); bb[3] = Math.max(bb[3], q[1]); });
+  const esc = q => dentroPoligono(q, poly) && distBorda(q, poly) > 1e-4 && (!clip || (dentroConvexo(q, clip) && distBorda(q, clip) > 1e-4));
+  return { esc, bordas, bb };
+}
+/* trechos visíveis (parâmetros t em [0,1]) do segmento AB diante do oclusor */
+function trechosVisiveis(A, B, oc) {
+  const minx = Math.min(A[0], B[0]), maxx = Math.max(A[0], B[0]), miny = Math.min(A[1], B[1]), maxy = Math.max(A[1], B[1]);
+  if (maxx < oc.bb[0] || minx > oc.bb[2] || maxy < oc.bb[1] || miny > oc.bb[3]) return [[0, 1]];
+  const ts = [0, 1], dx = B[0] - A[0], dy = B[1] - A[1];
+  oc.bordas.forEach(e => {
+    const p = e[0], ex = e[1][0] - p[0], ey = e[1][1] - p[1], den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-14) return;
+    const t = ((p[0] - A[0]) * ey - (p[1] - A[1]) * ex) / den, u = ((p[0] - A[0]) * dy - (p[1] - A[1]) * dx) / den;
+    if (t > 0 && t < 1 && u >= -1e-9 && u <= 1 + 1e-9) ts.push(t);
+  });
+  ts.sort((x, y) => x - y);
+  const out = [];
+  for (let i = 0; i + 1 < ts.length; i++) {
+    const t0 = ts[i], t1 = ts[i + 1]; if (t1 - t0 < 1e-9) continue;
+    const tm = (t0 + t1) / 2;
+    if (oc.esc([A[0] + dx * tm, A[1] + dy * tm])) continue;
+    if (out.length && Math.abs(out[out.length - 1][1] - t0) < 1e-9) out[out.length - 1][1] = t1; else out.push([t0, t1]);
+  }
+  return out;
+}
+/* apaga das primitivas já desenhadas o que o oclusor cobre */
+function esconder(prims, oc) {
+  const lerp = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
+  const novas = [];
+  prims.forEach(p => {
+    if (p.t === 'line') {
+      trechosVisiveis(p.a, p.b, oc).forEach(r => novas.push(Object.assign({}, p, { a: lerp(p.a, p.b, r[0]), b: lerp(p.a, p.b, r[1]) })));
+    } else if (p.t === 'pline') {
+      const n = p.pts.length, m = p.fechada ? n : n - 1, runs = [];
+      let inteiro = true, cur = null;
+      for (let i = 0; i < m; i++) {
+        const A = p.pts[i], B = p.pts[(i + 1) % n], vs = trechosVisiveis(A, B, oc);
+        if (!(vs.length === 1 && vs[0][0] === 0 && vs[0][1] === 1)) inteiro = false;
+        vs.forEach(r => {
+          const P = lerp(A, B, r[0]), Q = lerp(A, B, r[1]);
+          if (cur && r[0] === 0 && Math.hypot(cur[cur.length - 1][0] - P[0], cur[cur.length - 1][1] - P[1]) < 1e-9) cur.push(Q);
+          else { if (cur) runs.push(cur); cur = [P, Q]; }
+        });
+        if (!vs.length || vs[vs.length - 1][1] < 1) { if (cur) runs.push(cur); cur = null; }
+      }
+      if (cur) runs.push(cur);
+      if (inteiro) { novas.push(p); return; }
+      if (p.fechada && runs.length > 1) { const u = runs[runs.length - 1], f = runs[0]; if (Math.hypot(u[u.length - 1][0] - f[0][0], u[u.length - 1][1] - f[0][1]) < 1e-9) runs[0] = runs.pop().concat(f.slice(1)); }
+      runs.forEach(r => novas.push(r.length === 2 ? { t: 'line', a: r[0], b: r[1], cam: p.cam, lt: p.lt } : Object.assign({}, p, { pts: r, fechada: false })));
+    } else if (p.t === 'text') {
+      if (!oc.esc(p.p)) novas.push(p);
+    } else if (p.t === 'circle' || p.t === 'arc') {
+      const amostra = [0, 1, 2, 3, 4, 5, 6, 7].map(i => [p.c[0] + p.r * Math.cos(i * Math.PI / 4), p.c[1] + p.r * Math.sin(i * Math.PI / 4)]);
+      if (!(oc.esc(p.c) && amostra.every(oc.esc))) novas.push(p);
+    } else if (p.t === 'solid') {
+      if (!p.pts.every(oc.esc)) novas.push(p);
+    }
+  });
+  prims.length = 0;
+  novas.forEach(p => prims.push(p));
+}
+
+/* hachura: linhas a 45° recortadas pelo polígono (regra par-ímpar); esp = espaçamento em cm */
+function hachuraLinhas(pts, esp) {
+  const d = [Math.SQRT1_2, Math.SQRT1_2], n = [-Math.SQRT1_2, Math.SQRT1_2], out = [];
+  const tn = pts.map(q => q[0] * n[0] + q[1] * n[1]);
+  const t0 = Math.ceil(Math.min.apply(null, tn) / esp) * esp, t1 = Math.max.apply(null, tn);
+  for (let t = t0; t <= t1; t += esp) {
+    const sv = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length], fa = tn[i] - t + 1e-9, fb = tn[(i + 1) % pts.length] - t + 1e-9;
+      if ((fa < 0) !== (fb < 0)) { const k = fa / (fa - fb), q = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]; sv.push(q[0] * d[0] + q[1] * d[1]); }
+    }
+    sv.sort((x, y) => x - y);
+    for (let i = 0; i + 1 < sv.length; i += 2) if (sv[i + 1] - sv[i] > 1e-6) out.push([[n[0] * t + d[0] * sv[i], n[1] * t + d[1] * sv[i]], [n[0] * t + d[0] * sv[i + 1], n[1] * t + d[1] * sv[i + 1]]]);
+  }
+  return out;
+}
+
+/* lê um SVG nosso e devolve as primitivas em cm, y para cima:
+   {t:'line'|'pline'|'circle'|'arc'|'text'|'solid', cam, lt, ...} */
+function svgParaPrims(svg, C, det) {
+  const prims = [], pilha = [{ cam: null, clip: null, defs: false }], padroes = {}, clips = {};
+  let defsAtual = null, clipAtual = null, textoAberto = null;
+  const topo = () => pilha[pilha.length - 1];
+  const camPadrao = (a, eTexto) => {
+    if (eTexto) return 'TEXTO';
+    const st = a.stroke;
+    if (st === C.accent) return 'LINHA_CAMINHAMENTO';
+    if (st === C.info) return 'LINHA_CORTE';
+    if (st === C.muted) return a['stroke-dasharray'] ? 'PROJECAO' : 'VISTA';
+    return 'CONTORNO';
+  };
+  const ltDe = a => { const d = a['stroke-dasharray']; if (!d) return null; const k = d.trim().split(/[\s,]+/).length >= 3 ? 'DASHDOT' : 'DASHED'; return det ? k + '_DET' : k; };
+  const temTraco = a => a.stroke && a.stroke !== 'none' && a.stroke !== C.paper;
+  /* recorta uma polilinha pelo clip ativo; devolve trechos */
+  const recorta = (pts, fechada) => {
+    const clip = topo().clip;
+    if (!clip) return [{ pts, fechada }];
+    const segs = [], n = pts.length, m = fechada ? n : n - 1, out = [];
+    let inteiro = true;
+    for (let i = 0; i < m; i++) {
+      const A = pts[i], B = pts[(i + 1) % n], r = recorteSeg(A, B, clip);
+      if (!r) { segs.push(null); inteiro = false; continue; }
+      if (r[0] > 1e-9 || r[1] < 1 - 1e-9) inteiro = false;
+      segs.push([[A[0] + (B[0] - A[0]) * r[0], A[1] + (B[1] - A[1]) * r[0]], [A[0] + (B[0] - A[0]) * r[1], A[1] + (B[1] - A[1]) * r[1]]]);
+    }
+    if (inteiro) return [{ pts, fechada }]; /* tudo dentro do recorte */
+    const junto = (P, Q) => Math.hypot(P[0] - Q[0], P[1] - Q[1]) < 1e-6;
+    let cur = null;
+    segs.forEach(sg => {
+      if (!sg) { if (cur) out.push(cur); cur = null; return; }
+      if (cur && junto(sg[0], cur.pts[cur.pts.length - 1])) cur.pts.push(sg[1]);
+      else { if (cur) out.push(cur); cur = { pts: [sg[0], sg[1]], fechada: false }; }
+    });
+    if (cur) out.push(cur);
+    /* polígono fechado: o último trecho continua no primeiro */
+    if (fechada && out.length > 1 && junto(out[out.length - 1].pts[out[out.length - 1].pts.length - 1], out[0].pts[0])) out[0].pts = out.pop().pts.concat(out[0].pts.slice(1));
+    return out;
+  };
+  const hachura = (a, poly) => {
+    const m = /^url\(#([^)]+)\)$/.exec(a.fill || ''); if (!m || !poly || poly.length < 3) return;
+    const p = padroes[m[1]] || { w: 7, linhas: true };
+    const esp = p.linhas ? p.w : p.w / 3;
+    hachuraLinhas(poly, esp).forEach(sg => recorta(sg, false).forEach(tr => prims.push({ t: 'line', a: tr.pts[0], b: tr.pts[tr.pts.length - 1], cam: 'HACHURA' })));
+  };
+  const contorno = (a, pts, fechada, cam) => {
+    if (!temTraco(a)) return;
+    const lt = ltDe(a);
+    recorta(pts, fechada).forEach(tr => {
+      if (tr.pts.length === 2 && !tr.fechada) prims.push({ t: 'line', a: tr.pts[0], b: tr.pts[1], cam, lt });
+      else prims.push({ t: 'pline', pts: tr.pts, fechada: tr.fechada, cam, lt });
+    });
+  };
+  /* preenchimento sólido nos triângulos e quadriláteros pequenos (pontas de seta, escala gráfica) */
+  const solido = (a, pts, cam) => {
+    if (pts.length < 3 || pts.length > 4 || (topo().clip && !pts.every(q => dentroConvexo(q, topo().clip)))) return;
+    const f = a.fill;
+    if (f && (f === a.stroke || f === C.ink) && f !== 'none' && !/^url/.test(f)) prims.push({ t: 'solid', pts, cam });
+  };
+  const tokens = svg.match(/<!--[\s\S]*?-->|<\/?[a-zA-Z][^>]*>|[^<]+/g) || [];
+  tokens.forEach(tk => {
+    if (tk[0] !== '<') { if (textoAberto) textoAberto.s += desescXml(tk); return; }
+    if (tk.startsWith('<!--')) return;
+    const fecha = tk[1] === '/', auto = /\/>$/.test(tk), nome = (/^<\/?([a-zA-Z]+)/.exec(tk) || [])[1];
+    if (fecha) {
+      if (nome === 'text' && textoAberto) { if (textoAberto.s.trim()) prims.push(textoAberto); textoAberto = null; return; }
+      if (nome === 'g' || nome === 'svg') pilha.pop();
+      else if (nome === 'pattern') defsAtual = true;
+      else if (nome === 'defs') defsAtual = null, topo().defs = false;
+      else if (nome === 'clipPath') clipAtual = null;
+      return;
+    }
+    const a = svgAttrs(tk);
+    const pai = topo();
+    if (nome === 'svg') { pilha.push({ cam: null, clip: null, defs: false }); return; }
+    if (nome === 'defs') { if (!auto) { defsAtual = true; pai.defs = true; } return; }
+    if (defsAtual) {
+      if (nome === 'pattern') { padroes[a.id] = { w: +a.width || 7, linhas: false }; defsAtual = a.id; }
+      else if (nome === 'line' && padroes[defsAtual]) padroes[defsAtual].linhas = true;
+      else if (nome === 'rect' && padroes[defsAtual]) padroes[defsAtual].fundo = true; /* padrão com fundo: é opaco */
+      else if (nome === 'clipPath') clipAtual = a.id;
+      else if (clipAtual && !clips[clipAtual]) { const f = formaPoly(nome, a); if (f) clips[clipAtual] = f; }
+      return;
+    }
+    if (nome === 'g') {
+      const cl = /^url\(#([^)]+)\)$/.exec(a['clip-path'] || '');
+      pilha.push({ cam: a['data-camada'] || pai.cam, clip: cl ? clips[cl[1]] || pai.clip : pai.clip, defs: false });
+      return;
+    }
+    const camEl = a['data-camada'] || pai.cam;
+    if (nome === 'text') {
+      const x = +a.x, y = -(+a.y), rm = /rotate\(([-\d.e]+)/.exec(a.transform || '');
+      if (pai.clip && !dentroConvexo([x, y], pai.clip)) { textoAberto = { s: '' }; textoAberto.t = 'nada'; return; }
+      textoAberto = { t: 'text', p: [x, y], h: +a['font-size'] || 1, rot: rm ? -(+rm[1]) : 0, anc: a['text-anchor'] || 'start', s: '', cam: camEl || 'TEXTO' };
+      if (auto) textoAberto = null;
+      return;
+    }
+    const cam = camEl || camPadrao(a);
+    /* figura opaca: esconde o que já foi desenhado embaixo dela */
+    if (nome === 'polygon' || nome === 'rect' || nome === 'circle') {
+      const f = a.fill || '', pm = /^url\(#([^)]+)\)$/.exec(f);
+      const opaca = f && f !== 'none' && (a['fill-opacity'] === undefined || +a['fill-opacity'] >= 1) && (!pm || (padroes[pm[1]] && padroes[pm[1]].fundo));
+      const forma = opaca && formaPoly(nome, a, true);
+      if (forma && forma.length >= 3) esconder(prims, oclusor(forma, pai.clip));
+    }
+    if (nome === 'line') contorno(a, [[+a.x1, -a.y1], [+a.x2, -a.y2]], false, cam);
+    else if (nome === 'polyline') contorno(a, svgPts(a.points), false, cam);
+    else if (nome === 'polygon' || nome === 'rect') {
+      const pts = formaPoly(nome, a);
+      hachura(a, pts); solido(a, pts, cam); contorno(a, pts, true, cam);
+    } else if (nome === 'circle') {
+      const c = [+a.cx || 0, -(+a.cy || 0)], r = +a.r || 0;
+      if (r <= 0 || (pai.clip && !dentroConvexo(c, pai.clip))) return;
+      if (temTraco(a) || (a.fill && a.fill !== 'none' && a.fill !== C.paper)) prims.push({ t: 'circle', c, r, cam, lt: ltDe(a) });
+    } else if (nome === 'path') {
+      /* só o que os desenhos usam: M x,y e A r,r 0 large sweep x,y (arco de círculo) */
+      const d = a.d || '', mm = /M\s*([-\d.e]+)[ ,]([-\d.e]+)/.exec(d), am = /A\s*([-\d.e]+)[ ,]([-\d.e]+)\s+[-\d.e]+\s+([01])\s+([01])\s+([-\d.e]+)[ ,]([-\d.e]+)/.exec(d);
+      if (!mm || !am || !temTraco(a)) return;
+      const P0 = [+mm[1], -mm[2]], P1 = [+am[5], -am[6]], r = +am[1], grande = am[3] === '1', ccw = am[4] === '0';
+      /* no SVG (y para baixo) sweep 0 é anti-horário na tela; com o y invertido continua anti-horário */
+      const mx = (P0[0] + P1[0]) / 2, my = (P0[1] + P1[1]) / 2, dx = P1[0] - P0[0], dy = P1[1] - P0[1], cd = Math.hypot(dx, dy) / 2 || 1e-9;
+      const h = Math.sqrt(Math.max(0, r * r - cd * cd)), esq = (ccw && !grande) || (!ccw && grande), sg = esq ? 1 : -1;
+      const c = [mx - dy / (2 * cd) * h * sg, my + dx / (2 * cd) * h * sg];
+      const ang = P => Math.atan2(P[1] - c[1], P[0] - c[0]) * 180 / Math.PI;
+      prims.push({ t: 'arc', c, r, a0: ccw ? ang(P0) : ang(P1), a1: ccw ? ang(P1) : ang(P0), cam, lt: ltDe(a) });
+    }
+  });
+  return prims.filter(p => p.t !== 'nada');
+}
+
+/* caixa das primitivas (em cm, y para cima); o texto conta pelo ponto de inserção e uma largura estimada */
+function primsBbox(prims) {
+  const b = [Infinity, Infinity, -Infinity, -Infinity];
+  const B = (x, y) => { if (!isFinite(x) || !isFinite(y)) return; b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); };
+  prims.forEach(p => {
+    if (p.t === 'line') { B(p.a[0], p.a[1]); B(p.b[0], p.b[1]); }
+    else if (p.t === 'pline' || p.t === 'solid') p.pts.forEach(q => B(q[0], q[1]));
+    else if (p.t === 'circle' || p.t === 'arc') { B(p.c[0] - p.r, p.c[1] - p.r); B(p.c[0] + p.r, p.c[1] + p.r); }
+    else if (p.t === 'text') {
+      const w = p.s.length * p.h * 0.6, f = p.anc === 'middle' ? 0.5 : p.anc === 'end' ? 1 : 0;
+      const r = p.rot * Math.PI / 180, ux = Math.cos(r), uy = Math.sin(r);
+      B(p.p[0] - ux * w * f, p.p[1] - uy * w * f); B(p.p[0] + ux * w * (1 - f), p.p[1] + uy * w * (1 - f));
+    }
+  });
+  return b;
+}
+
+/* SVG de cada vista, com o tamanho de texto da tela (o DXF é em verdadeira grandeza) ou o op.fs pedido.
+   Sem o título interno nem a escala gráfica do SVG (semTitulo): cada vista recebe um só título, o do dxfDe */
+function dxfVistaSVG(R, C, v, op) {
+  const o = Object.assign({ semTitulo: true }, op.fs > 0 ? { fs: op.fs } : {});
+  if (v === 'planta') return planSVG(R, Object.assign({ modo: 'inf' }, o), C);
+  if (v === 'plantaSup') return planSVG(R, Object.assign({ modo: 'sup' }, o), C);
+  if (v === 'corteA') return corteSVG(R, o, C, 'A');
+  if (v === 'corteB') return corteSVG(R, o, C, 'B');
+  if (v === 'elevacao') return elevacaoSVG(R, o, C, op.ladoElev || 'frente');
+  if (v === 'detalhe') return detalheSVG(R, o, C);
+  return '';
+}
+
+function dxfDe(R, C, op) {
+  op = op || {};
+  C = C && C.ink ? C : DXF_TEMA;
+  const unidade = op.unidade === 'cm' ? 'cm' : 'm', k = unidade === 'cm' ? 1 : 0.01;
+  const VISTAS = ['planta', 'plantaSup', 'corteA', 'corteB', 'elevacao', 'detalhe'];
+  const vistas = (Array.isArray(op.vistas) && op.vistas.length ? op.vistas : ['planta', 'corteA', 'corteB']).filter((v, i, a) => VISTAS.indexOf(v) >= 0 && a.indexOf(v) === i);
+  if (!vistas.length) throw new RangeError('Escolha ao menos uma vista para o DXF.');
+  /* a planta vem primeiro e fica na origem do app (início da escada); as outras ficam à direita, com 1 m entre elas */
+  const ordem = vistas.indexOf('planta') >= 0 ? ['planta'].concat(vistas.filter(v => v !== 'planta')) : vistas;
+  const nomeLado = { frente: 'FRENTE', direita: 'LADO DIREITO', esquerda: 'LADO ESQUERDO', fundos: 'FUNDOS' };
+  const todas = [];
+  let xLivre = null, topoMax = -Infinity, x0 = 0, hMax = 0;
+  ordem.forEach((v, i) => {
+    const prims = svgParaPrims(dxfVistaSVG(R, C, v, op), C, v === 'detalhe');
+    const bb = primsBbox(prims);
+    if (!isFinite(bb[0])) return;
+    const primeira = xLivre === null, dx = primeira ? 0 : xLivre + 100 - bb[0];
+    const largura = bb[2] - bb[0], hT = Math.min(15, Math.max(3, largura / 25));
+    const titulo = DXF_TITULOS[v] + (v === 'elevacao' ? ' · ' + (nomeLado[op.ladoElev] || 'FRENTE') : '');
+    prims.push({ t: 'text', p: [bb[0], bb[3] + hT * 1.5], h: hT, rot: 0, anc: 'start', s: titulo, cam: 'TITULO' });
+    prims.forEach(p => { p.dx = dx; todas.push(p); });
+    if (primeira) x0 = bb[0];
+    xLivre = bb[2] + dx;
+    topoMax = Math.max(topoMax, bb[3] + hT * 3);
+    hMax = Math.max(hMax, hT);
+  });
+  /* a unidade, escrita no desenho (o R12 não guarda $INSUNITS) */
+  const hU = Math.max(2, hMax * 0.7);
+  todas.push({ t: 'text', p: [x0, topoMax + hU], h: hU, rot: 0, anc: 'start', dx: 0, cam: 'TITULO',
+    s: 'Unidade: ' + (unidade === 'm' ? 'metros (1 unidade = 1 m)' : 'centímetros (1 unidade = 1 cm)') + ' · desenho em verdadeira grandeza (1:1)' + (ordem.indexOf('detalhe') >= 0 ? ', exceto a altura do corrimão no detalhe' : '') + ' · os números das cotas estão em cm' });
+
+  /* limpeza: sem vértices repetidos em seguida, sem linhas de comprimento zero nem polilinhas que viraram quase um ponto
+     (sobras do recorte e das linhas escondidas, que atrapalham o OSNAP e a contagem de objetos no CAD) */
+  const MIN = 1e-3, dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  const limpas = [];
+  todas.forEach(p => {
+    if (p.t === 'line') { if (dist(p.a, p.b) >= MIN) limpas.push(p); return; }
+    if (p.t !== 'pline') { limpas.push(p); return; }
+    const pts = [];
+    p.pts.forEach(q => { if (!pts.length || dist(pts[pts.length - 1], q) >= MIN) pts.push(q); });
+    if (p.fechada && pts.length > 1 && dist(pts[0], pts[pts.length - 1]) < MIN) pts.pop();
+    let L = 0; for (let i = 0; i + 1 < pts.length; i++) L += dist(pts[i], pts[i + 1]);
+    /* polilinha de menos de 2 mm no total: lasca do recorte junto ao pilar (o CIRCLE do pilar já cobre esse trecho) */
+    if (pts.length < 2 || L < 0.2) return;
+    if (pts.length === 2 && !p.fechada) limpas.push({ t: 'line', a: pts[0], b: pts[1], cam: p.cam, lt: p.lt, dx: p.dx });
+    else limpas.push(Object.assign({}, p, { pts, fechada: p.fechada && pts.length > 2 }));
+  });
+  todas.length = 0; limpas.forEach(p => todas.push(p));
+
+  /* ---------- escrita ---------- */
+  const L = [];
+  const num = v => { const r = Math.round(v * 1e6) / 1e6; return String(Object.is(r, -0) ? 0 : r); };
+  const par = (c, v) => { L.push(String(c), String(v)); };
+  const X = (p, q) => num((q[0] + p.dx) * k), Y = q => num(q[1] * k);
+  const ext = [Infinity, Infinity, -Infinity, -Infinity];
+  const E = (p, q) => { const x = (q[0] + p.dx) * k, y = q[1] * k; ext[0] = Math.min(ext[0], x); ext[1] = Math.min(ext[1], y); ext[2] = Math.max(ext[2], x); ext[3] = Math.max(ext[3], y); };
+  todas.forEach(p => {
+    if (p.t === 'line') { E(p, p.a); E(p, p.b); } else if (p.pts) p.pts.forEach(q => E(p, q));
+    else if (p.c) { E(p, [p.c[0] - p.r, p.c[1] - p.r]); E(p, [p.c[0] + p.r, p.c[1] + p.r]); } else if (p.p) E(p, p.p);
+  });
+  if (!isFinite(ext[0])) { ext[0] = ext[1] = 0; ext[2] = ext[3] = 1; }
+
+  par(0, 'SECTION'); par(2, 'HEADER');
+  par(9, '$ACADVER'); par(1, 'AC1009');
+  par(9, '$DWGCODEPAGE'); par(3, 'ANSI_1252');
+  par(9, '$INSBASE'); par(10, 0); par(20, 0); par(30, 0);
+  par(9, '$EXTMIN'); par(10, num(ext[0])); par(20, num(ext[1])); par(30, 0);
+  par(9, '$EXTMAX'); par(10, num(ext[2])); par(20, num(ext[3])); par(30, 0);
+  par(9, '$LIMMIN'); par(10, num(ext[0])); par(20, num(ext[1]));
+  par(9, '$LIMMAX'); par(10, num(ext[2])); par(20, num(ext[3]));
+  par(9, '$LTSCALE'); par(40, 1);
+  par(9, '$TEXTSTYLE'); par(7, 'STANDARD');
+  par(9, '$CLAYER'); par(8, '0');
+  par(0, 'ENDSEC');
+
+  par(0, 'SECTION'); par(2, 'TABLES');
+  par(0, 'TABLE'); par(2, 'LTYPE'); par(70, DXF_LTYPES.length + 1);
+  par(0, 'LTYPE'); par(2, 'CONTINUOUS'); par(70, 0); par(3, 'Solid line'); par(72, 65); par(73, 0); par(40, 0);
+  DXF_LTYPES.forEach(t => {
+    const d = t[2].map(v => v * k), tot = d.reduce((s, v) => s + Math.abs(v), 0);
+    par(0, 'LTYPE'); par(2, t[0]); par(70, 0); par(3, t[1]); par(72, 65); par(73, d.length); par(40, num(tot));
+    d.forEach(v => par(49, num(v)));
+  });
+  par(0, 'ENDTAB');
+  par(0, 'TABLE'); par(2, 'LAYER'); par(70, DXF_CAMADAS.length);
+  DXF_CAMADAS.forEach(c => { par(0, 'LAYER'); par(2, c[0]); par(70, 0); par(62, c[1]); par(6, c[2]); });
+  par(0, 'ENDTAB');
+  par(0, 'TABLE'); par(2, 'STYLE'); par(70, 1);
+  par(0, 'STYLE'); par(2, 'STANDARD'); par(70, 0); par(40, 0); par(41, 1); par(50, 0); par(71, 0); par(42, num(2.5 * k)); par(3, 'txt'); par(4, '');
+  par(0, 'ENDTAB');
+  par(0, 'ENDSEC');
+
+  const conhecidas = new Set(DXF_CAMADAS.map(c => c[0]));
+  par(0, 'SECTION'); par(2, 'ENTITIES');
+  const cab = (tipo, p) => { par(0, tipo); par(8, conhecidas.has(p.cam) ? p.cam : 'CONTORNO'); if (p.lt) par(6, p.lt); };
+  todas.forEach(p => {
+    if (p.t === 'line') {
+      cab('LINE', p); par(10, X(p, p.a)); par(20, Y(p.a)); par(30, 0); par(11, X(p, p.b)); par(21, Y(p.b)); par(31, 0);
+    } else if (p.t === 'pline') {
+      /* 70: bit 1 = fechada; bit 128 = tipo de linha contínuo ao longo da polilinha (o tracejado não recomeça a cada vértice,
+         senão os trechos curtos das curvas da helicoidal saem cheios no AutoCAD) */
+      cab('POLYLINE', p); par(66, 1); par(10, 0); par(20, 0); par(30, 0); par(70, (p.fechada ? 1 : 0) | 128);
+      p.pts.forEach(q => { par(0, 'VERTEX'); par(8, conhecidas.has(p.cam) ? p.cam : 'CONTORNO'); par(10, X(p, q)); par(20, Y(q)); par(30, 0); });
+      par(0, 'SEQEND'); par(8, conhecidas.has(p.cam) ? p.cam : 'CONTORNO');
+    } else if (p.t === 'solid') {
+      const q = p.pts, ord = q.length === 3 ? [q[0], q[1], q[2], q[2]] : [q[0], q[1], q[3], q[2]];
+      cab('SOLID', p); ord.forEach((v, i) => { par(10 + i, X(p, v)); par(20 + i, Y(v)); par(30 + i, 0); });
+    } else if (p.t === 'circle') {
+      cab('CIRCLE', p); par(10, X(p, p.c)); par(20, Y(p.c)); par(30, 0); par(40, num(p.r * k));
+    } else if (p.t === 'arc') {
+      cab('ARC', p); par(10, X(p, p.c)); par(20, Y(p.c)); par(30, 0); par(40, num(p.r * k)); par(50, num(p.a0)); par(51, num(p.a1));
+    } else if (p.t === 'text') {
+      /* altura no DXF = altura das maiúsculas, ~0,7 do corpo da fonte do SVG; meio da altura como no dominant-baseline central */
+      const h = num(p.h * 0.7 * k), j = p.anc === 'middle' ? 1 : p.anc === 'end' ? 2 : 0;
+      cab('TEXT', p); par(10, X(p, p.p)); par(20, Y(p.p)); par(30, 0); par(40, h); par(1, dxfTexto(p.s.trim())); par(50, num(p.rot)); par(7, 'STANDARD');
+      par(72, j); par(11, X(p, p.p)); par(21, Y(p.p)); par(31, 0); par(73, 2);
+    }
+  });
+  par(0, 'ENDSEC');
+  par(0, 'EOF');
+  return L.join('\r\n') + '\r\n';
+}
+
+/* ===== PRANCHA EM ESCALA (folha A4, A3 ou A2 deitada, em milímetros) =====
+   pranchaSVG(R, C, op) devolve um SVG com width="<W>mm" height="<H>mm" e viewBox="0 0 W H": 1 unidade = 1 mm no papel.
+   Cada vista é um <svg> aninhado com o viewBox original do desenho (em cm) e largura em mm = largura do viewBox × 10 / escala.
+   É isso que garante a escala: em 1:50, 1 m da escada vira 20 mm no papel.
+   Margens, moldura e carimbo seguem o uso comum em escolas de arquitetura (margem esquerda maior, para encadernar;
+   carimbo no canto inferior direito). Não citamos norma de desenho técnico porque o texto dela não foi conferido.
+   montarPrancha(R, C, op) devolve as folhas (cada uma com o SVG, as vistas e o carimbo), a escala usada e o aviso (o que não coube).
+   Com op.folhas = 'varias' (padrão) a escala fica e as vistas se dividem em quantas folhas forem precisas;
+   com op.folhas = 'uma' tudo vai numa folha só, com a escala reduzida se for preciso. */
+const FOLHAS = { A4: [297, 210], A3: [420, 297], A2: [594, 420] };
+const FOLHA_MAIOR = { A4: 'A3', A3: 'A2', A2: null };
+const ESCALAS_AUTO = [50, 75, 100];
+const ESCALAS_DET = [5, 10, 20, 25]; /* o detalhe tenta 1:5 e 1:10; se não couber, 1:20 ou 1:25 */
+const MARGEM_ESQ = 25, MARGEM = 10; /* mm: uso comum (a da esquerda é maior, para encadernar) */
+const FOLGA = 6;    /* mm entre vistas, e entre vistas e carimbo */
+const RECUO = 5;    /* mm entre a moldura e as vistas */
+const TXT_MM = 2.5; /* altura de texto desejada no papel, em mm */
+const NOME_VISTA = { planta: 'PLANTA DO PAVIMENTO INFERIOR', plantaSup: 'PLANTA DO PAVIMENTO SUPERIOR', corteA: 'CORTE A-A', corteB: 'CORTE B-B', elevacao: 'ELEVAÇÃO', detalhe: 'DETALHE DO DEGRAU' };
+const VISTAS_PADRAO = ['planta', 'plantaSup', 'corteA', 'corteB', 'detalhe'];
+const LADOS_PRANCHA = { frente: 'FRENTE', direita: 'LADO DIREITO', esquerda: 'LADO ESQUERDO', fundos: 'FUNDOS' };
+
+const mm = v => Math.round(v * 1000) / 1000;
+/* largura aproximada de um texto em fonte monoespaçada (cada letra ocupa 0,6 da altura) */
+const largTxt = (t, h) => String(t).length * h * 0.6;
+const hojeBR = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear(); };
+
+/* tira a casca <svg ...> de um desenho e devolve o viewBox (em cm) e o miolo */
+function abrirDesenho(str) {
+  if (!str) return null;
+  const m = /^<svg\b[^>]*?viewBox="([^"]+)"[^>]*>/.exec(str); if (!m) return null;
+  const vb = m[1].trim().split(/[\s,]+/).map(Number); if (vb.length !== 4 || vb.some(v => !isFinite(v)) || vb[2] <= 0 || vb[3] <= 0) return null;
+  return { vb, corpo: str.slice(m[0].length, str.lastIndexOf('</svg>')) };
+}
+
+/* desenha uma vista com o texto do tamanho certo para a escala (o.fs, em cm); sem suporte a o.fs sai com o tamanho de sempre */
+function desenhoDaVista(R, C, v, escala, lado) {
+  const o = { fs: TXT_MM * escala / 10, semTitulo: true };
+  if (v === 'planta') return planSVG(R, Object.assign(o, { modo: 'inf', cortes: true }), C);
+  if (v === 'plantaSup') return planSVG(R, Object.assign(o, { modo: 'sup' }), C);
+  if (v === 'corteA') return corteSVG(R, o, C, 'A');
+  if (v === 'corteB') return corteSVG(R, o, C, 'B');
+  if (v === 'elevacao') return elevacaoSVG(R, o, C, lado);
+  if (v === 'detalhe') return detalheSVG(R, o, C);
+  return '';
+}
+
+/* retângulos [x0, y0, x1, y1] em mm */
+const cruza = (a, b) => a[0] < b[2] - 1e-9 && b[0] < a[2] - 1e-9 && a[1] < b[3] - 1e-9 && b[1] < a[3] - 1e-9;
+/* arranjo "de cima para baixo, da esquerda para a direita": cada caixa vai para o primeiro canto livre (menor y, depois menor x)
+   em que cabe dentro da área sem encostar nas outras nem no carimbo. Devolve as posições ou null. */
+function arranjar(caixas, area, obst) {
+  const postas = obst.map(r => [r[0] - FOLGA, r[1] - FOLGA, r[2] + FOLGA, r[3] + FOLGA]);
+  const pos = [];
+  for (const c of caixas) {
+    const xs = [area[0]].concat(postas.map(r => r[2])), ys = [area[1]].concat(postas.map(r => r[3]));
+    const cands = [];
+    xs.forEach(x => ys.forEach(y => { if (x >= area[0] - 1e-9 && y >= area[1] - 1e-9) cands.push([x, y]); }));
+    cands.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+    let achou = null;
+    for (const q of cands) {
+      const r = [q[0], q[1], q[0] + c.w, q[1] + c.h];
+      if (r[2] > area[2] + 1e-9 || r[3] > area[3] + 1e-9) continue;
+      if (postas.some(p => cruza(r, p))) continue;
+      achou = r; break;
+    }
+    if (!achou) return null;
+    pos.push(achou);
+    postas.push([achou[0] - FOLGA, achou[1] - FOLGA, achou[2] + FOLGA, achou[3] + FOLGA]);
+  }
+  return pos;
+}
+
+/* célula do carimbo: rótulo pequeno em cima, valor embaixo (diminui a letra e, se ainda não couber, corta com reticências) */
+function celula(x, y, w, h, rotulo, valor, C, tamValor, peso) {
+  let s = '<rect x="' + mm(x) + '" y="' + mm(y) + '" width="' + mm(w) + '" height="' + mm(h) + '" fill="none" stroke="' + C.ink + '" stroke-width="0.25"/>';
+  s += '<text x="' + mm(x + 1.5) + '" y="' + mm(y + 2.6) + '" font-size="1.8" fill="' + C.muted + '" font-family="' + FONT + '" letter-spacing="0.1">' + escXml(rotulo) + '</text>';
+  let t = String(valor || ''), tam = tamValor || 3;
+  const cabe = w - 3;
+  while (largTxt(t, tam) > cabe && tam > 2) tam = Math.max(2, tam - 0.25);
+  if (largTxt(t, tam) > cabe) { const n = Math.max(1, Math.floor(cabe / (tam * 0.6)) - 1); t = t.slice(0, n) + '…'; }
+  s += '<text x="' + mm(x + 1.5) + '" y="' + mm(y + h - 1.8) + '" font-size="' + mm(tam) + '" fill="' + C.ink + '" font-family="' + FONT + '"' + (peso ? ' font-weight="' + peso + '"' : '') + ' data-campo="' + escXml(rotulo) + '">' + escXml(t) + '</text>';
+  return s;
+}
+
+/* ordem das vistas nas folhas (modo "várias"): plantas na folha 1, depois cortes, elevação e detalhe */
+const ORDEM_FOLHAS = ['planta', 'plantaSup', 'corteA', 'corteB', 'elevacao', 'detalhe'];
+/* modo "uma", quando nem tudo cabe: a planta do pavimento inferior entra primeiro; o detalhe, a planta superior e o corte B-B são os primeiros a sair */
+const PRIORIDADE_UMA = ['planta', 'corteA', 'elevacao', 'corteB', 'plantaSup', 'detalhe'];
+const nomeMin = v => NOME_VISTA[v].toLowerCase().replace(/ ([ab]-[ab])$/, m => m.toUpperCase());
+const dois = n => String(n).padStart(2, '0');
+
+/* op.folhas: 'varias' (padrão) mantém a escala e usa quantas folhas forem precisas, todas do mesmo formato;
+   'uma' põe tudo numa folha só, reduzindo a escala, e avisa o que não coube. */
+function montarPrancha(R, C, op) {
+  op = op || {};
+  const formato = FOLHAS[op.formato] ? op.formato : 'A3';
+  const modo = op.folhas === 'uma' ? 'uma' : 'varias';
+  const [W, H] = FOLHAS[formato];
+  /* papel branco; o resto das cores vem do tema claro */
+  const Cp = Object.assign({}, C, { paper: '#ffffff' });
+  /* na prancha as cotas, os números e as chamadas de corte aparecem sempre, mesmo se a tela estiver sem eles */
+  const Rp = Object.create(R); Rp.st = Object.assign({}, R.st, { showDims: true, showNums: true, showCortes: true });
+  const pedidas = (Array.isArray(op.vistas) ? op.vistas : VISTAS_PADRAO).filter((v, i, a) => NOME_VISTA[v] && a.indexOf(v) === i);
+  const lado = LADOS_PRANCHA[op.ladoElev] ? op.ladoElev : 'frente';
+  const tipo = TIPOS.find(t => t.id === R.tipo) || { nome: '' };
+  const titulo = String(op.titulo || '').trim() || ('ESCADA ' + tipo.nome.toUpperCase());
+
+  /* moldura e carimbo (iguais em todas as folhas) */
+  const mold = [MARGEM_ESQ, MARGEM, W - MARGEM, H - MARGEM];
+  /* na A4 o carimbo fica mais estreito (148 mm, o mínimo para a régua de 100 mm e a nota ao lado), para sobrar lugar para a planta */
+  const cw = Math.min(formato === 'A4' ? 148 : 175, mold[2] - mold[0]), lin = [12, 9, 9, 9, 9, 9, 13], ch = lin.reduce((a, b) => a + b, 0);
+  const carimbo = [mold[2] - cw, mold[3] - ch, mold[2], mold[3]];
+  const area = [mold[0] + RECUO, mold[1] + RECUO, mold[2] - RECUO, mold[3] - RECUO];
+  /* área livre (para descartar logo o que não pode caber): a área menos o carimbo com a folga */
+  const livre = (area[2] - area[0]) * (area[3] - area[1]) - Math.max(0, area[2] - (carimbo[0] - FOLGA)) * Math.max(0, area[3] - (carimbo[1] - FOLGA));
+
+  const cache = {};
+  const vista = (v, esc) => { const k = v + '@' + esc; if (!(k in cache)) cache[k] = abrirDesenho(desenhoDaVista(Rp, Cp, v, esc, lado)); return cache[k]; };
+  const caixaDe = (v, esc) => {
+    const d = vista(v, esc); if (!d) return null;
+    const nome = NOME_VISTA[v] + (v === 'elevacao' ? ' · ' + LADOS_PRANCHA[lado] : '');
+    const sub = 'ESCALA 1:' + esc;
+    const w = d.vb[2] * 10 / esc, h = d.vb[3] * 10 / esc;
+    return { v, d, esc, nome, sub, w: Math.max(w, largTxt(nome, 3), largTxt(sub, 2.5)), h: h + 11, dw: w, dh: h };
+  };
+  /* tenta pôr uma lista de vistas numa folha, com a escala principal e a do detalhe; devolve o arranjo ou null (com cache) */
+  const memo = {};
+  const tentar = (esc, escD, lista) => {
+    const chave = esc + '|' + escD + '|' + lista.join(',');
+    if (chave in memo) return memo[chave];
+    const caixas = lista.map(v => caixaDe(v, v === 'detalhe' ? escD : esc)).filter(Boolean);
+    let pos = null;
+    if (caixas.reduce((a, c) => a + c.w * c.h, 0) <= livre + 1e-9) {
+      pos = arranjar(caixas, area, [carimbo]);
+      if (!pos) {
+        /* outras ordens de encaixe: primeiro das mais altas para as mais baixas, depois todas as permutações (no máximo 6 vistas = 720) */
+        const ords = [caixas.slice().sort((a, b) => b.h - a.h || b.w - a.w)];
+        const perm = (a) => a.length <= 1 ? [a] : [].concat.apply([], a.map((x, i) => perm(a.slice(0, i).concat(a.slice(i + 1))).map(r => [x].concat(r))));
+        if (caixas.length <= 6) perm(caixas).forEach(o => ords.push(o));
+        for (const ord of ords) { const p2 = arranjar(ord, area, [carimbo]); if (p2) { pos = caixas.map(c => p2[ord.indexOf(c)]); break; } }
+      }
+    }
+    return (memo[chave] = pos ? { caixas, pos } : null);
+  };
+  const auto = op.escala === undefined || op.escala === 'auto';
+  const escalas = auto ? ESCALAS_AUTO.slice() : [Number(op.escala)].filter(e => e > 0);
+  if (!escalas.length) escalas.push(50);
+  const temDet = pedidas.indexOf('detalhe') >= 0;
+  let esc = escalas[escalas.length - 1], escD = temDet ? ESCALAS_DET[ESCALAS_DET.length - 1] : null;
+  const omitidas = [];
+  let grupos = []; /* uma lista de vistas por folha, cada uma com o seu arranjo */
+
+  if (modo === 'uma') {
+    let res = null;
+    fora: for (const e of escalas) for (const ed of (temDet ? ESCALAS_DET : [null])) {
+      const r = tentar(e, ed, pedidas);
+      if (r) { res = r; esc = e; escD = ed; break fora; }
+    }
+    /* não coube tudo: na menor escala, põe uma vista de cada vez, com a planta do pavimento inferior primeiro, e avisa o que ficou de fora */
+    if (!res) {
+      const lista = [];
+      PRIORIDADE_UMA.filter(v => pedidas.indexOf(v) >= 0).forEach(v => {
+        const l2 = pedidas.filter(x => x === v || lista.indexOf(x) >= 0); /* mantém a ordem pedida dentro da folha */
+        const r = tentar(esc, escD, l2); if (r) { lista.push(v); res = r; } else omitidas.push(v);
+      });
+      omitidas.sort((a, b) => pedidas.indexOf(a) - pedidas.indexOf(b));
+      if (!res) res = { caixas: [], pos: [] };
+    }
+    grupos = [res];
+  } else {
+    /* várias folhas: a escala é a pedida; na automática, a maior em que cada vista (fora o detalhe) cabe sozinha numa folha */
+    const principais = pedidas.filter(v => v !== 'detalhe');
+    const cabem = e => principais.filter(v => tentar(e, null, [v])).length;
+    if (auto) {
+      const tudo = escalas.find(e => cabem(e) === principais.length);
+      if (tudo) esc = tudo;
+      else { let melhor = -1; escalas.forEach(e => { const n = cabem(e); if (n > melhor) { melhor = n; esc = e; } }); }
+    } else esc = escalas[0];
+    const ordem = ORDEM_FOLHAS.filter(v => pedidas.indexOf(v) >= 0);
+    /* distribui no menor número de folhas; entre as distribuições com o mesmo número, a que põe as vistas da ordem acima mais cedo */
+    const distribuir = (ed) => {
+      const itens = ordem.filter(v => tentar(esc, ed, [v]));
+      let melhor = null;
+      const blocos = [];
+      const passo = (i) => {
+        if (melhor && blocos.length >= melhor.length) return;
+        if (i === itens.length) { melhor = blocos.map(b => b.slice()); return; }
+        for (let k = 0; k <= blocos.length; k++) {
+          if (k === blocos.length) { if (melhor && blocos.length + 1 >= melhor.length) break; blocos.push([itens[i]]); passo(i + 1); blocos.pop(); }
+          else { const b = blocos[k].concat([itens[i]]); if (!tentar(esc, ed, b)) continue; blocos[k] = b; passo(i + 1); blocos[k] = b.slice(0, -1); }
+          if (melhor && blocos.length >= melhor.length) return;
+        }
+      };
+      passo(0);
+      return { itens, blocos: melhor || [] };
+    };
+    let dist = null;
+    if (temDet) {
+      /* o detalhe: a maior ampliação (1:5, 1:10, ...) que não aumenta o número de folhas */
+      for (const ed of ESCALAS_DET) {
+        if (!tentar(esc, ed, ['detalhe'])) continue;
+        const d = distribuir(ed);
+        if (!dist || d.blocos.length < dist.d.blocos.length) dist = { d, ed };
+      }
+      if (dist) escD = dist.ed; else dist = { d: distribuir(escD), ed: escD };
+      dist = dist.d;
+    } else dist = distribuir(null);
+    pedidas.forEach(v => { if (dist.itens.indexOf(v) < 0) omitidas.push(v); });
+    grupos = dist.blocos.map(b => tentar(esc, escD, b));
+    if (!grupos.length) grupos = [{ caixas: [], pos: [] }];
+  }
+
+  let aviso = '';
+  if (omitidas.length) {
+    const maior = FOLHA_MAIOR[formato];
+    aviso = 'Não coube na folha ' + formato + ' em 1:' + esc + ': ' + omitidas.map(nomeMin).join(', ') + '. ' +
+      [maior ? 'use a folha ' + maior : '', esc < 100 ? 'a escala 1:100 (desenho menor)' : '', 'desmarque alguma vista'].filter(Boolean).join(', ').replace(/^./, c => c.toUpperCase()).replace(/, ([^,]+)$/, ' ou $1') + '.';
+  }
+  const comDet = grupos.some(g => g.caixas.some(c => c.v === 'detalhe'));
+  const total = grupos.length;
+  const folhas = grupos.map((g, i) => montarFolha(g, i, total));
+  const f0 = folhas[0];
+  return { folhas, modo, svg: f0.svg, W, H, formato, escala: esc, escalaDetalhe: comDet ? escD : null, vistas: f0.vistas, omitidas, aviso, moldura: f0.moldura, carimbo: f0.carimbo };
+
+  /* ---- monta uma folha ---- */
+  function montarFolha(res, idx, n) {
+    const T = (x, y, t, tam, cor, anc, peso, extra) => '<text x="' + mm(x) + '" y="' + mm(y) + '" font-size="' + mm(tam) + '" fill="' + cor + '" font-family="' + FONT + '"' + (anc ? ' text-anchor="' + anc + '"' : '') + (peso ? ' font-weight="' + peso + '"' : '') + (extra || '') + '>' + escXml(t) + '</text>';
+    const qual = n > 1 ? ' (folha ' + (idx + 1) + ' de ' + n + ')' : '';
+    let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + 'mm" height="' + H + 'mm" viewBox="0 0 ' + W + ' ' + H + '" class="folha" data-formato="' + formato + '" data-escala="' + esc + '"' + (escD ? ' data-escala-detalhe="' + escD + '"' : '') + ' data-folha="' + (idx + 1) + '" data-folhas="' + n + '"' + (aviso ? ' data-aviso="' + escXml(aviso).replace(/"/g, '&quot;') + '"' : '') + ' role="img" aria-label="' + escXml('Prancha ' + formato + qual + ': ' + titulo).replace(/"/g, '&quot;') + '">';
+    if (aviso) s += '<!-- AVISO: ' + aviso.replace(/--/g, '—') + ' -->';
+    s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#ffffff"/>';
+    s += '<rect x="' + mold[0] + '" y="' + mold[1] + '" width="' + (mold[2] - mold[0]) + '" height="' + (mold[3] - mold[1]) + '" fill="none" stroke="' + Cp.ink + '" stroke-width="0.5" data-moldura="1"/>';
+    const vistas = [];
+    res.caixas.forEach((c, i) => {
+      const p = res.pos[i], dx = p[0] + (c.w - c.dw) / 2, dy = p[1];
+      s += '<g data-vista="' + c.v + '">';
+      s += '<svg x="' + mm(dx) + '" y="' + mm(dy) + '" width="' + mm(c.dw) + '" height="' + mm(c.dh) + '" viewBox="' + c.d.vb.join(' ') + '" overflow="hidden" data-escala="' + c.esc + '">' + c.d.corpo + '</svg>';
+      const cx = p[0] + c.w / 2, yt = dy + c.dh + 4.5, lt = Math.max(largTxt(c.nome, 3), largTxt(c.sub, 2.5));
+      s += T(cx, yt, c.nome, 3, Cp.ink, 'middle', 600);
+      s += '<line x1="' + mm(cx - lt / 2) + '" y1="' + mm(yt + 1.2) + '" x2="' + mm(cx + lt / 2) + '" y2="' + mm(yt + 1.2) + '" stroke="' + Cp.ink + '" stroke-width="0.35"/>';
+      s += T(cx, yt + 5, c.sub, 2.5, Cp.muted, 'middle');
+      s += '</g>';
+      vistas.push({ id: c.v, nome: c.nome, escala: c.esc, vb: c.d.vb.slice(), x: dx, y: dy, w: c.dw, h: c.dh, caixa: { x: p[0], y: p[1], w: c.w, h: c.h } });
+    });
+
+    /* carimbo */
+    const [kx, ky] = carimbo;
+    let y = ky, k = '<g data-carimbo="1">';
+    k += '<rect x="' + mm(kx) + '" y="' + mm(ky) + '" width="' + mm(cw) + '" height="' + mm(ch) + '" fill="#ffffff" stroke="' + Cp.ink + '" stroke-width="0.5"/>';
+    const w1 = cw - 60, wm = cw / 2;
+    k += celula(kx, y, cw, lin[0], 'TÍTULO', titulo, Cp, 4.5, 600);
+    if (n > 1) k += T(kx + cw - 1.5, y + 2.8, 'PRANCHA ' + (idx + 1) + ' DE ' + n, 2.2, Cp.ink, 'end', 600, ' data-prancha="' + (idx + 1) + '/' + n + '"');
+    y += lin[0];
+    k += celula(kx, y, w1, lin[1], 'ALUNA(O)', op.aluno, Cp) + celula(kx + w1, y, 60, lin[1], 'DATA', op.data || hojeBR(), Cp); y += lin[1];
+    k += celula(kx, y, wm, lin[2], 'DISCIPLINA', op.disciplina, Cp) + celula(kx + wm, y, cw - wm, lin[2], 'PROFESSOR(A)', op.professor, Cp); y += lin[2];
+    const temD = vistas.some(v => v.id === 'detalhe'), temP = vistas.some(v => v.id !== 'detalhe');
+    const escTxt = (temP || !temD ? 'PLANTAS E CORTES 1:' + esc : '') + (temP && temD ? ' · ' : '') + (temD ? 'DETALHE 1:' + escD : '');
+    k += celula(kx, y, w1, lin[3], 'ESCALAS', escTxt, Cp) + celula(kx + w1, y, 60, lin[3], 'FOLHA', dois(idx + 1) + '/' + dois(n) + ' · ' + formato, Cp); y += lin[3];
+    const nm = R.nm || {};
+    k += celula(kx, y, cw, lin[4], 'PERFIL NORMATIVO', nm.rotulo || nm.nome || 'Personalizada', Cp); y += lin[4];
+    const resumo = R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm · piso ' + fmt(R.p, 1) + ' cm · Blondel ' + fmt(R.bl, 1) + ' cm · desnível ' + fmt(R.H) + ' cm';
+    k += celula(kx, y, cw, lin[5], 'RESUMO', resumo, Cp); y += lin[5];
+    /* régua de conferência: 100 mm no papel */
+    k += '<rect x="' + mm(kx) + '" y="' + mm(y) + '" width="' + mm(cw) + '" height="' + lin[6] + '" fill="none" stroke="' + Cp.ink + '" stroke-width="0.25"/>';
+    const rx = kx + 4, ry = y + 7.5;
+    k += '<g data-regua="100">';
+    k += '<line x1="' + mm(rx) + '" y1="' + mm(ry) + '" x2="' + mm(rx + 100) + '" y2="' + mm(ry) + '" stroke="' + Cp.ink + '" stroke-width="0.4" data-regua-traco="1"/>';
+    for (let i = 0; i <= 10; i++) { const t = i % 5 === 0 ? 2.2 : 1.2; k += '<line x1="' + mm(rx + i * 10) + '" y1="' + mm(ry - t) + '" x2="' + mm(rx + i * 10) + '" y2="' + mm(ry) + '" stroke="' + Cp.ink + '" stroke-width="0.25"/>'; }
+    k += T(rx, ry + 3.6, '0', 2, Cp.muted, 'middle') + T(rx + 50, ry + 3.6, '50', 2, Cp.muted, 'middle') + T(rx + 100, ry + 3.6, '100 mm', 2, Cp.muted, 'middle');
+    k += T(rx, y + 3, 'Este traço mede 100 mm no papel:', 2, Cp.ink, 'start');
+    k += '</g>';
+    const nx = rx + 108;
+    k += T(nx, y + 5.2, 'Imprimir em tamanho real', 2.4, Cp.ink, 'start', 600, ' data-nota="1"');
+    k += T(nx, y + 8.6, '(escala 100%).', 2.4, Cp.ink, 'start', 600);
+    k += T(nx, y + 11.6, 'Cotas em cm · níveis em m', 2, Cp.muted, 'start');
+    k += '</g>';
+    s += k + '</svg>';
+    return { svg: s, W, H, vistas, moldura: { x: mold[0], y: mold[1], w: mold[2] - mold[0], h: mold[3] - mold[1] }, carimbo: { x: kx, y: ky, w: cw, h: ch } };
+  }
+}
+
+/* SVG da primeira folha (compatibilidade) e de todas as folhas */
+function pranchaSVG(R, C, op) { return montarPrancha(R, C, op).svg; }
+function pranchasSVG(R, C, op) { return montarPrancha(R, C, op).folhas.map(f => f.svg); }
+
 /* ===== INTERFACE ===== */
 const $ = id => document.getElementById(id);
 const LS_KEY = 'patamar-v1';
@@ -3369,6 +4359,7 @@ function bind() {
   $('btnSvg').addEventListener('click', () => { if (VIEW === '3d' || !CUR) return; const C = temaClaro(); copiar(VIEW === 'corte' ? svgCorte(CUR, { pxW: 1400 }, C) : planSVG(CUR, { pxW: 1400 }, C), 'SVG copiado'); });
   $('btnImg').addEventListener('click', gerarImagem);
   $('btnPrint').addEventListener('click', imprimir);
+  ligarPrancha();
   $('modalClose').addEventListener('click', () => fecharDialogo('modal'));
   $('modal').addEventListener('click', e => { if (e.target.id === 'modal') fecharDialogo('modal'); });
   $('btnAmpliar').addEventListener('click', abrirZoom);
@@ -3377,7 +4368,7 @@ function bind() {
   $('zMenos').addEventListener('click', () => zoomPor(1 / 1.4));
   ligarPinca();
   document.addEventListener('keydown', e => {
-    const aberto = ['zoom', 'modal'].find(id => !$(id).hidden); if (!aberto) return;
+    const aberto = ['zoom', 'prancha', 'modal'].find(id => !$(id).hidden); if (!aberto) return;
     if (e.key === 'Escape') { e.preventDefault(); fecharDialogo(aberto); return; }
     if (e.key === 'Tab') prenderFoco(e, $(aberto));
   });
@@ -3471,7 +4462,7 @@ function falha(msg, campo) {
   $('navBadge').hidden = false; $('navBadge').className = 'badge'; $('navBadge').textContent = '!';
   miniRes('<span class="mrErr">' + (el ? 'Medida que o app não aceita: a mensagem está embaixo do campo.' : esc(msg)) + '</span>', 'bad', el ? 'Ir ao campo' : '', el ? { campo: el.id } : null);
   $('notaNorma').hidden = true;
-  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = true; });
+  ['btnImg', 'btnSvg', 'btnPrancha', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = true; });
   $('btnAmpliar').hidden = true;
   $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true; $('viewCorteBar').hidden = true;
 }
@@ -3512,7 +4503,7 @@ function render(typing) {
   marcarCampo(null); $('erroDados').hidden = true;
   /* "Como resolver" testa saídas recalculando a escada (na helicoidal leva perto de 1 s): roda depois de desenhar, fora da digitação, e fica guardado por estado */
   if (!solDoCache(R)) agendarSol(R, typing);
-  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = false; });
+  ['btnImg', 'btnSvg', 'btnPrancha', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = false; });
   /* controles */
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#lado button').forEach(b => b.classList.toggle('on', b.dataset.v === S.lado));
@@ -3735,19 +4726,23 @@ function marcarRolagemTipos() {
   c.classList.toggle('maisEsq', mais && c.scrollLeft > 2);
 }
 
-/* ---- janelas (imagem gerada e desenho ampliado): foco vai para dentro, Tab fica preso, ao fechar volta para o botão ---- */
-let FOCO_ANTES = null;
+/* ---- janelas (imagem gerada e desenho ampliado): foco vai para dentro, Tab fica preso, ao fechar volta para o botão ----
+   Uma janela pode abrir outra (a folha ampliada abre por cima da tela da prancha): cada uma guarda de onde veio o foco. */
+const FOCO_ANTES = {};
 function abrirDialogo(id, foco) {
-  FOCO_ANTES = document.activeElement;
+  FOCO_ANTES[id] = document.activeElement;
   $(id).hidden = false;
-  if (id === 'zoom') document.body.classList.add('travado');
+  if (id === 'zoom' || id === 'prancha') document.body.classList.add('travado');
   setTimeout(() => { const f = $(foco); if (f) f.focus(); }, 0);
 }
 function fecharDialogo(id) {
   $(id).hidden = true;
-  if (id === 'zoom') { document.body.classList.remove('travado'); $('zArea').innerHTML = ''; }
-  if (FOCO_ANTES && document.contains(FOCO_ANTES)) FOCO_ANTES.focus();
-  FOCO_ANTES = null;
+  if ($('zoom').hidden && $('prancha').hidden) document.body.classList.remove('travado');
+  if (id === 'zoom') $('zArea').innerHTML = '';
+  if (id === 'prancha') $('prFolha').innerHTML = '';
+  const f = FOCO_ANTES[id];
+  if (f && document.contains(f)) f.focus();
+  delete FOCO_ANTES[id];
 }
 function prenderFoco(e, box) {
   const fs = [...box.querySelectorAll('a[href],button,input,select,[tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && !x.hidden && x.offsetParent !== null);
@@ -3761,16 +4756,24 @@ function prenderFoco(e, box) {
 let ZW = 0, ZMIN = 0;
 function abrirZoom() {
   if (!CUR || !(VIEW === 'planta' || VIEW === 'corte')) return;
+  mostrarZoom(VIEW === 'corte' ? svgCorte(CUR, {}, THEME) : planSVG(CUR, {}, THEME), 'Desenho ampliado', 0);
+}
+/* abre o SVG em tela cheia; larg0 é a largura inicial mínima em px (a folha da prancha começa grande o bastante para ler) */
+function mostrarZoom(svgStr, rotulo, larg0) {
   const area = $('zArea');
-  area.innerHTML = VIEW === 'corte' ? svgCorte(CUR, {}, THEME) : planSVG(CUR, {}, THEME);
+  area.innerHTML = svgStr;
+  $('zoom').setAttribute('aria-label', rotulo);
   abrirDialogo('zoom', 'btnAjustar');
   const svg = area.querySelector('svg'); if (!svg) return;
   svg.style.maxHeight = 'none';
   ZMIN = Math.max(200, area.clientWidth - 16);
-  ZW = Math.max(ZMIN * 2, 900);
+  ZW = Math.max(ZMIN * 2, 900, larg0 || 0);
   svg.style.width = ZW + 'px'; svg.style.height = 'auto';
-  /* começa no centro do desenho */
-  requestAnimationFrame(() => { area.scrollLeft = (area.scrollWidth - area.clientWidth) / 2; area.scrollTop = (area.scrollHeight - area.clientHeight) / 2; });
+  /* o desenho começa no centro; a folha da prancha, no canto de cima à esquerda (onde fica a primeira vista) */
+  requestAnimationFrame(() => {
+    if (larg0) { area.scrollLeft = 0; area.scrollTop = 0; return; }
+    area.scrollLeft = (area.scrollWidth - area.clientWidth) / 2; area.scrollTop = (area.scrollHeight - area.clientHeight) / 2;
+  });
 }
 /* muda a largura do desenho mantendo parado o ponto (cx, cy) da área visível */
 function zoomPara(w, cx, cy) {
@@ -3853,7 +4856,155 @@ function gerarImagem() {
   img.src = url;
 }
 
-window.addEventListener('beforeprint', montarRelatorio);
+/* ---- prancha em escala e DXF ----
+   Os campos do carimbo, a folha, a escala, o modo das folhas, as vistas e a unidade do DXF ficam guardados neste aparelho (chave patamar-prancha).
+   A data não é guardada: começa com a de hoje. Tudo sai no tema claro, como no papel. */
+const PR_KEY = 'patamar-prancha';
+const PR_VISTAS = ['planta', 'plantaSup', 'corteA', 'corteB', 'elevacao', 'detalhe'];
+const PR_TXT = { titulo: 'prTit', aluno: 'prAluno', disciplina: 'prDisc', professor: 'prProf' };
+let PR = { titulo: '', aluno: '', disciplina: '', professor: '', formato: 'A3', escala: 'auto', folhas: 'varias', vistas: VISTAS_PADRAO.slice(), unid: 'm' };
+let PR_INFO = null, PR_T = null, IMP_PRANCHA = false;
+function lerPrancha() {
+  try {
+    const j = JSON.parse(localStorage.getItem(PR_KEY) || 'null'); if (!j || typeof j !== 'object') return;
+    Object.keys(PR_TXT).forEach(k => { if (typeof j[k] === 'string') PR[k] = j[k].slice(0, 60); });
+    if (FOLHAS[j.formato]) PR.formato = j.formato;
+    if (['auto', '50', '75', '100'].indexOf(String(j.escala)) >= 0) PR.escala = String(j.escala);
+    if (j.folhas === 'varias' || j.folhas === 'uma') PR.folhas = j.folhas;
+    if (Array.isArray(j.vistas)) PR.vistas = PR_VISTAS.filter(v => j.vistas.indexOf(v) >= 0);
+    if (j.unid === 'm' || j.unid === 'cm') PR.unid = j.unid;
+  } catch (e) { }
+}
+function salvarPrancha() { try { localStorage.setItem(PR_KEY, JSON.stringify(PR)); } catch (e) { } }
+const dxfPronto = () => typeof dxfDe === 'function' && typeof dxfBytes === 'function';
+/* data do carimbo: dd/mm/aaaa de um dia que existe (31/02 não passa). Devolve a data arrumada ou null. */
+function dataBR(t) {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(t || '').trim()); if (!m) return null;
+  const d = +m[1], me = +m[2], a = +m[3];
+  if (a < 1900 || a > 2200 || me < 1 || me > 12 || d < 1) return null;
+  const dias = [31, (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][me - 1];
+  if (d > dias) return null;
+  return String(d).padStart(2, '0') + '/' + String(me).padStart(2, '0') + '/' + a;
+}
+/* marca o campo da data quando ela não vale; o carimbo usa a data de hoje até ela corrigir */
+function conferirData() {
+  const el = $('prData'), t = el.value.trim(), d = t ? dataBR(t) : hojeBR();
+  el.classList.toggle('err', !d); if (d) el.removeAttribute('aria-invalid'); else el.setAttribute('aria-invalid', 'true');
+  $('prDataErro').hidden = !!d;
+  return d || hojeBR();
+}
+function opPrancha() {
+  return { formato: PR.formato, escala: PR.escala === 'auto' ? 'auto' : Number(PR.escala), folhas: PR.folhas, vistas: PR.vistas.slice(), titulo: PR.titulo, aluno: PR.aluno, disciplina: PR.disciplina, professor: PR.professor, data: conferirData(), ladoElev: S.ladoElev || 'frente' };
+}
+const nomeSvgFolha = (P, i) => 'patamar-' + S.tipo + '-prancha-' + P.formato + (P.folhas.length > 1 ? '-folha' + (i + 1) : '') + '.svg';
+function desenharPrancha() {
+  if (!CUR) return;
+  clearTimeout(PR_T); PR_T = null;
+  const P = PR_INFO = montarPrancha(CUR, temaClaro(), opPrancha());
+  const n = P.folhas.length, nada = !PR.vistas.length;
+  /* pré-visualização: todas as folhas, uma embaixo da outra; tocar numa folha abre ela grande */
+  $('prFolha').innerHTML = P.folhas.map((f, i) => '<figure class="pfig">' + (n > 1 ? '<figcaption>Folha ' + (i + 1) + ' de ' + n + '</figcaption>' : '') +
+    '<button type="button" class="pamp" data-folha="' + i + '" aria-label="Ampliar a folha ' + (i + 1) + (n > 1 ? ' de ' + n : '') + ' em tela cheia">' + f.svg +
+    '<span class="pampTxt" aria-hidden="true">Ampliar</span></button></figure>').join('');
+  const escs = 'Folha ' + P.formato + ' deitada' + (n > 1 ? ' · ' + n + ' folhas' : '') + ' · plantas e cortes em 1:' + P.escala + (P.escalaDetalhe ? ' · detalhe em 1:' + P.escalaDetalhe : '') + '.' +
+    (PR.folhas === 'uma' && P.escala > 50 && PR.escala === 'auto' && !P.aviso ? ' Em 1:50 não coube tudo numa folha: para 1:50, use uma folha maior ou desmarque uma vista (ou escolha “Várias” em Folhas).' : '');
+  const msg = nada ? 'Marque pelo menos uma vista.' : P.aviso ? escs + ' ' + P.aviso : escs;
+  const av = $('prAviso');
+  av.textContent = msg; av.classList.toggle('alerta', nada || !!P.aviso);
+  /* o motivo também aparece junto dos botões (no celular a folha fica longe deles) */
+  const mo = $('prMotivo');
+  mo.textContent = nada ? 'Marque pelo menos uma vista para baixar ou imprimir.' : P.aviso || '';
+  mo.hidden = !mo.textContent;
+  /* um botão de SVG por folha */
+  const box = $('prSvgs');
+  if (box.children.length !== n) box.innerHTML = P.folhas.map((f, i) => '<button type="button" class="btn' + (i ? '' : ' pri') + '" data-folha="' + i + '"></button>').join('');
+  [...box.children].forEach((b, i) => { b.textContent = n > 1 ? 'Baixar SVG da folha ' + (i + 1) : 'Baixar SVG da prancha'; b.disabled = nada; });
+  $('prImp').disabled = nada;
+  $('prDxf').disabled = nada || !dxfPronto();
+  $('prDicaImp').textContent = (n > 1 ? 'Sai uma página por folha (' + n + ' páginas). ' : '') + 'Na janela de impressão, escolha o papel ' + P.formato + ', orientação paisagem, margens “nenhuma” e escala 100% (ou “Tamanho real”). Com “Ajustar à página” a prancha sai fora de escala. Depois de imprimir, confira a régua de 100 mm do carimbo.';
+  notaDxf();
+}
+function agendarPrancha() { clearTimeout(PR_T); PR_T = setTimeout(desenharPrancha, 250); }
+/* antes de baixar ou imprimir: se ainda há um redesenho esperando (texto recém-digitado), faz agora */
+function pranchaEmDia() { if (PR_T || !PR_INFO) desenharPrancha(); return PR_INFO; }
+function abrirPrancha() {
+  if (!CUR) return;
+  Object.keys(PR_TXT).forEach(k => { $(PR_TXT[k]).value = PR[k]; });
+  $('prTit').placeholder = 'ESCADA ' + (TIPOS.find(t => t.id === S.tipo) || { nome: '' }).nome.toUpperCase();
+  if (!$('prData').value) $('prData').value = hojeBR();
+  $('prFormato').value = PR.formato; $('prEscala').value = PR.escala; document.querySelectorAll('#prFolhas input').forEach(r => { r.checked = r.value === PR.folhas; }); $('prUnid').value = PR.unid;
+  $('prElevNome').textContent = 'Elevação (' + LADO_NOME[S.ladoElev || 'frente'] + ', como na aba Cortes)';
+  document.querySelectorAll('#prVistas input[data-v]').forEach(c => { c.checked = PR.vistas.indexOf(c.dataset.v) >= 0; });
+  $('prSvgs').innerHTML = '';
+  desenharPrancha();
+  abrirDialogo('prancha', 'prFechar');
+}
+/* baixa um arquivo gerado no aparelho (no artefato do claude.ai o download pode não funcionar) */
+function baixar(blob, nome) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function imprimirPrancha() {
+  const P = pranchaEmDia(); if (!P || !PR.vistas.length) return;
+  IMP_PRANCHA = true;
+  const pa = $('printArea');
+  /* uma página por folha, cada uma do tamanho exato do papel */
+  pa.innerHTML = P.folhas.map(f => '<div class="pimp" style="width:' + P.W + 'mm;height:' + P.H + 'mm">' + f.svg + '</div>').join('');
+  pa.classList.add('prancha');
+  document.documentElement.classList.add('imprPrancha');
+  $('pagePrancha').textContent = '@media print{@page{size:' + P.W + 'mm ' + P.H + 'mm;margin:0}}';
+  setTimeout(() => window.print(), 50);
+}
+function fimImpPrancha() {
+  if (!IMP_PRANCHA) return;
+  IMP_PRANCHA = false;
+  const pa = $('printArea'); pa.classList.remove('prancha'); pa.innerHTML = '';
+  document.documentElement.classList.remove('imprPrancha');
+  $('pagePrancha').textContent = '';
+}
+function ligarPrancha() {
+  lerPrancha();
+  $('btnPrancha').addEventListener('click', abrirPrancha);
+  $('prFechar').addEventListener('click', () => fecharDialogo('prancha'));
+  $('prForm').addEventListener('submit', e => e.preventDefault());
+  Object.keys(PR_TXT).forEach(k => $(PR_TXT[k]).addEventListener('input', e => { PR[k] = e.target.value.slice(0, 60); salvarPrancha(); agendarPrancha(); }));
+  $('prData').addEventListener('input', agendarPrancha);
+  $('prData').addEventListener('blur', () => { const d = dataBR($('prData').value); if (d && d !== $('prData').value) { $('prData').value = d; agendarPrancha(); } });
+  $('prFormato').addEventListener('change', e => { PR.formato = e.target.value; salvarPrancha(); desenharPrancha(); });
+  $('prEscala').addEventListener('change', e => { PR.escala = e.target.value; salvarPrancha(); desenharPrancha(); });
+  $('prFolhas').addEventListener('change', e => { if (!e.target.checked) return; PR.folhas = e.target.value === 'uma' ? 'uma' : 'varias'; salvarPrancha(); desenharPrancha(); });
+  $('prUnid').addEventListener('change', e => { PR.unid = e.target.value; salvarPrancha(); notaDxf(); });
+  $('prVistas').addEventListener('change', () => { PR.vistas = PR_VISTAS.filter(v => { const c = document.querySelector('#prVistas input[data-v="' + v + '"]'); return c && c.checked; }); salvarPrancha(); desenharPrancha(); });
+  $('prSvgs').addEventListener('click', e => {
+    const b = e.target.closest('button[data-folha]'); if (!b) return;
+    const i = +b.dataset.folha, P = pranchaEmDia(); if (!P || !P.folhas[i]) return;
+    baixar(new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + P.folhas[i].svg], { type: 'image/svg+xml' }), nomeSvgFolha(P, i));
+  });
+  $('prFolha').addEventListener('click', e => {
+    const b = e.target.closest('button[data-folha]'); if (!b) return;
+    const i = +b.dataset.folha, P = pranchaEmDia(); if (!P || !P.folhas[i]) return;
+    /* começa com cerca de 4 px por mm, para o texto de 2,5 mm ficar legível */
+    mostrarZoom(P.folhas[i].svg, 'Folha ' + (i + 1) + ' de ' + P.folhas.length + ' ampliada', P.W * 4);
+  });
+  $('prImp').addEventListener('click', imprimirPrancha);
+  $('prDxf').addEventListener('click', () => {
+    if (!CUR || !dxfPronto() || !PR.vistas.length) return;
+    try {
+      const str = dxfDe(CUR, temaClaro(), { unidade: PR.unid, vistas: PR.vistas.slice(), ladoElev: S.ladoElev || 'frente' });
+      baixar(new Blob([dxfBytes(str)], { type: 'application/dxf' }), nomeDxf(S.tipo, PR.unid));
+    } catch (e) { toast('Não consegui gerar o DXF'); }
+  });
+  window.addEventListener('afterprint', fimImpPrancha);
+}
+/* o nome do DXF diz a unidade: patamar-u-leque-m.dxf ou patamar-u-leque-cm.dxf */
+function nomeDxf(tipo, unid) { return 'patamar-' + tipo + '-' + (unid === 'cm' ? 'cm' : 'm') + '.dxf'; }
+function notaDxf() {
+  $('prDxfNota').textContent = !dxfPronto() ? 'A exportação em DXF ainda não está disponível nesta versão do app.' :
+    (PR.vistas.length ? '' : 'Marque pelo menos uma vista para baixar. ') + 'O DXF sai em tamanho real (1:1), com as medidas em ' + (PR.unid === 'm' ? 'metros' : 'centímetros') + ' (o nome do arquivo termina em -' + (PR.unid === 'cm' ? 'cm' : 'm') + '): no programa de CAD, confira a unidade antes de cotar.';
+}
+
+window.addEventListener('beforeprint', () => { if (!IMP_PRANCHA) montarRelatorio(); });
 window.addEventListener('DOMContentLoaded', () => {
   aplicarTema(lerTema());
   load(); mount(); bind(); renderTypes(); mostrarPainel(PAINEL); render();
