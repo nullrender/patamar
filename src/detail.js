@@ -238,8 +238,10 @@ function detalheSVG(R, o, C) {
   [0, 1].forEach(i => { tt += '<rect x="' + r2(x0 + i * 10) + '" y="' + r2(-y0 - hh) + '" width="10" height="' + r2(hh) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
   [0, 10, 20].forEach(v => { tt += sText(x0 + v, y0 - fs * 0.85, String(v), fs * 0.7, C.muted, 'middle'); });
   tt += sText(x0 + 22, y0 + hh / 2, 'cm', fs * 0.7, C.muted, 'start');
-  s += cam('TITULO', tt);
-  const ymin = y0 - fs * 2.2, ymax = bb[3] + m;
+  /* o.semTitulo (prancha): sem título nem escala gráfica, que a prancha já põe embaixo da vista */
+  const semT = !!(o && o.semTitulo);
+  if (!semT) s += cam('TITULO', tt);
+  const ymin = semT ? yT + fs * 0.4 : y0 - fs * 2.2, ymax = bb[3] + m;
   const bg = '<rect x="' + r2(vx) + '" y="' + r2(-ymax) + '" width="' + r2(vw) + '" height="' + r2(ymax - ymin) + '" fill="' + C.paper + '"/>';
   return svgWrap(vx, -ymax, vw, ymax - ymin, bg + s, o, defs);
 }
