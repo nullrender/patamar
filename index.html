@@ -263,7 +263,7 @@ body.travado{overflow:hidden}
   .stepper button{width:40px}
 }
 /* telas de pouca altura (tablet deitado, notebook de 768 a 850 px): a faixa de tipos e o resumo encolhem para o desenho começar perto do topo */
-@media (min-width:700px) and (max-height:850px){
+@media (min-width:700px) and (max-height:950px){
   .top{padding-top:6px;padding-bottom:4px}
   .mark{width:28px;height:28px}
   .top h1{font-size:22px}
@@ -283,7 +283,7 @@ body.travado{overflow:hidden}
   #viewCorteBar{flex-wrap:wrap}
 }
 /* resumo numa linha só: pouca altura ou tablet em pé */
-@media (min-width:700px) and (max-height:850px),(min-width:700px) and (max-width:1023px) and (orientation:portrait){
+@media (min-width:700px) and (max-height:950px),(min-width:700px) and (max-width:1023px) and (orientation:portrait){
   .tiles{display:flex;flex-wrap:wrap;gap:6px}
   .tile{flex:1 1 auto;flex-direction:row;align-items:baseline;gap:6px;padding:4px 10px;border-radius:8px}
   .tile .ts{display:none}
@@ -1201,7 +1201,8 @@ function calc(inp) {
   const areaPoly = pts => { let s = 0; for (let i = 0; i < pts.length; i++) { const a2 = pts[i], b2 = pts[(i + 1) % pts.length]; s += a2[0] * b2[1] - b2[0] * a2[1]; } return Math.abs(s) / 2; };
   const areaOcup = hel ? PI * helix.R * helix.R : polys.reduce((s, q) => s + areaPoly(q.pts), 0);
   /* partes com zero ficam de fora ("15 degraus balanceados", não "0 pisos comuns + 15 degraus balanceados") */
-  const contagem = [nReto ? nReto + (hel ? ' degraus' : ' pisos comuns') : '', nLeque ? nLeque + (bal ? ' degraus balanceados' : ' leques') : '', nPat ? nPat + ' patamar' + (nPat > 1 ? 'es' : '') : ''].filter(Boolean).join(' + ');
+  const pl2 = (n, um, varios) => n + ' ' + (n === 1 ? um : varios);
+  const contagem = [nReto ? (hel ? pl2(nReto, 'degrau', 'degraus') : pl2(nReto, 'piso comum', 'pisos comuns')) : '', nLeque ? (bal ? pl2(nLeque, 'degrau balanceado', 'degraus balanceados') : pl2(nLeque, 'leque', 'leques')) : '', nPat ? nPat + ' patamar' + (nPat > 1 ? 'es' : '') : ''].filter(Boolean).join(' + ');
   /* ---- verificações ---- */
   const TOL = 1e-6; /* só erro de arredondamento do computador; não é tolerância de obra */
   const fora = (v, a, b2) => v < a - TOL || v > b2 + TOL;
@@ -1253,7 +1254,7 @@ function calc(inp) {
     chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn, 0) + ' cm', ruim ? ruimSt : 'ok', (ruim ? abre + 'patamar curto. ' : '') + (nm.patReto ? 'NBR 9050:2020, 6.8.8: patamar entre lances com pelo menos 120 cm.' + (nm.fuga ? ' A NBR 9077:2025 (9.1.10) manda seguir a NBR 9050 nos patamares.' : '') : (nm.mez ? 'A 9.5.9.1 da NBR 9077:2025 não fixa patamar para lances retos; o app usa a referência de estudo. ' : '') + 'NBR 9077:2001 (edição cancelada), 4.7.3.3 a: (2e + p) × n + p, com n = 1 passo no patamar: 2 × ' + fmt(e, 2) + ' + 2 × ' + fmt(p, 1) + ' = ' + fmt(mn, 1) + ' cm.' + (nm.id === 'custom' ? ' O perfil personalizado não tem limite próprio de patamar.' : '')));
     chk('patform', 'Fórmula do patamar (NBR 9077:2001 (cancelada), 4.7.3.3 a)', 'n = 1: ' + fmt(bb2 + p, 0) + ' · n = 2: ' + fmt(2 * bb2 + p, 0) + ' · n = 3: ' + fmt(3 * bb2 + p, 0) + ' cm', '(2e + p) × n + p', 'info', 'Comprimentos que dão n passos inteiros no patamar sem quebrar o ritmo da passada. Seu patamar tem ' + fmt(Lp) + ' cm.');
   }
-  if (tipo === 'u-patamar') { const mnU = L, rU = Lp < mnU - 1e-6; chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', 'mín. = largura (' + fmt(L) + ' cm)', rU ? 'bad' : 'ok', (rU ? 'Não atende: patamar curto. ' : '') + (nm.fuga ? 'NBR 9077:2025, 9.1.12: na mudança de direção o patamar não pode ser mais estreito que os lances; NBR 9050:2020, 6.8.8.' : nm.acess ? 'NBR 9050:2020, 6.8.8: na mudança de direção o patamar tem pelo menos a largura da escada.' : 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9050:2020, 6.8.8; era também a NBR 9077:2001, 4.7.3.3 b, edição cancelada).')); }
+  if (tipo === 'u-patamar') { const mnU = L, rU = Lp < mnU - 1e-6; chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', 'mín. = largura (' + fmt(L) + ' cm)', rU ? (nm.mez ? 'warn' : 'bad') : 'ok', (rU ? (nm.mez ? 'Fora da referência de estudo: a 9.5.9.1 da NBR 9077:2025 não fixa o patamar de retorno. ' : 'Não atende: patamar curto. ') : '') + (nm.fuga ? 'NBR 9077:2025, 9.1.12: na mudança de direção o patamar não pode ser mais estreito que os lances; NBR 9050:2020, 6.8.8.' : nm.acess ? 'NBR 9050:2020, 6.8.8: na mudança de direção o patamar tem pelo menos a largura da escada.' : 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9050:2020, 6.8.8; era também a NBR 9077:2001, 4.7.3.3 b, edição cancelada).')); }
   if (tipo === 'l-patamar' || tipo === 'c-patamar' || tipo === 'z-patamar') chk('patprof', tipo === 'l-patamar' ? 'Patamar de canto' : 'Patamares de canto', fmt(L) + ' × ' + fmt(L) + ' cm', 'lados = largura', 'ok', 'Quadrado com lado igual à largura, por construção (' + (nm.fuga ? 'NBR 9077:2025, 9.1.12; ' : nm.acess ? '' : 'NBR 9077:2001, 4.7.3.3 b, edição cancelada; ') + 'NBR 9050:2020, 6.8.8).');
   if (nm.fuga && (nLeque || hel)) chk('mudanca', hel ? 'Escada em espiral' : 'Degraus em leque', hel ? 'helicoidal' : nLeque + ' leques', 'proibido em rota de fuga', 'bad', 'Não atende: a NBR 9077:2025 proíbe degraus em leque e escada em espiral nas rotas de saída (9.1.11) e manda fazer toda mudança de direção por patamar, sem degraus, com largura não inferior à dos lances (9.1.12). Em mezanino ou área privativa a 9.5.9.1 permite leque e espiral: se for o caso, use esse perfil.');
   else if (nm.acess && (nLeque || hel)) chk('mudanca', 'Mudança de direção sem patamar', hel ? 'helicoidal' : nLeque + ' leques', 'patamar obrigatório', 'bad', 'Não atende ao perfil NBR 9050: a 6.8.7 da NBR 9050:2020 pede patamar sempre que houver mudança de direção. A 6.8.6 admite lance curvo, com piso e espelho medidos a 0,55 m da borda interna, e a norma não diz como juntar as duas regras; o app adota a leitura mais segura e pede patamar. Confirme com quem aprova o projeto. Use um tipo com patamar.');
@@ -3226,11 +3227,15 @@ function migrarNorma(s) {
   if (s && (s.norma === 'sec' || s.norma === 'serv')) { s.norma = 'mez'; return true; }
   return false;
 }
-const AVISO_MIGRA = 'O perfil que você usava vinha da NBR 9077:2001, cancelada pela edição de 2025. Agora usamos \u201cMezanino ou área privativa (NBR 9077:2025, 9.5.9.1)\u201d.';
+const AVISO_MIGRA = 'O perfil que você usava vinha da NBR 9077:2001, cancelada pela edição de 2025. Agora usamos \u201cMezanino ou área privativa (NBR 9077:2025, 9.5.9.1)\u201d. Esse perfil vale só para mezanino ou área privativa, com menos de 20 pessoas e até 3,7 m de altura percorrida, e os limites mudaram: confira as verificações.';
+const AVISO_DESC = 'O perfil salvo neste aparelho não existe mais nesta versão do app. Voltamos ao perfil Estudo: confira a referência de limites.';
 
 function load() {
   try { const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (j && j.S) S = Object.assign(S, j.S); } catch (e) { }
-  if (migrarNorma(S)) { const a = $('avisoMigra'); if (a) { $('avisoMigraTxt').textContent = AVISO_MIGRA; a.hidden = false; } }
+  let avisoM = migrarNorma(S) ? AVISO_MIGRA : '';
+  /* perfil desconhecido (de outra versão): não cai no Estudo em silêncio */
+  if (!avisoM && S.norma !== 'custom' && !NORMAS[S.norma]) { S.norma = 'res'; avisoM = AVISO_DESC; }
+  if (avisoM) { const a = $('avisoMigra'); if (a) { $('avisoMigraTxt').textContent = avisoM; a.hidden = false; } }
   const h = (location.hash || '').slice(1);
   const m = h.match(/^(.*?)(?:-(planta|corte|3d|explica))?$/);
   if (m && TIPOS.some(t => t.id === m[1])) { S.tipo = m[1]; VIEW = m[2] || 'planta'; }
@@ -3610,7 +3615,7 @@ function marcarSelecao() {
 const metros = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const LAB_ST = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
 function checksHTML(R) {
-  return R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + LAB_ST[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
+  return R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + LAB_ST[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>' + (c.status === 'warn' || c.status === 'info' ? 'referência: ' : 'limite: ') + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
 }
 /* legenda de cada vista: só o que aparece naquele desenho, com as cores daquele desenho */
 function legendaHTML(R, svg) {

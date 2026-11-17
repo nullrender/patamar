@@ -454,7 +454,7 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   const ch=new Function(fn('chaveSecao')+'\nreturn chaveSecao;')();
   const sm=t=>({querySelector:()=>({textContent:t})});
   ok(ch(sm('Sobre o tipo escolhido: Em L com leques'),0)===ch(sm('Sobre o tipo escolhido: Reta'),0) && ch(sm('Roteiro para desenhar a elevação (vista frente)'),0)===ch(sm('Roteiro para desenhar a elevação (vista fundos)'),0),'chave da seção ignora o que muda com o tipo');
-  ok(/@media \(min-width:700px\) and \(max-height:850px\)/.test(tpl) && /\.tipos \.th\{display:none\}/.test(tpl),'pouca altura: faixa de tipos compacta e resumo numa linha');
+  ok(/@media \(min-width:700px\) and \(max-height:950px\)/.test(tpl) && /\.tipos \.th\{display:none\}/.test(tpl),'pouca altura: faixa de tipos compacta e resumo numa linha');
   ok(/@media \(min-width:700px\)\{\s*\.tipos button\{flex:1 1 0;min-width:96px/.test(tpl) && /maisDir/.test(tpl) && /marcarRolagemTipos/.test(ui),'faixa de tipos cabe em 1024 px e mostra degradê quando rola');
   ok(/orientation:portrait\)\{\s*\.app\{grid-template-columns:clamp\(228px/.test(tpl),'tablet em pé: coluna de dados estreita');
   const gi=fn('gerarImagem')||'';
@@ -474,6 +474,16 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   ok(/' · perfil: '/.test(fn('resumo')||''),'"Copiar resumo" sem parênteses dentro de parênteses');
   ok(/const metros = v => v\.toLocaleString\('pt-BR', \{ minimumFractionDigits: 2/.test(ui),'"Em planta" com duas casas fixas');
   ok(/R\.nReto \? R\.nReto \+ ' retos' : ''/.test(ui),'bloco Pisos sem "0 retos"');
+}
+
+
+/* acabamentos finais: contagem no singular, patamar do U no mezanino, perfil salvo desconhecido, rótulo do limite */
+{
+  ok(calc({tipo:'l-leque',L:100,H:280,nMeio:1}).contagem.indexOf('1 pisos')<0 && !/(^|\D)1 (pisos|degraus|leques|patamares)/.test(['reta','l-leque','u-leque','l-patamar','u-patamar'].map(t=>calc({tipo:t}).contagem).join(' ')),'contagem no singular quando é 1');
+  ok(st(calc({norma:'mez',tipo:'u-patamar',LpAuto:false,Lp:60}),'patprof')==='warn' && st(calc({norma:'res',tipo:'u-patamar',LpAuto:false,Lp:60}),'patprof')==='bad','mezanino: patamar de retorno curto é atenção (a 9.5.9.1 não fixa)');
+  const ui2=require('fs').readFileSync(require('path').join(__dirname,'..','src','ui.js'),'utf8');
+  ok(/!NORMAS\[S\.norma\]\) \{ S\.norma = 'res'; avisoM = AVISO_DESC/.test(ui2),'perfil salvo desconhecido volta ao Estudo com aviso (não em silêncio)');
+  ok(/'limite: '/.test(ui2) && !/<span>referência ' \+ c\.regra/.test(ui2),'lista de verificações: "limite:" nas exigências e "referência:" só em atenção/informação');
 }
 
 console.log(fail?fail+' falha(s)':'todos passaram');

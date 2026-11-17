@@ -23,11 +23,15 @@ function migrarNorma(s) {
   if (s && (s.norma === 'sec' || s.norma === 'serv')) { s.norma = 'mez'; return true; }
   return false;
 }
-const AVISO_MIGRA = 'O perfil que você usava vinha da NBR 9077:2001, cancelada pela edição de 2025. Agora usamos \u201cMezanino ou área privativa (NBR 9077:2025, 9.5.9.1)\u201d.';
+const AVISO_MIGRA = 'O perfil que você usava vinha da NBR 9077:2001, cancelada pela edição de 2025. Agora usamos \u201cMezanino ou área privativa (NBR 9077:2025, 9.5.9.1)\u201d. Esse perfil vale só para mezanino ou área privativa, com menos de 20 pessoas e até 3,7 m de altura percorrida, e os limites mudaram: confira as verificações.';
+const AVISO_DESC = 'O perfil salvo neste aparelho não existe mais nesta versão do app. Voltamos ao perfil Estudo: confira a referência de limites.';
 
 function load() {
   try { const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (j && j.S) S = Object.assign(S, j.S); } catch (e) { }
-  if (migrarNorma(S)) { const a = $('avisoMigra'); if (a) { $('avisoMigraTxt').textContent = AVISO_MIGRA; a.hidden = false; } }
+  let avisoM = migrarNorma(S) ? AVISO_MIGRA : '';
+  /* perfil desconhecido (de outra versão): não cai no Estudo em silêncio */
+  if (!avisoM && S.norma !== 'custom' && !NORMAS[S.norma]) { S.norma = 'res'; avisoM = AVISO_DESC; }
+  if (avisoM) { const a = $('avisoMigra'); if (a) { $('avisoMigraTxt').textContent = avisoM; a.hidden = false; } }
   const h = (location.hash || '').slice(1);
   const m = h.match(/^(.*?)(?:-(planta|corte|3d|explica))?$/);
   if (m && TIPOS.some(t => t.id === m[1])) { S.tipo = m[1]; VIEW = m[2] || 'planta'; }
@@ -407,7 +411,7 @@ function marcarSelecao() {
 const metros = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const LAB_ST = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
 function checksHTML(R) {
-  return R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + LAB_ST[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
+  return R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + LAB_ST[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>' + (c.status === 'warn' || c.status === 'info' ? 'referência: ' : 'limite: ') + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
 }
 /* legenda de cada vista: só o que aparece naquele desenho, com as cores daquele desenho */
 function legendaHTML(R, svg) {

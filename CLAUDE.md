@@ -30,7 +30,7 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 1. Edite só os arquivos em `src/` (ou `sw.js`, o manifesto e os ícones).
 2. `node build.js`
 3. `npm test`. Precisa terminar com "todos passaram". Toda correção nova ganha um teste em `tests/aceite.js`.
-4. Confira visualmente quando mexer em desenho: abra `index.html` no navegador e veja os 7 tipos nas abas Planta, Perfil, 3D e Explicação, no desktop e com largura de celular (390 px).
+4. Confira visualmente quando mexer em desenho ou interface: abra `index.html` no navegador e veja os 9 tipos nas abas Planta, Cortes, 3D e Explicação em 390, 820, 1024 e 1440 px, nos temas claro e escuro.
 5. Troque a constante `VERSAO` em `sw.js` (ex.: `patamar-v4-1` para `patamar-v5-1`). Sem isso, quem instalou o app continua com a versão antiga.
 6. Faça o commit de `src/`, `tests/`, `index.html` e `sw.js` juntos, com mensagem em PT-BR. O Pages publica sozinho em 1 ou 2 minutos.
 
@@ -47,7 +47,9 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 - A NBR 9050:2020 (versão corrigida de 2021) segue vigente: em 17/11/2026 não havia edição nova (só confirmação em 12/2025).
 - Cópias públicas usadas na conferência: NBR 9077:2001 no site do CNMP, NBR 9050:2020 no drive da Prefeitura de São Paulo, NPT 011 dos Bombeiros do PR. O ambiente de nuvem "patamar" libera esses hosts.
 - Status das verificações: `bad` = fora do limite do perfil ("não atende"); `warn` = algo que o app não consegue validar; `info` = só informação. A tolerância é 1e-6 (só erro de arredondamento), nunca uma folga de obra.
-- Entrada inválida não é corrigida em silêncio: `calc` lança erro e a interface mostra a mensagem, sem desenho.
+- Entrada inválida não é corrigida em silêncio: `calc` lança erro e a interface mostra a mensagem, sem desenho. O erro traz `.campo` (chave do estado, ex.: `'H'`) para a interface marcar o campo. Desnível < 20 cm ou largura < 30 cm dão erro (provável valor em metros).
+- Interface: faixa de tipos no topo; no celular, três painéis (Dados / Desenho / Verificações) com barra fixa embaixo e botão "Ampliar" no desenho; tablet com duas colunas; PC com três. O "Como resolver" roda depois de desenhar, com cache por estado. Perfil salvo que não existe mais (`sec`, `serv`) vira `mez` com aviso (`migrarNorma`); qualquer outro desconhecido volta ao Estudo com aviso.
+- No perfil `mez`, o que a 9.5.9.1 não fixa (espelho, piso, Blondel, lance, patamares, ponta) aparece como atenção (`warn`), nunca como "não atende". No `fuga`, a verificação `hlivre` confere os 2,10 m da 4.2 b.
 - A contagem é N espelhos e N − 1 superfícies entre eles. Patamar e leque contam como superfícies, mas não como "pisos comuns". Use `R.contagem`, `R.nReto`, `R.nLeque` e `R.nPat`.
 - **Leques**: o padrão é `leque: 'bal'` (balanceados, função `balanceado()` no `core.js`). Todos os degraus têm piso p na linha de caminhamento; as larguras na borda interna seguem progressão aritmética numa zona que cresce até a ponta chegar a `lqMin`. `leque: 'conv'` mantém os leques convergentes antigos, para comparar. Cada polígono tem `wIn` e `wOut` (largura nas bordas interna e externa). Teste de área: no balanceado, a soma de todos os degraus é a área do contorno; no convergente, os leques somam L² por curva.
 - **Estrutura** (`estrutura`): `'laje'` (degraus sobre laje maciça; na helicoidal, laje helicoidal) ou `'balanco'` (placas soltas de `espDegrau`, sem espelho; `R.placas`). Padrão: helicoidal em balanço, os demais em laje. Valem nos 9 tipos.
