@@ -83,6 +83,9 @@ button{-webkit-tap-highlight-color:transparent}
 .tipos .th{display:block;height:50px;overflow:hidden}
 .tipos .th svg{width:100%;height:100%;display:block}
 .tipos .nm{font-size:12px;font-weight:600;line-height:1.2}
+.tipos.maisDir{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent)}
+.tipos.maisEsq{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent)}
+.tipos.maisDir.maisEsq{-webkit-mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent)}
 
 /* ---- três painéis: dados | desenho | verificações ---- */
 .app{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:8px var(--gut) 28px;align-items:start}
@@ -148,8 +151,28 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
 .tabs button:hover:not(.on){background:var(--paper)}
 .tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .board{background:var(--panel);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:12px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.stageW{position:relative}
 .stage{min-height:260px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;border-radius:6px;padding:6px;overflow:hidden}
 .stage svg{max-height:min(72vh,900px)}
+/* botão "Ampliar" no canto do desenho (planta e cortes) */
+.zoomBtn{position:absolute;top:6px;right:6px;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;box-shadow:var(--shadow)}
+.zoomBtn:hover{border-color:var(--muted)}
+.zoomBtn svg{width:16px;height:16px}
+/* desenho ampliado em tela cheia */
+.zoom{position:fixed;inset:0;z-index:45;background:var(--paper);display:flex;flex-direction:column}
+.zbar{display:flex;align-items:center;gap:8px;padding:8px var(--gut);padding-top:calc(8px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--line);background:var(--panel)}
+.zbar .zdica{flex:1;font-size:12px;color:var(--muted);line-height:1.3}
+.zbar .btn{min-height:44px;min-width:44px;flex:none;font-size:16px}
+.zarea{flex:1;overflow:auto;touch-action:pan-x pan-y;overscroll-behavior:contain;padding:8px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+.zarea svg{display:block;margin:0 auto;max-width:none}
+body.travado{overflow:hidden}
+.chkPrint{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);min-height:40px;cursor:pointer}
+.chkPrint input{accent-color:var(--btn);width:16px;height:16px;margin:0}
+/* erro de entrada no painel Dados, logo abaixo do campo */
+.errDados{grid-column:1 / -1;margin-top:8px;padding:10px 12px;border:1px solid var(--bad);border-left-width:4px;border-radius:8px;background:var(--badbg);color:var(--ink);font-size:13px;line-height:1.45}
+.errDados b{color:var(--bad)}
+#painel-dados>.errDados{margin:0}
+.mrErr{color:var(--bad);font-weight:500}
 .stage canvas{display:block;touch-action:none;cursor:grab;border-radius:4px}
 .cap{margin:8px 4px 2px;font-size:12px;color:var(--muted)}
 .bar3{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0 0 10px}
@@ -160,6 +183,10 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
 .sw{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block;flex:none}
 .ln{width:22px;height:0;border-top:2.5px solid var(--accent);display:inline-block;flex:none}
 .ln.dash{border-top:2px dashed var(--info)}
+.ln.dash.acc{border-top-color:var(--accent)}
+.ln.dashdot{border-top:0;height:2px;background:repeating-linear-gradient(to right,var(--info) 0 8px,transparent 8px 10px,var(--info) 10px 12px,transparent 12px 14px)}
+.ln.fino{border-top:1px solid var(--ink)}
+.sw.hach{background:repeating-linear-gradient(135deg,var(--ink) 0 1.2px,transparent 1.2px 4px)}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .btn{border:1px solid var(--ink);background:transparent;border-radius:7px;padding:8px 14px;min-height:40px;cursor:pointer;font-weight:500;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
 .btn:hover{background:var(--ink);color:var(--paper)}
@@ -219,11 +246,49 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
   #painel-desenho{grid-area:desenho}
   #painel-verif{grid-area:verif}
 }
+/* de 700 a 1279 px os 9 tipos dividem a largura; em 1024 px cabem todos, abaixo disso a faixa rola (com degradê na borda) */
+@media (min-width:700px){
+  .tipos button{flex:1 1 0;min-width:96px;max-width:none}
+}
 @media (min-width:700px) and (max-width:1023px){
   .top p{display:none}
   .head h2{font-size:24px}
   .ctrl .grid2{grid-template-columns:minmax(0,1fr)}
   .ctrl .grid2 .field+.field{margin-top:0}
+}
+/* tablet em pé: coluna de dados mais estreita para o desenho ganhar largura; resumo compacto */
+@media (min-width:700px) and (max-width:1023px) and (orientation:portrait){
+  .app{grid-template-columns:clamp(228px,29vw,248px) minmax(0,1fr);gap:12px}
+  .ctrl .card{padding:12px}
+  .stepper button{width:40px}
+}
+/* telas de pouca altura (tablet deitado, notebook de 768 a 850 px): a faixa de tipos e o resumo encolhem para o desenho começar perto do topo */
+@media (min-width:700px) and (max-height:850px){
+  .top{padding-top:6px;padding-bottom:4px}
+  .mark{width:28px;height:28px}
+  .top h1{font-size:22px}
+  .top p{display:none}
+  .tipos{padding-bottom:6px}
+  .tipos .th{display:none}
+  .tipos button{min-height:40px;justify-content:center;padding:4px 8px}
+  .app{padding-top:4px}
+  .out{gap:8px}
+  .head h2{font-size:22px}
+  .head p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip{min-height:32px}
+  .barP{flex-wrap:nowrap;gap:8px 12px}
+  .barP .seg{min-width:0;flex:none}
+  .barP .seg button{padding:6px 10px}
+  .barP label{white-space:nowrap}
+  #viewCorteBar{flex-wrap:wrap}
+}
+/* resumo numa linha só: pouca altura ou tablet em pé */
+@media (min-width:700px) and (max-height:850px),(min-width:700px) and (max-width:1023px) and (orientation:portrait){
+  .tiles{display:flex;flex-wrap:wrap;gap:6px}
+  .tile{flex:1 1 auto;flex-direction:row;align-items:baseline;gap:6px;padding:4px 10px;border-radius:8px}
+  .tile .ts{display:none}
+  .tv{font-size:15px;white-space:nowrap}
+  .tl{font-size:10px;letter-spacing:.05em}
 }
 @media (min-width:1024px){
   .side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
@@ -235,7 +300,7 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
   .app{grid-template-columns:290px minmax(0,1fr) clamp(330px,24vw,460px);grid-template-areas:"dados desenho verif";gap:20px}
   #painel-verif{position:sticky;top:10px;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 4px 4px 0;margin-right:-4px;display:flex}
   .side>.wide{grid-column:auto}
-  .tipos button{flex:1 1 0;min-width:110px;max-width:none}
+  .tipos button{min-width:110px}
 }
 @media (min-width:1680px){
   .app{grid-template-columns:330px minmax(0,1fr) 480px}
@@ -277,14 +342,16 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
   .tabs button{flex:1 1 0;padding:8px 4px;font-size:14px}
   .board{padding:8px;border-radius:0 0 10px 10px}
   /* no celular o desenho vem antes das opções da vista */
-  .board>.stage{order:1}
   .board>.legend{order:2}
   .board>.bar3,.board>.barP{order:3;margin:12px 0 0}
   .board>.actions{order:4}
-  .stage{overflow-x:auto;padding:4px}
-  .stage[data-view=corte] svg{min-width:600px}
-  .stage[data-view=planta] svg{min-width:520px}
+  /* o desenho cabe na largura da tela; para ver detalhes, o botão "Ampliar" abre em tela cheia com pinça */
+  .stage{overflow:hidden;padding:4px;min-height:0}
+  .stage svg{width:100%;height:auto;max-height:none}
   .stage[data-view=explica]{overflow:visible}
+  .zoomBtn{top:4px;right:4px;min-height:40px}
+  .zbar .zdica{font-size:11px}
+  .board>.stageW{order:1}
   .seg button,.barP .seg button{min-height:44px}
   .barP{gap:8px 16px}
   .barP .seg,.barP .segC{width:100%;min-width:0}
@@ -298,7 +365,7 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
   .actions{gap:6px}
   .miniRes{display:flex;position:sticky;top:0;z-index:5;flex-wrap:wrap;align-items:center;gap:4px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
   .miniRes b{font-family:var(--mono);font-weight:600}
-  .miniRes .mr{flex:1 1 auto}
+  .miniRes .mr{flex:1 1 auto;min-width:0}
   .miniRes .chip{min-height:32px;padding:2px 10px;font-size:12px}
   .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
   .mnav button{flex:1;min-height:50px;border:0;border-radius:10px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
@@ -366,6 +433,7 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
   .printArea .ptiles span{font-size:8pt;color:#555;text-transform:uppercase;letter-spacing:.06em}
   .printArea figure{margin:0 0 8pt;break-inside:avoid}
   .printArea figure svg{width:100%;height:auto;max-height:96mm}
+  .printArea figure.grande svg{max-height:150mm}
   .printArea figcaption{font-size:9pt;color:#444}
   .printArea .quebra{break-before:page}
   .printArea .checks li,.printArea .memo li{break-inside:avoid}
@@ -382,13 +450,14 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
 <header class="top">
   <svg class="mark" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="6" fill="var(--ink)"/><path d="M6 27h6v-5h6v-5h6v-5h4" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
   <div class="brand"><h1>Patamar</h1><p>Escadas calculadas e desenhadas: planta, cortes e 3D</p></div>
-  <button type="button" class="ibtn" id="btnTema" aria-label="Tema: automático"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg><span id="temaTxt">Automático</span></button>
+  <button type="button" class="ibtn" id="btnTema" aria-label="Tema: automático"><svg viewBox="0 0 24 24" aria-hidden="true" id="temaIco"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg><span id="temaTxt">Automático</span></button>
 </header>
 <div class="avisoM" id="avisoMigra" role="status" hidden><p id="avisoMigraTxt"></p><button type="button" id="avisoMigraFechar" aria-label="Fechar aviso">×</button></div>
 <nav class="tipobar" aria-label="Tipo de escada"><div id="tipos" class="tipos" role="radiogroup" aria-label="Tipo de escada"></div></nav>
 <main class="app" id="app" data-painel="desenho">
   <section class="ctrl painel" id="painel-dados" aria-label="Dados da escada" role="tabpanel">
-    <div class="miniRes" id="miniRes" aria-live="polite"></div>
+    <div class="miniRes" id="miniRes" aria-live="polite"><span class="mr" id="miniTxt"></span><button type="button" class="chip ok" id="miniBtn" data-p="verif"></button></div>
+    <div class="errDados" id="erroDados" role="alert" hidden></div>
     <div class="ctrlIn" id="ctrl"></div>
   </section>
   <section class="out painel" id="painel-desenho" aria-label="Resultado e desenho" role="tabpanel" tabindex="-1">
@@ -396,7 +465,7 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
     <div class="tiles" id="tiles" aria-live="polite"></div>
     <div>
       <div class="tabs" id="tabs" role="tablist" aria-label="Tipo de desenho"></div>
-      <div class="board" role="tabpanel" aria-label="Desenho">
+      <div class="board" id="board" role="tabpanel" aria-labelledby="tab-planta">
         <div class="bar3" id="view3dBar" hidden>
           <label>Girar <input type="range" id="yaw" min="-180" max="180" value="-32"></label>
           <label>Inclinar <input type="range" id="pit" min="12" max="80" value="42"></label>
@@ -413,13 +482,14 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
           <label><input type="checkbox" id="showNums"> números</label>
           <label><input type="checkbox" id="showCortes"> cortes</label>
         </div>
-        <div class="stage" id="stage"></div>
+        <div class="stageW"><div class="stage" id="stage"></div><button type="button" class="zoomBtn" id="btnAmpliar" aria-label="Ampliar o desenho em tela cheia"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Ampliar</button></div>
         <div class="legend" id="legend"></div>
         <div class="actions">
           <button type="button" class="btn pri" id="btnImg">Gerar imagem</button>
           <button type="button" class="btn" id="btnSvg">Copiar SVG</button>
           <button type="button" class="btn" id="btnResumo">Copiar resumo</button>
           <button type="button" class="btn" id="btnPrint">Imprimir / PDF</button>
+          <label class="chkPrint"><input type="checkbox" id="printExp"> imprimir com a explicação completa</label>
         </div>
       </div>
     </div>
@@ -442,6 +512,10 @@ select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(
     <img id="modalImg" alt="Desenho gerado">
     <div class="row"><a class="btn pri" id="modalDl" download="patamar.png" style="text-decoration:none">Baixar PNG</a><button type="button" class="btn" id="modalClose">Fechar</button><span class="note">Se o download não abrir, segure (celular) ou clique com o botão direito (PC) na imagem e salve.</span></div>
   </div>
+</div>
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Desenho ampliado">
+  <div class="zbar"><span class="zdica">Arraste para mover. Pinça com dois dedos, Ctrl + roda do mouse ou os botões mudam o tamanho.</span><button type="button" class="btn" id="zMenos" aria-label="Diminuir">−</button><button type="button" class="btn" id="zMais" aria-label="Aumentar">+</button><button type="button" class="btn pri" id="btnAjustar">Ajustar</button></div>
+  <div class="zarea" id="zArea"></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <div id="printArea" class="printArea" aria-hidden="true"></div>
@@ -3135,11 +3209,12 @@ const FIELDS = [
 ];
 
 function mount() {
-  const norm = Object.keys(NORMAS).map(k => '<option value="' + k + '">' + NORMAS[k].nome + '</option>').join('') + '<option value="custom">Personalizada (digite os limites)</option>';
+  /* no seletor vai o rótulo curto (cabe no celular); o nome completo aparece na dica embaixo */
+  const norm = Object.keys(NORMAS).map(k => '<option value="' + k + '">' + rotuloNorma(k) + '</option>').join('') + '<option value="custom">Personalizada</option>';
   $('ctrl').innerHTML =
     '<section class="card"><h2>Medidas</h2><div class="grid2">' +
     fieldNum('H', 'Desnível piso a piso', 'cm', 'Do piso de baixo ao piso de cima, acabados.') + fieldNum('L', 'Largura útil', 'cm', 'Espaço livre para passar, entre paredes ou guardas.') + '</div>' +
-    '<div class="field"><label for="norma">Referência de limites</label><select id="norma">' + norm + '</select></div>' +
+    '<div class="field"><label for="norma">Referência de limites</label><select id="norma" aria-describedby="normaHint">' + norm + '</select><p class="hint" id="normaHint"></p></div>' +
     '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + fieldNum('cLq', 'Ponta mínima do leque', 'cm') + '</div></div>' +
     '<div class="field" data-for="l-patamar l-leque u-patamar u-leque c-patamar z-patamar helicoidal"><span class="lab" id="ladoLab">Ao subir, a escada vira para</span><div class="seg" id="lado" role="group" aria-labelledby="ladoLab"><button type="button" data-v="dir">Direita</button><button type="button" data-v="esq">Esquerda</button></div></div></section>' +
     '<section class="card"><h2>Degraus</h2>' +
@@ -3162,8 +3237,11 @@ function mount() {
     fieldNum('hLivre', 'Altura livre mínima', 'cm') + fieldNum('espLaje', 'Laje do piso de cima', 'cm') +
     '<div id="tLajeWrap">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
     '<div id="espDegrauWrap">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
-  $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Cortes'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
+  $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Cortes'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '" aria-controls="board" tabindex="-1">' + v[1] + '</button>').join('');
 }
+/* rótulo curto do perfil (NORMAS[k].rotulo); enquanto o núcleo não tiver o campo, usa o nome */
+function rotuloNorma(k) { const n = NORMAS[k]; return n ? (n.rotulo || n.nome) : 'Personalizada'; }
+function nomeNorma(k) { return k === 'custom' ? 'Personalizada: limites digitados por você (do professor ou do código de obras da cidade).' : (NORMAS[k] ? NORMAS[k].nome : ''); }
 function fieldNum(id, label, unit, hint) {
   return '<div class="field"><label for="' + id + '">' + label + '</label><div class="inp"><input id="' + id + '" type="text" inputmode="decimal" autocomplete="off"><span class="un">' + unit + '</span></div>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + '</div>';
 }
@@ -3173,8 +3251,8 @@ function bind() {
     const el = $(f.id); if (!el) return;
     el.addEventListener('input', () => {
       const v = parseNum(el.value);
-      if (isNaN(v) || (f.kind === 'int' && Math.round(v) !== v)) { BAD[f.id] = true; el.classList.add('err'); render(true); return; }
-      delete BAD[f.id]; el.classList.remove('err');
+      if (isNaN(v) || (f.kind === 'int' && Math.round(v) !== v)) { BAD[f.id] = true; el.classList.add('err'); el.setAttribute('aria-invalid', 'true'); render(true); return; }
+      delete BAD[f.id]; el.classList.remove('err'); el.removeAttribute('aria-invalid');
       S[f.key] = v;
       if (f.auto) { S[f.auto] = false; $(f.auto).checked = false; }
       render(true);
@@ -3207,26 +3285,52 @@ function bind() {
   $('nPerPlus').addEventListener('click', () => { limpaNPer(); S.nPerAuto = false; S.nPer = Math.min(72, nPerAtual() + 1); render(); });
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; render(); });
   $('tipos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tipo = b.dataset.v; render(); });
-  /* setas do teclado andam entre os tipos (grupo de opções) */
+  /* teclado: só o item marcado entra no Tab (tabindex 0); as setas, Home e End andam entre os itens */
+  const setas = (e, lista, atual) => {
+    const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key], i = lista.indexOf(atual);
+    if (d) return lista[(i + d + lista.length) % lista.length];
+    if (e.key === 'Home') return lista[0];
+    if (e.key === 'End') return lista[lista.length - 1];
+    return null;
+  };
   $('tipos').addEventListener('keydown', e => {
-    const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!d) return;
-    e.preventDefault(); const i = TIPOS.findIndex(t => t.id === S.tipo), t = TIPOS[(i + d + TIPOS.length) % TIPOS.length];
-    S.tipo = t.id; render(); const b = document.querySelector('#tipos button[data-v="' + t.id + '"]'); if (b) b.focus();
+    const t = setas(e, TIPOS.map(x => x.id), S.tipo); if (!t) return;
+    e.preventDefault(); S.tipo = t; render(); const b = document.querySelector('#tipos button[data-v="' + t + '"]'); if (b) b.focus();
   });
+  $('tabs').addEventListener('keydown', e => {
+    const v = setas(e, ['planta', 'corte', '3d', 'explica'], VIEW); if (!v) return;
+    e.preventDefault(); VIEW = v; render(); $('tab-' + v).focus();
+  });
+  $('tipos').addEventListener('scroll', marcarRolagemTipos, { passive: true });
   $('mnav').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) mostrarPainel(b.dataset.p); });
-  $('miniRes').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) mostrarPainel(b.dataset.p); });
+  /* o botão do resumo fixo é o mesmo nó em todo render (trocar o nó fazia o primeiro toque se perder quando um campo saía de foco) */
+  $('miniBtn').addEventListener('click', () => {
+    const b = $('miniBtn');
+    if (b.dataset.campo) { const el = $(b.dataset.campo); if (el) { const d = el.closest('details'); if (d) d.open = true; el.focus(); el.scrollIntoView({ block: 'center', behavior: rolagem() }); } return; }
+    if (b.dataset.p) mostrarPainel(b.dataset.p);
+  });
   $('statusChip').addEventListener('click', () => { if (ehCelular()) mostrarPainel('verif'); else $('cardChecks').scrollIntoView({ block: 'start', behavior: rolagem() }); });
   $('btnTema').addEventListener('click', () => { const ordem = ['auto', 'light', 'dark'], t = ordem[(ordem.indexOf(lerTema()) + 1) % 3]; try { localStorage.setItem(TEMA_KEY, t); } catch (e) { } aplicarTema(t); toast('Tema: ' + TEMA_NOME[t]); });
   $('avisoMigraFechar').addEventListener('click', () => { $('avisoMigra').hidden = true; });
   $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
   $('pit').addEventListener('input', e => { PIT = +e.target.value; draw3d(false); });
   $('btnResumo').addEventListener('click', () => copiar(resumo(), 'Resumo copiado'));
-  $('btnSvg').addEventListener('click', () => { if (VIEW === '3d') return; copiar(VIEW === 'corte' ? svgCorte(CUR, { pxW: 1400 }, THEME) : planSVG(CUR, { pxW: 1400 }, THEME), 'SVG copiado'); });
+  /* o desenho exportado sai sempre com as cores do tema claro, como no papel */
+  $('btnSvg').addEventListener('click', () => { if (VIEW === '3d' || !CUR) return; const C = temaClaro(); copiar(VIEW === 'corte' ? svgCorte(CUR, { pxW: 1400 }, C) : planSVG(CUR, { pxW: 1400 }, C), 'SVG copiado'); });
   $('btnImg').addEventListener('click', gerarImagem);
   $('btnPrint').addEventListener('click', imprimir);
-  $('modalClose').addEventListener('click', () => $('modal').hidden = true);
-  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('modal').hidden = true; });
+  $('modalClose').addEventListener('click', () => fecharDialogo('modal'));
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') fecharDialogo('modal'); });
+  $('btnAmpliar').addEventListener('click', abrirZoom);
+  $('btnAjustar').addEventListener('click', () => fecharDialogo('zoom'));
+  $('zMais').addEventListener('click', () => zoomPor(1.4));
+  $('zMenos').addEventListener('click', () => zoomPor(1 / 1.4));
+  ligarPinca();
+  document.addEventListener('keydown', e => {
+    const aberto = ['zoom', 'modal'].find(id => !$(id).hidden); if (!aberto) return;
+    if (e.key === 'Escape') { e.preventDefault(); fecharDialogo(aberto); return; }
+    if (e.key === 'Tab') prenderFoco(e, $(aberto));
+  });
   CV3 = $('cv3');
   let drag = null;
   CV3.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: YAW, pit: PIT }; CV3.setPointerCapture(e.pointerId); });
@@ -3235,7 +3339,9 @@ function bind() {
   CV3.addEventListener('pointerup', end); CV3.addEventListener('pointercancel', end);
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
   if (mq.addEventListener) mq.addEventListener('change', () => { THEME = null; renderTypes(); render(); });
-  new MutationObserver(() => { THEME = null; renderTypes(); render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  /* só redesenha quando o tema mudou de fato (a exportação troca para o claro e volta na mesma hora) */
+  let temaVisto = document.documentElement.getAttribute('data-theme');
+  new MutationObserver(() => { const t = document.documentElement.getAttribute('data-theme'); if (t === temaVisto) return; temaVisto = t; THEME = null; renderTypes(); render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 }
 
 const ehCelular = () => window.matchMedia('(max-width: 699px)').matches;
@@ -3246,15 +3352,23 @@ function mostrarPainel(p) {
   document.querySelectorAll('#mnav button').forEach(b => b.setAttribute('aria-selected', b.dataset.p === p));
   if (ehCelular()) window.scrollTo({ top: 0 });
   if (p === 'desenho') draw3d(true);
+  if (p === 'verif' && SOL_PEND && SOL_PEND === CUR) agendarSol(CUR);
 }
 /* tema: automático (segue o aparelho), claro ou escuro; guardado só neste navegador */
 const TEMA_NOME = { auto: 'automático (segue o aparelho)', light: 'claro', dark: 'escuro' };
+const TEMA_ICO = {
+  auto: '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+  light: '<circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  dark: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z" fill="currentColor"/>'
+};
 function lerTema() { try { const t = localStorage.getItem(TEMA_KEY); return t === 'light' || t === 'dark' ? t : 'auto'; } catch (e) { return 'auto'; } }
 function aplicarTema(t) {
   const root = document.documentElement;
   if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
-  const txt = $('temaTxt'), b = $('btnTema');
+  const txt = $('temaTxt'), b = $('btnTema'), ico = $('temaIco');
   if (txt) txt.textContent = { auto: 'Automático', light: 'Claro', dark: 'Escuro' }[t];
+  /* o ícone mostra o tema ativo também no celular, onde o texto fica escondido: meio círculo = automático, sol = claro, lua = escuro */
+  if (ico) ico.innerHTML = TEMA_ICO[t];
   if (b) { b.setAttribute('aria-label', 'Tema: ' + TEMA_NOME[t] + '. Toque para trocar.'); b.title = 'Tema: ' + TEMA_NOME[t]; }
 }
 
@@ -3270,18 +3384,45 @@ function renderTypes() {
    (sem isso, um erro antigo de um campo escondido voltava a travar o app quando o campo reaparecia) */
 function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) { el.value = v; delete BAD[id]; el.classList.remove('err'); } }
 
-function falha(msg) {
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/* campo marcado pelo erro de entrada que veio do núcleo (RangeError com .campo, a chave do estado) */
+let CAMPO_ERR = null;
+function marcarCampo(campo) {
+  if (CAMPO_ERR && CAMPO_ERR !== campo && !BAD[CAMPO_ERR]) { const v = $(CAMPO_ERR); if (v) { v.classList.remove('err'); v.removeAttribute('aria-invalid'); v.removeAttribute('aria-describedby'); } }
+  CAMPO_ERR = null;
+  const el = campo ? $(campo) : null;
+  if (!el || !/^(INPUT|SELECT)$/.test(el.tagName)) return null;
+  CAMPO_ERR = campo; el.classList.add('err'); el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', 'erroDados');
+  const d = el.closest('details'); if (d) d.open = true;
+  return el;
+}
+/* resumo fixo do celular: o botão é sempre o mesmo nó; aqui só trocam o texto, a classe e o destino */
+function miniRes(html, chip, rotulo, destino) {
+  $('miniTxt').innerHTML = html;
+  const b = $('miniBtn'); b.className = 'chip ' + chip; b.textContent = rotulo; b.hidden = !rotulo;
+  b.dataset.p = destino && destino.p || ''; b.dataset.campo = destino && destino.campo || '';
+}
+function falha(msg, campo) {
   CUR = null;
   FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
   ['tiles', 'memo', 'checks', 'legend', 'quant'].forEach(id => { $(id).innerHTML = ''; });
+  const el = marcarCampo(campo || (Object.keys(BAD).find(id => $(id) && !$(id).closest('[hidden]')) || null));
+  /* a mensagem fica no painel Dados, logo abaixo do campo com problema (ou no topo, se o erro não é de um campo) */
+  const box = $('erroDados');
+  box.innerHTML = '<b>Não dá para calcular com essas medidas.</b> ' + esc(msg);
+  const fld = el && el.closest('.field');
+  if (fld) fld.after(box); else $('ctrl').before(box);
+  box.hidden = false;
   $('stage').dataset.view = 'erro';
-  $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
-  $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Entrada ou configuração inválida';
-  $('statusChip').className = 'chip bad'; $('statusChip').textContent = 'Medidas inválidas'; $('statusChip').setAttribute('aria-label', 'Medidas inválidas: veja a mensagem no desenho.');
+  $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + esc(msg) + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
+  $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Medidas inválidas';
+  $('checks').innerHTML = '<li class="ck bad"><span class="pill">erro</span><div class="cb"><div class="cn">Entrada</div><div class="cnote">' + esc(msg) + '</div></div></li>';
+  $('statusChip').className = 'chip bad'; $('statusChip').textContent = 'Medidas inválidas'; $('statusChip').setAttribute('aria-label', 'Medidas inválidas: ' + msg);
   $('navBadge').hidden = false; $('navBadge').className = 'badge'; $('navBadge').textContent = '!';
-  $('miniRes').innerHTML = '<span class="mr">Não dá para calcular com essas medidas.</span><button type="button" class="chip bad" data-p="desenho">Ver o motivo</button>';
+  miniRes('<span class="mrErr">' + (el ? 'Medida que o app não aceita: a mensagem está embaixo do campo.' : esc(msg)) + '</span>', 'bad', el ? 'Ir ao campo' : '', el ? { campo: el.id } : null);
   $('notaNorma').hidden = true;
-  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = true; });
+  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = true; });
+  $('btnAmpliar').hidden = true;
   $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true; $('viewCorteBar').hidden = true;
 }
 /* opções do número de degraus da curva: de 2 até pelo menos kw (o mínimo do balanceamento pode passar de 6) */
@@ -3310,24 +3451,23 @@ function render(typing) {
   document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
   $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e), cancelada pela edição de 2025, pedia pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
-  document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
-  document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  marcarSelecao();
   $('customNorm').hidden = S.norma !== 'custom';
   /* só conta campo inválido que está à vista e em uso (não oculto, não no automático) */
   const bad = Object.keys(BAD).filter(id => { const el = $(id); if (!el || el.closest('[hidden]')) return false; const f = FIELDS.find(x => x.id === id); return !(f && f.auto && S[f.auto]); });
-  if (bad.length) { const lab = bad.map(id => { const l = document.querySelector('label[for="' + id + '"]'); return l ? l.textContent : id; }); falha('Campo com valor que não é número: ' + lab.join(', ') + '. Use só algarismos, com vírgula para decimal (ex.: 17,5), sem ponto de milhar (escreva 1000, não 1.000).'); return; }
+  if (bad.length) { const lab = bad.map(id => { const l = document.querySelector('label[for="' + id + '"]'); return l ? l.textContent : id; }); falha('Campo com valor que não é número: ' + lab.join(', ') + '. Use só algarismos, com vírgula para decimal (ex.: 17,5), sem ponto de milhar (escreva 1000, não 1.000).', bad[0]); return; }
   let R;
-  try { R = calc(S); } catch (err) { if (!err.patamar) console.error(err); falha(err.message); return; }
+  try { R = calc(S); } catch (err) { if (!err.patamar) console.error(err); falha(err.message, err.campo); return; }
   CUR = R;
-  /* "Como resolver" testa saídas recalculando a escada: só depois que a digitação para */
-  if (!typing) R.resolver(); else { clearTimeout(render.tSol); render.tSol = setTimeout(() => { if (CUR === R) render(); }, 450); }
-  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = false; });
+  marcarCampo(null); $('erroDados').hidden = true;
+  /* "Como resolver" testa saídas recalculando a escada (na helicoidal leva perto de 1 s): roda depois de desenhar, fora da digitação, e fica guardado por estado */
+  if (!solDoCache(R)) agendarSol(R, typing);
+  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = false; });
   /* controles */
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
-  document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#lado button').forEach(b => b.classList.toggle('on', b.dataset.v === S.lado));
-  document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   $('norma').value = S.norma; $('customNorm').hidden = S.norma !== 'custom';
+  $('normaHint').textContent = nomeNorma(S.norma);
   ['cEmin','cEmax','cPmin','cPmax','cBmin','cBmax','cLmin','cHpat','cDw','cLq'].forEach(k => setVal(k, plain(S[k])));
   setVal('zCorte', plain(S.zCorte)); $('showDims').checked = S.showDims !== false; $('showNums').checked = S.showNums !== false;
   document.querySelectorAll('#modoP button').forEach(b => b.classList.toggle('on', b.dataset.v === S.modoPlanta));
@@ -3356,11 +3496,11 @@ function render(typing) {
   const incl = R.incl;
   $('tiles').innerHTML = [
     ['Espelhos', R.N, 'altura ' + fmt(R.e, 2) + ' cm'],
-    ['Pisos', R.nReto + R.nLeque, R.hel ? 'degraus' : [R.nLeque ? R.nReto + ' retos + ' + R.nLeque + (R.bal ? ' balanceados' : ' leques') : 'pisos comuns', R.nPat ? '+ ' + R.nPat + ' patamar' : ''].filter(Boolean).join(' ')],
+    ['Pisos', R.nReto + R.nLeque, R.hel ? 'degraus' : (R.nLeque ? [R.nReto ? R.nReto + ' retos' : '', R.nLeque + (R.bal ? ' balanceados' : ' leques')].filter(Boolean).join(' + ') : 'pisos comuns') + (R.nPat ? ' + ' + R.nPat + (R.nPat > 1 ? ' patamares' : ' patamar') : '')],
     ['Piso', fmt(R.p, 1) + ' cm', R.hel ? 'na linha de caminhamento' : 'profundidade'],
     ['Blondel', fmt(R.bl, 1) + ' cm', '2e + p'],
     ['Inclinação', fmt(incl, 1) + '°', fmt(R.e / R.p * 100, 0) + '%'],
-    ['Em planta', fmt((R.bbox[2] - R.bbox[0]) / 100, 2) + ' × ' + fmt((R.bbox[3] - R.bbox[1]) / 100, 2), R.hel ? 'm · círculo de ' + fmt(R.areaOcup / 10000, 2) + ' m²' : 'm (retângulo) · ocupa ' + fmt(R.areaOcup / 10000, 2) + ' m²'],
+    ['Em planta', metros((R.bbox[2] - R.bbox[0]) / 100) + ' × ' + metros((R.bbox[3] - R.bbox[1]) / 100), R.hel ? 'm · círculo de ' + fmt(R.areaOcup / 10000, 2) + ' m²' : 'm (retângulo) · ocupa ' + fmt(R.areaOcup / 10000, 2) + ' m²'],
   ].map(t => '<div class="tile"><span class="tl">' + t[0] + '</span><span class="tv">' + t[1] + '</span><span class="ts">' + t[2] + '</span></div>').join('');
   const cnt = { ok: 0, warn: 0, bad: 0 }; R.checks.forEach(c => { if (cnt[c.status] !== undefined) cnt[c.status]++; });
   const sev = cnt.bad ? 'bad' : cnt.warn ? 'warn' : 'ok';
@@ -3370,21 +3510,14 @@ function render(typing) {
   $('statusChip').className = 'chip ' + sev; $('statusChip').innerHTML = '<span class="longo">' + $('checkSum').textContent + '</span><span class="curto">' + curto + '</span>';
   $('statusChip').setAttribute('aria-label', 'Verificações: ' + $('checkSum').textContent + '. Ver a lista.');
   const nb = $('navBadge'); nb.hidden = !(cnt.bad + cnt.warn); nb.className = 'badge' + (cnt.bad ? '' : ' warn'); nb.textContent = cnt.bad || cnt.warn;
-  $('miniRes').innerHTML = '<span class="mr"><b>' + R.N + '</b> × <b>' + fmt(R.e, 2) + '</b> cm · piso <b>' + fmt(R.p, 1) + '</b> · Blondel <b>' + fmt(R.bl, 1) + '</b></span><button type="button" class="chip ' + sev + '" data-p="verif">' + curto + '</button>';
+  miniRes('<b>' + R.N + '</b> × <b>' + fmt(R.e, 2) + '</b> cm · piso <b>' + fmt(R.p, 1) + '</b> · Blondel <b>' + fmt(R.bl, 1) + '</b>', sev, curto, { p: 'verif' });
   /* perfis que ainda usam números da NBR 9077:2001 como referência */
   $('notaNorma').hidden = !(R.nm.id === 'res' || R.nm.id === 'mez');
-  const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
-  $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
+  $('checks').innerHTML = checksHTML(R);
   $('memo').innerHTML = R.memo.map(t => '<li>' + t + '</li>').join('');
   $('quant').innerHTML = quantHTML(R);
   $('title').textContent = TIPOS.find(t => t.id === S.tipo).nome;
   $('desc').textContent = TIPOS.find(t => t.id === S.tipo).desc + '. ' + R.nm.nome + '.';
-  /* legenda */
-  const lg = [['sw', 'var(--tread)', 'Degrau reto']];
-  if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', R.bal ? 'Degrau balanceado' : 'Leque']);
-  if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
-  const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
-  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">' + ('Modelo de estudo: ' + (R.placas ? (R.hel ? 'degraus em balanço em volta do pilar' : 'degraus em balanço (placas soltas)') : (R.hel ? 'degraus sobre a laje helicoidal' : 'degraus com o fundo real da laje')) + ' e corrimãos, sem acabamentos.') + ' Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
   $('view3dBar').hidden = VIEW !== '3d';
   $('viewPlantaBar').hidden = VIEW !== 'planta';
   $('viewCorteBar').hidden = VIEW !== 'corte';
@@ -3397,22 +3530,70 @@ function render(typing) {
   $('showCortes').checked = S.showCortes !== false;
   $('btnSvg').hidden = VIEW === '3d' || VIEW === 'explica';
   $('btnImg').hidden = VIEW === 'explica';
-  $('legend').hidden = VIEW === 'explica';
+  $('btnAmpliar').hidden = !(VIEW === 'planta' || VIEW === 'corte');
   mostrarTipo();
   /* palco */
-  $('stage').dataset.view = VIEW;
-  if (VIEW === 'planta') { $('stage').innerHTML = planSVG(R, {}, THEME); }
-  else if (VIEW === 'corte') { $('stage').innerHTML = svgCorte(R, {}, THEME) + '<p class="cap">' + legCorte(R, S.vistaCorte || 'A') + '</p>'; }
-  else if (VIEW === 'explica') { $('stage').innerHTML = explicacao(R, S, THEME); }
-  else { $('stage').innerHTML = ''; $('stage').appendChild(CV3); draw3d(true); }
+  const stg = $('stage');
+  lembrarAbertas();
+  stg.dataset.view = VIEW;
+  let svg = '';
+  if (VIEW === 'planta') { svg = planSVG(R, {}, THEME); stg.innerHTML = svg; }
+  else if (VIEW === 'corte') { svg = svgCorte(R, {}, THEME); stg.innerHTML = svg + '<p class="cap">' + legCorte(R, S.vistaCorte || 'A') + '</p>'; }
+  else if (VIEW === 'explica') { stg.innerHTML = explicacao(R, S, THEME); reabrir(); }
+  else { stg.innerHTML = ''; stg.appendChild(CV3); draw3d(true); }
+  $('legend').innerHTML = VIEW === 'explica' ? '' : legendaHTML(R, svg);
+  $('legend').hidden = !$('legend').innerHTML;
   save();
 }
+/* seções da Explicação: as que a estudante abriu ou fechou continuam assim quando um dado muda (a aba se refaz a cada mudança) */
+let EX_ABERTAS = null;
+function lembrarAbertas() {
+  const ds = $('stage').querySelectorAll('details.ex'); if (!ds.length) return;
+  EX_ABERTAS = {}; ds.forEach((d, i) => { EX_ABERTAS[chaveSecao(d, i)] = d.open; });
+}
+function reabrir() {
+  if (!EX_ABERTAS) return;
+  $('stage').querySelectorAll('details.ex').forEach((d, i) => { const k = chaveSecao(d, i); if (k in EX_ABERTAS) d.open = EX_ABERTAS[k]; });
+}
+/* a chave é o começo do título, até o primeiro número, parêntese ou dois-pontos (alguns títulos mudam com o tipo ou com a medida) */
+function chaveSecao(d, i) { const s = d.querySelector('summary'); const t = s ? s.textContent.replace(/[\d(:].*$/, '').replace(/[:,.\s]+$/, '').slice(0, 40) : ''; return t || 'sec' + i; }
+function marcarSelecao() {
+  document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; });
+  document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; });
+  $('board').setAttribute('aria-labelledby', 'tab-' + VIEW);
+}
+const metros = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const LAB_ST = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
+function checksHTML(R) {
+  return R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + LAB_ST[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
+}
+/* legenda de cada vista: só o que aparece naquele desenho, com as cores daquele desenho */
+function legendaHTML(R, svg) {
+  const it = (marca, txt) => '<span class="lg">' + marca + txt + '</span>';
+  const sw = cor => '<i class="sw" style="background:' + cor + '"></i>';
+  const cores = VIEW === '3d' ? ['var(--t3)', 'var(--w3)', 'var(--p3)'] : ['var(--tread)', 'var(--winder)', 'var(--patamar)'];
+  let lg = it(sw(cores[0]), R.hel ? 'Degrau' : 'Degrau reto');
+  if (R.polys.some(p => p.kind === 'leque')) lg += it(sw(cores[1]), R.bal ? 'Degrau balanceado' : 'Leque');
+  if (R.polys.some(p => p.kind === 'patamar')) lg += it(sw(cores[2]), 'Patamar');
+  if (VIEW === '3d') return lg + '<span class="lg">Modelo de estudo: ' + (R.placas ? (R.hel ? 'degraus em balanço em volta do pilar' : 'degraus em balanço (placas soltas)') : (R.hel ? 'degraus sobre a laje helicoidal' : 'degraus com o fundo real da laje')) + ' e corrimãos, sem acabamentos. Arraste para girar.</span>';
+  if (VIEW === 'planta') {
+    const inf = S.modoPlanta !== 'sup';
+    return lg + it('<i class="ln"></i>', 'Linha de caminhamento') + (R.opening && inf ? it('<i class="ln dash"></i>', 'Vão mínimo na laje') : '') + (inf && S.showCortes !== false ? it('<i class="ln dashdot"></i>', 'Linhas dos cortes A-A e B-B') : '') + '<span class="lg">Cotas em cm.</span>';
+  }
+  const v = S.vistaCorte || 'A';
+  if (v === 'detalhe') return '';
+  if (v === 'perfil') return lg + (/altura livre/.test(svg) ? it('<i class="ln dash acc"></i>', 'Altura livre') : '') + '<span class="lg">Esquema esticado na linha de caminhamento. Cotas em cm.</span>';
+  if (v === 'E') return it('<i class="ln fino"></i>', 'Tudo em vista, em traço fino: nada é cortado') + '<span class="lg">Lado: ' + LADO_NOME[S.ladoElev || 'frente'] + '. Cotas em cm.</span>';
+  return it('<i class="sw hach"></i>', 'Cortado pelo plano (hachura)') + it('<i class="ln fino"></i>', 'Em vista, além do plano (traço fino)') + (/tracejado laranja/.test(svg) ? it('<i class="ln dash acc"></i>', 'Altura livre sobre os degraus cortados') : '') + '<span class="lg">Cotas em cm.</span>';
+}
+const LADO_NOME = { frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' };
 
 /* deixa o tipo escolhido à vista na faixa de tipos, que rola na horizontal */
 function mostrarTipo() {
-  const c = $('tipos'), b = c.querySelector('button.on'); if (!b || c.scrollWidth <= c.clientWidth) return;
+  const c = $('tipos'), b = c.querySelector('button.on'); if (!b || c.scrollWidth <= c.clientWidth) { marcarRolagemTipos(); return; }
   const l = b.offsetLeft - c.offsetLeft;
   if (l < c.scrollLeft || l + b.offsetWidth > c.scrollLeft + c.clientWidth) c.scrollLeft = Math.max(0, l - 12);
+  marcarRolagemTipos();
 }
 /* quantitativos: estimativas da geometria, para orçamento preliminar e para conferir ordem de grandeza */
 function quantHTML(R) {
@@ -3442,7 +3623,7 @@ function legCorte(R, v) {
   const fora = R.st['corte' + v] ? ' A linha foi deslocada ' + fmt(R.st['corte' + v]) + ' cm.' : '';
   if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do pilar, marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
   if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
-  if (v === 'E') return 'Elevação (' + ({ frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' }[S.ladoElev || 'frente']) + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
+  if (v === 'E') return 'Elevação (' + LADO_NOME[S.ladoElev || 'frente'] + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
   if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
   return R.placas ? 'Detalhe do degrau: ampliação dos degraus em balanço (placas soltas, sem laje e com o espelho aberto)' + (R.hel ? ', com o piso medido na linha de caminhamento' : '') + ' e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão' + (R.hel ? ' (na helicoidal, medidos na linha de caminhamento)' : '') + '.';
 }
@@ -3455,41 +3636,149 @@ function draw3d(hq) {
   render3D(CV3, CUR, { yaw: YAW, pitch: PIT }, THEME || getTheme());
 }
 
-function resumo() {
-  CUR.resolver();
-  const R = CUR, t = TIPOS.find(x => x.id === S.tipo);
-  return 'Escada ' + t.nome.toLowerCase() + ' (' + R.nm.nome + ')\n' +
-    'Desnível ' + fmt(R.H) + ' cm · largura ' + fmt(R.L) + ' cm\n' +
-    R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm · ' + R.contagem + ' · piso ' + fmt(R.p, 1) + ' cm · Blondel ' + fmt(R.bl, 1) + ' cm\n' +
-    'Inclinação ' + fmt(R.incl, 1) + '°\n\n' + R.memo.join('\n') + '\n\nVerificações:\n' + R.checks.map(c => '- ' + c.nome + ': ' + c.valor + (c.regra ? ' (ref. ' + c.regra + ')' : '') + ' [' + c.status + ']' + (c.sol ? '\n  Como resolver: ' + c.sol : '')).join('\n');
+/* nome do tipo no meio da frase: "Escada em L com leques" (a letra que dá a forma fica maiúscula) */
+function nomeTipoFrase(t) { return t.nome.toLowerCase().replace(/ ([lucz]) /g, (m, a) => ' ' + a.toUpperCase() + ' '); }
+
+/* ---- "Como resolver": roda depois de desenhar e fica guardado por estado ---- */
+const SOL_CACHE = new Map();
+const SO_TELA = ['modoPlanta', 'showDims', 'showNums', 'showCortes', 'vistaCorte', 'ladoElev', 'corteA', 'corteB', 'zCorte'];
+function chaveSol() { const o = {}; Object.keys(S).sort().forEach(k => { if (SO_TELA.indexOf(k) < 0) o[k] = S[k]; }); return JSON.stringify(o); }
+/* aplica as soluções já calculadas para este estado; devolve false se ainda não há */
+function solDoCache(R) {
+  const sols = SOL_CACHE.get(chaveSol()); if (!sols || sols.length !== R.checks.length) return false;
+  R.checks.forEach((c, i) => { if (sols[i]) c.sol = sols[i]; });
+  R.resolver.feito = true;
+  return true;
+}
+function resolverAgora(R) {
+  if (R.resolver.feito) return;
+  R.resolver();
+  SOL_CACHE.set(chaveSol(), R.checks.map(c => c.sol || null));
+  if (SOL_CACHE.size > 60) SOL_CACHE.delete(SOL_CACHE.keys().next().value);
+}
+let SOL_T = null, SOL_PEND = null;
+function agendarSol(R) {
+  clearTimeout(SOL_T); SOL_PEND = R;
+  /* no celular só calcula quando a lista de verificações está à vista */
+  if (ehCelular() && PAINEL !== 'verif') return;
+  /* espera uma pausa nos cliques e na digitação (cada teste da helicoidal refaz o cálculo inteiro) */
+  SOL_T = setTimeout(() => {
+    const roda = () => { if (CUR !== R || SOL_PEND !== R) return; SOL_PEND = null; resolverAgora(R); $('checks').innerHTML = checksHTML(R); };
+    if (window.requestIdleCallback) requestIdleCallback(roda, { timeout: 800 }); else roda();
+  }, 600);
 }
 
-/* relatório para imprimir ou salvar em PDF: sempre com as cores do tema claro, que é o que sai no papel */
-function montarRelatorio() {
-  if (!CUR) { $('printArea').innerHTML = '<p>Corrija as medidas antes de imprimir: com entrada inválida o app não desenha a escada.</p>'; return; }
-  CUR.resolver();
-  const R = CUR, t = TIPOS.find(x => x.id === S.tipo), root = document.documentElement, antes = root.getAttribute('data-theme');
+/* cores do tema claro, para exportar e imprimir (troca o tema por um instante e volta) */
+function temaClaro() {
+  const root = document.documentElement, antes = root.getAttribute('data-theme');
   root.setAttribute('data-theme', 'light');
   const C = getTheme();
+  if (antes === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', antes);
+  return C;
+}
+
+/* ---- faixa de tipos: degradê na borda que ainda tem tipos para rolar ---- */
+function marcarRolagemTipos() {
+  const c = $('tipos'); if (!c) return;
+  const mais = c.scrollWidth - c.clientWidth > 2;
+  c.classList.toggle('maisDir', mais && c.scrollLeft + c.clientWidth < c.scrollWidth - 2);
+  c.classList.toggle('maisEsq', mais && c.scrollLeft > 2);
+}
+
+/* ---- janelas (imagem gerada e desenho ampliado): foco vai para dentro, Tab fica preso, ao fechar volta para o botão ---- */
+let FOCO_ANTES = null;
+function abrirDialogo(id, foco) {
+  FOCO_ANTES = document.activeElement;
+  $(id).hidden = false;
+  if (id === 'zoom') document.body.classList.add('travado');
+  setTimeout(() => { const f = $(foco); if (f) f.focus(); }, 0);
+}
+function fecharDialogo(id) {
+  $(id).hidden = true;
+  if (id === 'zoom') { document.body.classList.remove('travado'); $('zArea').innerHTML = ''; }
+  if (FOCO_ANTES && document.contains(FOCO_ANTES)) FOCO_ANTES.focus();
+  FOCO_ANTES = null;
+}
+function prenderFoco(e, box) {
+  const fs = [...box.querySelectorAll('a[href],button,input,select,[tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && !x.hidden && x.offsetParent !== null);
+  if (!fs.length) return;
+  const a = fs[0], z = fs[fs.length - 1];
+  if (e.shiftKey && (document.activeElement === a || !box.contains(document.activeElement))) { e.preventDefault(); z.focus(); }
+  else if (!e.shiftKey && (document.activeElement === z || !box.contains(document.activeElement))) { e.preventDefault(); a.focus(); }
+}
+
+/* ---- desenho ampliado: tela cheia com rolagem, pinça (dois dedos), Ctrl + roda do mouse e botões + / − ---- */
+let ZW = 0, ZMIN = 0;
+function abrirZoom() {
+  if (!CUR || !(VIEW === 'planta' || VIEW === 'corte')) return;
+  const area = $('zArea');
+  area.innerHTML = VIEW === 'corte' ? svgCorte(CUR, {}, THEME) : planSVG(CUR, {}, THEME);
+  abrirDialogo('zoom', 'btnAjustar');
+  const svg = area.querySelector('svg'); if (!svg) return;
+  svg.style.maxHeight = 'none';
+  ZMIN = Math.max(200, area.clientWidth - 16);
+  ZW = Math.max(ZMIN * 2, 900);
+  svg.style.width = ZW + 'px'; svg.style.height = 'auto';
+  /* começa no centro do desenho */
+  requestAnimationFrame(() => { area.scrollLeft = (area.scrollWidth - area.clientWidth) / 2; area.scrollTop = (area.scrollHeight - area.clientHeight) / 2; });
+}
+/* muda a largura do desenho mantendo parado o ponto (cx, cy) da área visível */
+function zoomPara(w, cx, cy) {
+  const area = $('zArea'), svg = area.querySelector('svg'); if (!svg) return;
+  const nw = clamp(w, ZMIN, 8000); if (Math.abs(nw - ZW) < 0.5) return;
+  if (cx === undefined) { cx = area.clientWidth / 2; cy = area.clientHeight / 2; }
+  const k = nw / ZW, x = area.scrollLeft + cx, y = area.scrollTop + cy;
+  ZW = nw; svg.style.width = nw + 'px';
+  area.scrollLeft = x * k - cx; area.scrollTop = y * k - cy;
+}
+function zoomPor(k) { zoomPara(ZW * k); }
+function ligarPinca() {
+  const area = $('zArea'); let p0 = null;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  area.addEventListener('touchstart', e => { if (e.touches.length === 2) { const r = area.getBoundingClientRect(); p0 = { d: dist(e.touches), w: ZW, cx: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, cy: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top }; } }, { passive: true });
+  area.addEventListener('touchmove', e => { if (!p0 || e.touches.length !== 2) return; e.preventDefault(); zoomPara(p0.w * dist(e.touches) / p0.d, p0.cx, p0.cy); }, { passive: false });
+  area.addEventListener('touchend', e => { if (e.touches.length < 2) p0 = null; });
+  area.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); const r = area.getBoundingClientRect(); zoomPara(ZW * Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+}
+
+function resumo() {
+  resolverAgora(CUR);
+  const R = CUR, t = TIPOS.find(x => x.id === S.tipo);
+  return 'Escada ' + nomeTipoFrase(t) + ' · perfil: ' + R.nm.nome + '\n' +
+    'Desnível ' + fmt(R.H) + ' cm · largura ' + fmt(R.L) + ' cm\n' +
+    R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm · ' + R.contagem + ' · piso ' + fmt(R.p, 1) + ' cm · Blondel ' + fmt(R.bl, 1) + ' cm\n' +
+    'Inclinação ' + fmt(R.incl, 1) + '°\n\n' + R.memo.join('\n') + '\n\nVerificações:\n' + R.checks.map(c => '- ' + c.nome + ': ' + c.valor + (c.regra ? ' · referência: ' + c.regra : '') + ' [' + LAB_ST[c.status] + ']' + (c.sol ? '\n  Como resolver: ' + c.sol : '')).join('\n');
+}
+
+/* relatório para imprimir ou salvar em PDF: sempre com as cores do tema claro, que é o que sai no papel.
+   Sem a opção "incluir explicação completa", leva só o Resumo, o Passo a passo e a Tabela de degraus. */
+const EX_CURTA = ['Resumo', 'Passo a passo', 'Tabela de degraus'];
+function montarRelatorio() {
+  if (!CUR) { $('printArea').innerHTML = '<p>Corrija as medidas antes de imprimir: com entrada inválida o app não desenha a escada.</p>'; return; }
+  resolverAgora(CUR);
+  const R = CUR, t = TIPOS.find(x => x.id === S.tipo);
+  const C = temaClaro();
   const hoje = new Date().toLocaleDateString('pt-BR');
-  const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
+  const lado = S.ladoElev || 'frente';
   const tiles = [['Espelhos', R.N + ' × ' + fmt(R.e, 2) + ' cm'], ['Piso', fmt(R.p, 1) + ' cm'], ['Blondel (2e + p)', fmt(R.bl, 1) + ' cm'], ['Inclinação', fmt(R.incl, 1) + '°'], ['Largura útil', fmt(R.L) + ' cm'], ['Superfícies', R.contagem]];
-  let h = '<h1>Escada ' + t.nome.toLowerCase().replace(' l ', ' L ').replace(' u ', ' U ') + '</h1>';
+  let h = '<h1>Escada ' + nomeTipoFrase(t) + '</h1>';
   h += '<p class="sub">Desnível de ' + fmt(R.H) + ' cm · ' + R.nm.nome + ' · gerado pelo Patamar em ' + hoje + '</p>';
   h += '<div class="ptiles">' + tiles.map(x => '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>').join('') + '</div>';
-  h += '<figure>' + planSVG(R, { modo: 'inf', cortes: true }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso e as linhas dos cortes A-A e B-B.</figcaption></figure>';
-  h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
+  h += '<figure class="grande">' + planSVG(R, { modo: 'inf', cortes: true }, C) + '<figcaption>Planta do pavimento inferior, com corte a ' + fmt(R.zc, 0) + ' cm do piso e as linhas dos cortes A-A e B-B.</figcaption></figure>';
   h += '<div class="quebra"></div><figure>' + corteSVG(R, {}, C, 'A') + '<figcaption>Corte A-A, marcado na planta.</figcaption></figure>';
   h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
-  h += '<figure>' + elevacaoSVG(R, {}, C, S.ladoElev || 'direita') + '<figcaption>Elevação: a escada vista de fora, sem cortar nada.</figcaption></figure>';
+  h += '<div class="quebra"></div><figure>' + elevacaoSVG(R, {}, C, lado) + '<figcaption>Elevação (' + LADO_NOME[lado] + '): a escada vista de fora, sem cortar nada.</figcaption></figure>';
+  h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
   const det = detalheSVG(R, {}, C); if (det) h += '<figure>' + det + '<figcaption>Detalhe do degrau.</figcaption></figure>';
-  h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('') + '</ul>';
+  h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + checksHTML(R) + '</ul>';
   h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
   h += '<h2>Quantitativos (estimativa)</h2>' + quantHTML(R);
-  h += '<div class="quebra"></div><h2>Explicação</h2>' + explicacao(R, S, C).replace(/<details class="ex"( open)?>/g, '<details class="ex" open>');
+  const tmp = document.createElement('div'); tmp.innerHTML = explicacao(R, S, C);
+  const completa = $('printExp').checked;
+  tmp.querySelectorAll('details.ex').forEach(d => { const tt = (d.querySelector('summary') || {}).textContent || ''; if (!completa && !EX_CURTA.some(k => tt.indexOf(k) === 0)) d.remove(); else d.open = true; });
+  h += '<div class="quebra"></div><h2>Explicação' + (completa ? '' : ' (resumo, passo a passo e tabela de degraus)') + '</h2>' + tmp.innerHTML;
   h += '<p class="rodape">' + $('aviso').textContent + '</p>';
   $('printArea').innerHTML = h;
-  if (antes === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', antes);
 }
 function imprimir() { montarRelatorio(); setTimeout(() => window.print(), 50); }
 
@@ -3500,10 +3789,12 @@ function copiar(txt, msg) {
   try { navigator.clipboard.writeText(txt).then(() => toast(msg), fallback); } catch (e) { fallback(); }
 }
 
+/* imagem PNG do desenho à vista, sempre no tema claro (fundo de papel), qualquer que seja o tema da tela */
 function gerarImagem() {
-  const T = THEME || getTheme();
-  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? (S.vistaCorte === 'E' ? 'elevacao-' + (S.ladoElev || 'frente') : 'corte-' + (S.vistaCorte || 'A')) : VIEW) + '.png'; $('modal').hidden = false; };
-  if (VIEW === '3d') { draw3d(true); done(CV3.toDataURL('image/png')); return; }
+  if (!CUR) return;
+  const T = temaClaro();
+  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? (S.vistaCorte === 'E' ? 'elevacao-' + (S.ladoElev || 'frente') : 'corte-' + (S.vistaCorte || 'A')) : VIEW) + '.png'; abrirDialogo('modal', 'modalDl'); };
+  if (VIEW === '3d') { const c = document.createElement('canvas'); c.width = 1600; c.height = 1248; render3D(c, CUR, { yaw: YAW, pitch: PIT }, T); done(c.toDataURL('image/png')); return; }
   const svg = VIEW === 'corte' ? svgCorte(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
   const m = svg.match(/width="(\d+)" height="(\d+)"/); const w = +m[1], h = +m[2];
   const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
@@ -3516,7 +3807,7 @@ window.addEventListener('beforeprint', montarRelatorio);
 window.addEventListener('DOMContentLoaded', () => {
   aplicarTema(lerTema());
   load(); mount(); bind(); renderTypes(); mostrarPainel(PAINEL); render();
-  let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => draw3d(true), 120); });
+  let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { draw3d(true); marcarRolagemTipos(); }, 120); });
   window.addEventListener('hashchange', () => { const before = S.tipo + VIEW; load(); if (S.tipo + VIEW !== before) render(); });
 });
 
