@@ -342,7 +342,7 @@ const DEFAULTS = {
   nAuto: true, N: 16, pAuto: true, p: 29, n1Auto: true, n1: 7,
   lado: 'dir', kLeque: 3, nMeio: 1, nMeioP: 4, nMeioPAuto: true, vao: 10, LpAuto: true, Lp: 100, leque: 'bal',
   D: 220, Dc: 20, nPerAuto: true, nPer: 13,
-  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5, bocel: 'bocel', avanco: 1.5,
+  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5, bocel: 'bocel', avanco: 1.5, estrutura: null,
   zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true, showCortes: true, vistaCorte: 'A', corteA: 0, corteB: 0, ladoElev: 'frente',
   cEmin: 16, cEmax: 18, cPmin: 25, cPmax: 32, cBmin: 63, cBmax: 64, cLmin: 80, cHpat: 320, cDw: 55, cLq: 15,
 };
@@ -392,7 +392,12 @@ function calc(inp) {
   /* borda do degrau: bocel (nariz saliente), espelho inclinado (a quina avança) ou sem saliência */
   if (st.bocel !== undefined && st.bocel !== null && ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) < 0) erro('Borda do degrau: opção inválida. Escolha Bocel, Espelho inclinado ou Sem saliência.');
   const bocelModo = st.bocel || 'bocel';
-  if (bocelModo === 'inclinado' && st.tipo === 'helicoidal') erro('Na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar. Em "Borda do degrau", escolha Bocel (as placas se sobrepõem) ou Sem saliência.');
+  /* estrutura: 'laje' = peça de concreto maciça (laje inclinada, ou helicoidal na caracol); 'balanco' = degraus em balanço,
+     placas soltas presas na parede, numa viga ou no pilar. Sem escolha: helicoidal em balanço, as outras em laje. */
+  if (st.estrutura !== undefined && st.estrutura !== null && ['laje', 'balanco'].indexOf(st.estrutura) < 0) erro('Estrutura: opção inválida. Escolha Laje de concreto ou Degraus em balanço.');
+  const estrutura = st.estrutura || (st.tipo === 'helicoidal' ? 'balanco' : 'laje'), placas = estrutura === 'balanco';
+  if (bocelModo === 'inclinado' && placas && st.tipo !== 'helicoidal') erro('Com degraus em balanço não há espelho para inclinar: as placas ficam soltas. Em "Borda do degrau", escolha Bocel (as placas se sobrepõem) ou Sem saliência.');
+  if (bocelModo === 'inclinado' && st.tipo === 'helicoidal') erro('Na helicoidal o espelho de cada degrau é radial e não se inclina como numa escada reta. Em "Borda do degrau", escolha Bocel (o degrau avança sobre o de baixo) ou Sem saliência.');
   if (bocelModo !== 'sem') {
     const av = Number(st.avanco);
     if (isFinite(av) && av <= 0) erro('Avanço sobre o degrau de baixo precisa ser maior que zero (você digitou ' + fmt(av, 2) + '). Para uma borda sem saliência, escolha "Sem saliência".');
@@ -422,7 +427,7 @@ function calc(inp) {
   let pAlvo;
   if (temFaixa) { const lo = Math.ceil(fP[0] - 1e-9), hi = Math.floor(fP[1] + 1e-9); pAlvo = lo <= hi ? clamp(Math.round(nm.bMid - 2 * e), lo, hi) : clamp(nm.bMid - 2 * e, fP[0], fP[1]); }
   else pAlvo = clamp(nm.bMid - 2 * e, nm.pMin, nm.pMax);
-  const thk = hel ? st.espDegrau : e + st.tLaje;
+  let thk = placas ? st.espDegrau : e + st.tLaje; /* espessura vertical no pé do espelho (helicoidal maciça: ajustada abaixo) */
   const mirror = st.lado === 'esq' && !hel;
 
   const polys = [], walk = [], checks = [], memo = [];
@@ -770,6 +775,8 @@ function calc(inp) {
     dw = Math.min(nm.dw, Leff / 2);
     const rw = rc + dw; /* linha de caminhamento medida a partir da borda interna (o pilar) */
     const pT = st.pAuto ? pAlvo : st.p;
+    /* laje helicoidal maciça: espessura vertical no pé do espelho = e + dv, com dv = tLaje na perpendicular à inclinação */
+    if (!placas) thk = e + st.tLaje * Math.hypot(pT, e) / pT;
     const nPref = Math.max(6, Math.round(2 * PI * rw / pT));
     const nReq = Math.ceil((st.hLivre + thk) / e - 1e-9);
     /* degraus por volta: automático = o maior entre o que dá o piso desejado e o que dá a altura livre; ou escolhido pela estudante */
@@ -803,6 +810,7 @@ function calc(inp) {
     slab = mkSector(R / Math.cos(rad(90 / 16)), R + 50, phiEnd, phiEnd + dir * 90); /* laje fora do furo: o raio interno compensa as cordas do polígono */
     pole = { r: rc, h: H };
     pReal = rw * rad(th);
+    if (!placas) thk = e + st.tLaje * Math.hypot(pReal, e) / pReal;
     helix = { R, rc, rw, th, nPer, nPref, nReq, nPerAuto: st.nPerAuto !== false, dir, phi0, phiEnd, turns: T * th / 360, clearance: nPer * e - thk, Leff, dw };
     rises = [H];
     avail = 0;
@@ -850,7 +858,7 @@ function calc(inp) {
     return z;
   };
   const undX = [];
-  if (!hel) {
+  if (!placas) {
     polys.forEach((pl, i) => {
       const z0 = (pl.k - 1) * e, z1 = pl.k * e;
       if (pl.kind === 'patamar') { const w = pl.x1 - pl.x0; for (let j = 0; j <= 16; j++) { const X = pl.x0 + w * j / 16; undX.push([X, fundoPatamar(i, X - pl.x0)]); } }
@@ -867,7 +875,14 @@ function calc(inp) {
   const saidaDe = i => i + 1 < polys.length ? polys[i + 1].entry : (hel ? null : arrivalPts.slice(0, 2));
   const zBot = (pl, q) => {
     const top = pl.k * e;
-    if (hel) return Math.max(0, top - thk);
+    if (placas) return Math.max(0, top - st.espDegrau);
+    if (hel) {
+      /* laje helicoidal: posição do ponto dentro do setor do degrau pelo ângulo, levada à linha de caminhamento */
+      const o = pl.arc.outer, a0 = Math.atan2(o[0][1], o[0][0]), a1 = Math.atan2(o[o.length - 1][1], o[o.length - 1][0]), aq = Math.atan2(q[1], q[0]);
+      const dif = (a, b) => { let d = a - b; while (d > PI) d -= 2 * PI; while (d < -PI) d += 2 * PI; return d; };
+      const tot = dif(a1, a0), f = Math.abs(tot) < 1e-9 ? 0 : clamp(dif(aq, a0) / tot, 0, 1);
+      return Uat(pl.x0 + f * (pl.x1 - pl.x0));
+    }
     if (pl.kind === 'patamar') {
       /* distância perpendicular às arestas de entrada e de saída, só onde o ponto fica dentro da largura delas
          (no patamar do U, o lance que sai está ao lado, e não deve "puxar" a laje do lado do lance que chega) */
@@ -882,7 +897,7 @@ function calc(inp) {
   /* "dente" da chegada: o último espelho sobe até a laje do piso de cima; quando o espelho é maior que a espessura dessa
      laje, a faixa de H − e a H − espLaje precisa existir (viga de borda), senão sobra uma fresta entre o degrau e a laje */
   let dente = null;
-  if (!hel && e > st.espLaje + 1e-9) {
+  if (!hel && !placas && e > st.espLaje + 1e-9) {
     const a0 = arrivalPts[0], a1 = arrivalPts[1], a3 = arrivalPts[3], l = Math.hypot(a3[0] - a0[0], a3[1] - a0[1]) || 1, w = Math.max(st.tLaje, 10);
     const d = [(a3[0] - a0[0]) / l * w, (a3[1] - a0[1]) / l * w];
     dente = { pts: [a0, a1, [a1[0] + d[0], a1[1] + d[1]], [a0[0] + d[0], a0[1] + d[1]]], z0: H - e, z1: H - st.espLaje };
@@ -905,7 +920,7 @@ function calc(inp) {
   const aPisos = polys.reduce((s, pl) => s + areaPl(pl), 0);
   const aEspelhos = riserLen.reduce((s, l) => s + l * e, 0);
   const incPl = pl => pl.kind === 'patamar' ? 1 : Math.hypot(pl.wlen, e) / pl.wlen;
-  const aForma = hel ? 0 : polys.reduce((s, pl) => s + areaPl(pl) * incPl(pl), 0);
+  const aForma = placas ? 0 : polys.reduce((s, pl) => s + areaPl(pl) * incPl(pl), 0);
   const corrimao = polys.reduce((s, pl) => s + (pl.kind === 'patamar' ? pl.wlen : Math.hypot(pl.wlen, e)), 0) + (nm.acess ? 60 : 0);
   const quant = { aPisos, aEspelhos, volConc, aForma, corrimao, riserLen };
 
@@ -957,11 +972,17 @@ function calc(inp) {
   {
     /* avanço com até 2 casas: 1,45 não pode aparecer como "1,5" ao lado de "mínimo 1,5" */
     const av2 = fmt(avanco, 2);
-    const nomeB = hel ? (bocelModo === 'sem' ? 'placas sem sobreposição' : 'cada placa avança ' + av2 + ' cm sobre a de baixo')
+    const nomeB = placas ? (bocelModo === 'sem' ? 'placas sem sobreposição' : 'cada placa avança ' + av2 + ' cm sobre a de baixo')
       : bocelModo === 'bocel' ? 'bocel de ' + av2 + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + av2 + ' cm' : 'sem saliência (espelho reto)';
     if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm de bocel ou de balanço da quina; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
     else if (nm.acess) { const ruim = avanco > 1.5 + TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço máx. 1,5 cm', ruim ? 'bad' : 'ok', ruim ? 'Não atende: a NBR 9050:2020 (6.7.1) limita a projeção do bocel ou da quina a 1,5 cm. (Na prática, uma borda muito saliente pode prender a ponta do pé de quem sobe.)' : 'NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a aresta avança no máximo 1,5 cm; degrau sem saliência também atende.'); }
-    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, balanço da quina do degrau sobre o de baixo com esse mesmo mínimo' + (hel ? '.' : ' (pela nota do 3.10, sem bocel o espelho é obrigatoriamente inclinado).') + ' ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou balanço da quina com o mesmo mínimo' + (hel ? '. ' : ' (nota do 3.10: sem bocel, espelho inclinado). ')) + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, balanço da quina do degrau sobre o de baixo com esse mesmo mínimo' + (placas ? '.' : ' (pela nota do 3.10, sem bocel o espelho é obrigatoriamente inclinado).') + ' ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou balanço da quina com o mesmo mínimo' + (placas ? '. ' : ' (nota do 3.10: sem bocel, espelho inclinado). ')) + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+  }
+  /* degraus em balanço: placas soltas, sem espelho fechado (espelho vazado). NBR 9050:2020, 6.7.1: em rotas acessíveis não
+     podem ser usados degraus com espelhos vazados. */
+  if (placas) {
+    if (nm.acess) chk('vazado', 'Espelho vazado (degraus em balanço)', 'placas sem espelho', 'proibido em rota acessível', 'bad', 'Não atende: a NBR 9050:2020 (6.7.1) não admite degraus com espelho vazado em rotas acessíveis.');
+    else chk('vazado', 'Espelho vazado (degraus em balanço)', 'placas sem espelho', '', 'info', 'Degraus em balanço ficam com o espelho aberto entre uma placa e outra. A NBR 9050:2020 (6.7.1) proíbe isso em rota acessível; fora dela, confira a regra que vale para a sua escada.');
   }
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));
@@ -992,7 +1013,7 @@ function calc(inp) {
     }
   }
   if (hel) {
-    chk('altura', 'Altura livre sob a volta de cima e a chegada', fmt(helix.clearance, 0) + ' cm', 'mín. ' + fmt(st.hLivre, 0) + ' cm', helix.clearance < st.hLivre - 1e-6 ? 'bad' : 'ok', 'Degraus por volta × espelho − espessura do degrau = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk) + '. A laje do piso de cima fica fora do furo, então não passa sobre os degraus.');
+    chk('altura', 'Altura livre sob a volta de cima e a chegada', fmt(helix.clearance, 0) + ' cm', 'mín. ' + fmt(st.hLivre, 0) + ' cm', helix.clearance < st.hLivre - 1e-6 ? 'bad' : 'ok', 'Degraus por volta × espelho − ' + (placas ? 'espessura do degrau = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk) : 'espessura da laje helicoidal no pé do espelho (espelho + laje medida na vertical) = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk, 1)) + '. A laje do piso de cima fica fora do furo, então não passa sobre os degraus.');
     const pPilar = helix.rc * rad(helix.th);
     /* ponta junto ao pilar = raio do pilar × ângulo do degrau; diâmetro mínimo do centro para a ponta de referência */
     const ref = nm.lqMin, dMinC = ref > 0 ? 2 * ref / rad(helix.th) : 0, atende = pPilar >= ref - TOL;
@@ -1048,7 +1069,7 @@ function calc(inp) {
   return {
     st, nm, tipo, hel, H, N, e, T, p: pReal, pInput: p, pAlvo, bl, incl, L, Lp, g, kw, nMeio, dw, thk,
     a, b, avail, nSug, rises, polys, walk, arrival: hel ? arrival : { pts: arrivalPts }, slab: hel ? slab : { pts: slabPts },
-    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente, bocel: bocelModo, avanco,
+    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente, bocel: bocelModo, avanco, estrutura, placas,
     pole, helix, opening, kc, kCut, zc, person, lances: lancesTxt, nReto, nLeque, nPat, contagem, areaOcup, temFaixa, fP, bbox, bboxAll, startEdge, Wtot, checks, memo, mirror,
   };
 }
@@ -1280,10 +1301,10 @@ function sectionSVG(R, o, C) {
   /* terreno */
   s += '<rect x="' + left + '" y="0" width="' + (0 - left) + '" height="' + r2(fs * 2.2) + '" fill="url(#' + hid + ')" stroke="none"/>';
   s += sLine([left, 0], [0, 0], C.ink, 2.4);
-  /* degraus */
-  if (R.hel) {
+  /* degraus: placas soltas (em balanço) ou laje maciça */
+  if (R.placas) {
     R.polys.forEach(pl => {
-      const top = pl.k * e, bot = Math.max(top - R.thk, 0);
+      const top = pl.k * e, bot = Math.max(top - R.st.espDegrau, 0);
       s += '<rect x="' + r2(pl.x0) + '" y="' + r2(-top) + '" width="' + r2(pl.x1 - pl.x0) + '" height="' + r2(top - bot) + '" fill="' + treadFill(pl.kind, C) + '" stroke="' + C.ink + '" stroke-width="1.3" ' + NS + '/>';
     });
   } else {
@@ -1353,7 +1374,7 @@ function sectionSVG(R, o, C) {
   s += dimLine([X + slabR, 0], [X + slabR, H], 1, 0, fs * 2.6, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([0, 0], [X, 0], 0, -1, fs * 2.8, fmt(X, 0) + ' (desenvolvido)', fs, C);
   s += dimLine([left, H - st.espLaje], [left, H], -1, 0, fs * 1.0, 'laje ' + fmt(st.espLaje, 0), fs * 0.8, C);
-  s += sText(left + fs * 0.5, -fs * 5.6, 'degrau: espelho ' + fmt(e, 1) + ' × piso ' + fmt(R.p, 1) + ' cm  ·  ' + fmt(R.incl, 1) + '°' + (R.hel ? '' : '  ·  laje da escada ' + fmt(st.tLaje) + ' cm'), fs * 0.9, C.ink, 'start', 0, 500);
+  s += sText(left + fs * 0.5, -fs * 5.6, 'degrau: espelho ' + fmt(e, 1) + ' × piso ' + fmt(R.p, 1) + ' cm  ·  ' + fmt(R.incl, 1) + '°' + (R.placas ? '  ·  degraus em balanço de ' + fmt(st.espDegrau) + ' cm' : '  ·  laje da escada ' + fmt(st.tLaje) + ' cm'), fs * 0.9, C.ink, 'start', 0, 500);
   const t1 = 'PERFIL DESENVOLVIDO · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
   const t2 = 'esquema ao longo da linha de caminhamento (não é corte A-A) · H ' + fmt(H) + ' · ' + R.N + ' espelhos de ' + fmt(e, 1) + ' · cotas em cm';
   s += titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
@@ -1454,7 +1475,7 @@ function corteSVG(R, o, C, qual, lado) {
     const sai = idx + 1 < R.polys.length ? R.polys[idx + 1].entry : R.arrival.pts.slice(0, 2);
     const ce = [(pl.entry[0][0] + pl.entry[1][0]) / 2, (pl.entry[0][1] + pl.entry[1][1]) / 2], cs2 = [(sai[0][0] + sai[1][0]) / 2, (sai[0][1] + sai[1][1]) / 2];
     const dl = Math.hypot(cs2[0] - ce[0], cs2[1] - ce[1]) || 1, d = ((cs2[0] - ce[0]) * n[0] + (cs2[1] - ce[1]) * n[1]) / dl;
-    const cls = R.hel ? 'placa' : pl.kind === 'patamar' ? 'plano' : d > 0.35 ? 'frente' : d < -0.35 ? 'baixo' : 'lado';
+    const cls = R.placas ? 'placa' : pl.kind === 'patamar' ? 'plano' : d > 0.35 ? 'frente' : d < -0.35 ? 'baixo' : 'lado';
     itens.push({ k: pl.k, kind: pl.kind, ta, tb, top: pl.top, fundo, prof, cls });
   });
   /* junta degraus seguidos do mesmo lance num só contorno: numa elevação não há aresta entre um degrau e o outro
@@ -1526,9 +1547,10 @@ function corteSVG(R, o, C, qual, lado) {
   }
   const lajeRet = (a, b) => b - a > 1e-6 ? '<rect x="' + r2(a) + '" y="' + r2(-H) + '" width="' + r2(b - a) + '" height="' + r2(st.espLaje) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="1.8" ' + NS + '/>' : '';
   if (elev) {
-    /* na elevação nada é cortado: a laje do piso de cima aparece só como as duas linhas da borda, em traço fino */
-    s += sLine([s0, zU], [s1, zU], C.muted, 0.9, '10 4') + sLine([s0, H], [s1, H], C.muted, 0.9, '10 4');
-    s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior (laje em linha tracejada)', fs * 0.72, C.muted, 'start', 0, 500);
+    /* na elevação nada é cortado: a laje do piso de cima aparece em vista, como a faixa da borda dela (traço fino, sem hachura).
+       Ela passa na frente do que fica atrás dela nessa altura; por isso é desenhada depois das vistas da escada. */
+    s += '<rect x="' + r2(s0) + '" y="' + r2(-H) + '" width="' + r2(s1 - s0) + '" height="' + r2(st.espLaje) + '" fill="' + C.piso + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>';
+    s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior: laje de ' + fmt(st.espLaje) + ' cm, em vista', fs * 0.72, C.muted, 'start', 0, 500);
   } else if (furo) {
     s += lajeRet(s0, furo[0]) + lajeRet(furo[1], s1);
     s += sLine([furo[0], zU], [furo[1], zU], C.muted, 0.9) + sLine([furo[0], H], [furo[1], H], C.muted, 0.9);
@@ -1547,7 +1569,7 @@ function corteSVG(R, o, C, qual, lado) {
   /* junta peças vizinhas de degraus consecutivos num só contorno */
   const grupos = [];
   /* na helicoidal os degraus são placas soltas (sem espelho): cada uma tem o próprio contorno */
-  pecas.forEach(pc => { const g = grupos[grupos.length - 1], ult = g && g[g.length - 1]; if (!R.hel && ult && Math.abs(ult.b - pc.a) < 1e-4 && Math.abs(ult.k - pc.k) === 1) g.push(pc); else grupos.push([pc]); });
+  pecas.forEach(pc => { const g = grupos[grupos.length - 1], ult = g && g[g.length - 1]; if (!R.placas && ult && Math.abs(ult.b - pc.a) < 1e-4 && Math.abs(ult.k - pc.k) === 1) g.push(pc); else grupos.push([pc]); });
   grupos.forEach(g => {
     const topo = [], fundo = [];
     g.forEach(pc => { topo.push([pc.a, pc.top], [pc.b, pc.top]); pc.fundo.forEach(q => fundo.push(q)); });
@@ -1621,14 +1643,14 @@ let DTL = 0;
 
 function detalheSVG(R, o, C) {
   o = o || {};
-  const e = R.e, p = R.p, st = R.st, hel = !!R.hel;
+  const e = R.e, p = R.p, st = R.st, hel = !!R.hel, plc = !!R.placas; /* plc: degraus em balanço (placas soltas) */
   const modo = R.bocel || 'bocel', b = modo === 'sem' ? 0 : (R.avanco === undefined ? 1.5 : R.avanco); /* avanço da borda */
   const a = Math.atan2(e, p), ca = Math.cos(a), sa = Math.sin(a), tg = e / p;
   const u = [ca, sa], n = [-sa, ca];
   const add = (P, v, t) => [P[0] + v[0] * t, P[1] + v[1] * t];
   const f2 = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const tl = hel ? 0 : Math.max(0, st.tLaje);
-  const tD = hel ? st.espDegrau : 0;
+  const tl = plc ? 0 : Math.max(0, st.tLaje);
+  const tD = plc ? st.espDegrau : 0;
   const span = Math.max(3.6 * p + 30, 4 * e + 50);
   const fs = clamp(span / 42, 2, 4.5);
   const id = 'dtl' + (++DTL);
@@ -1694,7 +1716,7 @@ function detalheSVG(R, o, C) {
     return [[xr, z1 - tn - 0.9], [xn + 0.5, z1 - tn], [xn, z1 - tn + 0.5], [xn, z1 - 0.45], [xn + 0.45, z1]];
   };
   let zMin = 0, zMax = 4 * e, xMin = -p, xMax = 3 * p + b;
-  if (!hel) {
+  if (!plc) {
     const zc = x => (x - b) * tg;              /* linha dos cantos internos (pé dos espelhos) */
     const zu = x => zc(x) - tl / ca;          /* face inferior da laje: paralela, a tl na perpendicular */
     const prof = [];
@@ -1736,7 +1758,7 @@ function detalheSVG(R, o, C) {
       s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 2), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
     } else { const tx = 'espelho reto, sem saliência'; s += halo(sText(-fs * 0.6, e * 0.5, tx, fs * 0.8, C.muted, 'end', 0, 500)); B(-fs * 0.6 - tW(tx, fs * 0.8), e * 0.5); }
   } else {
-    /* helicoidal: degraus soltos (placas) de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
+    /* degraus em balanço: placas soltas de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
     for (let k = 0; k <= 3; k++) {
       const x0 = (k - 1) * p, x1 = k * p + b, z1 = k * e, z0 = z1 - tD;
       const pts = [[x0 + 0.45, z1], [x1, z1], [x1, z0], [x0 + 0.5, z0], [x0, z0 + 0.5], [x0, z1 - 0.45]];
@@ -1751,7 +1773,7 @@ function detalheSVG(R, o, C) {
   }
   /* espelho e, no degrau 2 (à esquerda do espelho) */
   const xr2 = p + b, dE = Math.min(p * 0.32, fs * 3.5);
-  s += vDim(xr2 - dE, e, 2 * e, 'e ' + f2(e), -1, 0, hel ? p + b : xr2, hel ? p : xr2);
+  s += vDim(xr2 - dE, e, 2 * e, 'e ' + f2(e), -1, 0, plc ? p + b : xr2, plc ? p : xr2);
   /* piso p, de bocel a bocel (degraus 2 e 3) */
   const zp = 3 * e + fs * 1.8;
   s += hDim(p, 2 * p, zp, 'p ' + f2(p), 2 * e, 3 * e);
@@ -1791,7 +1813,7 @@ function detalheSVG(R, o, C) {
 
   /* seção do corrimão junto à parede, em escala, com um diâmetro dentro da faixa do perfil */
   const xw = 2.25 * p;
-  const zTopLim = hel ? Math.min(zn(xw - 4) - e - tD, e - tD) - fs * 2 : (xw - 4 - b) * tg - tl / ca - fs * 1.5;
+  const zTopLim = plc ? Math.min(zn(xw - 4) - e - tD, e - tD) - fs * 2 : (xw - 4 - b) * tg - tl / ca - fs * 1.5;
   const zi = Math.min(zTopLim - fs * 2.2 - 8, -2);
   s += '<rect x="' + r2(xw - 3) + '" y="' + r2(-(zi + 8)) + '" width="3" height="16" fill="url(#' + id + ')" stroke="' + C.ink + '" stroke-width="1.3" ' + NS + '/>';
   const cx = xw + 4 + rr;
@@ -1812,7 +1834,7 @@ function detalheSVG(R, o, C) {
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
-    hel ? (modo === 'sem' ? 'borda: placas sem sobreposição' : 'borda: cada placa avança ' + fmt(b, 2) + ' cm sobre a de baixo')
+    plc ? (modo === 'sem' ? 'borda: placas sem sobreposição' : 'borda: cada placa avança ' + fmt(b, 2) + ' cm sobre a de baixo')
       : (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 2) + ' cm'),
     '  NBR 9077:2001, 4.7.3.1 e: mín. 1,5 cm; NBR 9050:2020, 6.7.1: máx. 1,5 cm',
     R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
@@ -1820,15 +1842,16 @@ function detalheSVG(R, o, C) {
     'altura do corrimão (' + alturas.join(' e ') + ' cm) medida na vertical',
     '  a partir da linha dos bocéis'
   ];
+  if (plc) notas.push('degraus em balanço: sem laje; placas soltas de ' + fmt(tD) + ' cm de espessura, espelho aberto');
+  else if (hel) notas.push('helicoidal maciça: laje helicoidal de ' + fmt(st.tLaje) + ' cm sob os degraus');
   if (hel) {
-    notas.push('helicoidal: sem laje; degraus soltos de ' + fmt(tD) + ' cm de espessura');
     notas.push('piso medido na linha de caminhamento (' + fmt(R.helix.rw, 0) + ' cm do eixo);');
     notas.push('fora dela o piso muda: menor perto do eixo, maior perto da borda');
-  } else notas.push('laje da escada ' + fmt(tl) + ' cm, medida na perpendicular à inclinação');
+  } else if (!plc) notas.push('laje da escada ' + fmt(tl) + ' cm, medida na perpendicular à inclinação');
   const fN = fs * 0.78, lh = fs * 1.35;
   const wN = Math.max.apply(null, notas.map(t => tW(t, fN)));
   const tb1 = 'DETALHE DO DEGRAU · AMPLIADO (use a escala gráfica)';
-  const tb2 = (hel ? 'degrau na linha de caminhamento' : 'três degraus retos típicos, ampliados') + ' · medidas em cm';
+  const tb2 = (hel ? 'degraus na linha de caminhamento' : plc ? 'três degraus em balanço típicos, ampliados' : 'três degraus retos típicos, ampliados') + ' · medidas em cm';
   const wT = Math.max(tW(tb1, fs * 0.95), tW(tb2, fs * 0.8));
   const vx = bb[0] - m;
   const vw = Math.max(bb[2] - bb[0] + 2 * m, wN + 3 * fs, wT + 3 * fs);
@@ -2029,7 +2052,7 @@ function buildFaces(R, C) {
   const sl = R.slab;
   prism(sl.pts, sl.arc ? triOf({ arc: sl.arc, pts: sl.pts }) : fan(sl.pts), R.H - R.st.espLaje, R.H, hexRGB(C.f3));
   /* chegada da helicoidal: placa no nível do piso de cima, com a espessura do degrau */
-  if (R.hel && R.arrival && R.arrival.arc) prism(R.arrival.pts, triOf({ arc: R.arrival.arc, pts: R.arrival.pts }), R.H - R.thk, R.H, col3.patamar || col3.reto);
+  if (R.hel && R.arrival && R.arrival.arc) prism(R.arrival.pts, triOf({ arc: R.arrival.arc, pts: R.arrival.pts }), R.H - (R.placas ? R.st.espDegrau : Math.max(R.st.espLaje, R.st.tLaje)), R.H, col3.patamar || col3.reto);
   /* pilar */
   if (R.pole) { const ring = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 2 * PI; ring.push([R.pole.r * Math.cos(a), R.pole.r * Math.sin(a)]); } prism(ring, fan(ring), 0, R.H - R.st.espLaje, [88, 98, 108]); }
   /* dente da chegada: espelho do último degrau sob a laje do piso de cima (quando o espelho é maior que a laje) */
@@ -2572,7 +2595,7 @@ function explicacao(R, S, C) {
     /* fundo na posição s: o ponto mais baixo do intradorso na fatia do degrau (mesma amostragem do desenho) */
     const fundoEm = (pl, sx) => { const base = [cs.P0[0] + cs.u[0] * sx, cs.P0[1] + cs.u[1] * sx]; let z = pl.top; cortaPoligono(pl.pts, base, cs.u, cs.n).forEach(iv => [iv[0] + 1e-4, (iv[0] + iv[1]) / 2, iv[1] - 1e-4].forEach(d => { z = Math.min(z, R.zBot(pl, [base[0] + cs.n[0] * d, base[1] + cs.n[1] * d])); })); return Math.max(0, z); };
     const veQue = (pl, idx) => {
-      if (R.hel) return 'placa';
+      if (R.placas) return 'placa';
       if (pl.kind === 'patamar') return 'patamar';
       const sai = idx + 1 < R.polys.length ? R.polys[idx + 1].entry : R.arrival.pts.slice(0, 2);
       const ce = [(pl.entry[0][0] + pl.entry[1][0]) / 2, (pl.entry[0][1] + pl.entry[1][1]) / 2], c2 = [(sai[0][0] + sai[1][0]) / 2, (sai[0][1] + sai[1][1]) / 2];
@@ -2581,7 +2604,7 @@ function explicacao(R, S, C) {
     };
     const linhas = R.polys.map((pl, idx) => {
       const sx = pl.pts.map(Sx), a = Math.min.apply(null, sx), b = Math.max.apply(null, sx);
-      const fa = R.hel ? pl.top - R.thk : fundoEm(pl, a + 1e-6), fb = R.hel ? pl.top - R.thk : fundoEm(pl, b - 1e-6);
+      const fa = R.placas ? pl.top - R.st.espDegrau : fundoEm(pl, a + 1e-6), fb = R.placas ? pl.top - R.st.espDegrau : fundoEm(pl, b - 1e-6);
       return [pl.k, f(pl.top, 1), f(fa, 1), f(fb, 1), f(a - x0, 1) + ' a ' + f(b - x0, 1), f(Math.min.apply(null, pl.pts.map(Dq)) - dmin, 0), veQue(pl, idx)];
     });
     let corpo = p('Elevação é a escada vista de fora, de um lado, sem cortar nada. Você não precisa imaginar a escada em pé: cada ponto do desenho tem só duas medidas. A <b>horizontal</b> vem da planta, por uma linha de chamada; a <b>altura</b> vem da conta do degrau (número do degrau × ' + f(R.e, 2) + ' cm). Este roteiro usa a vista <b>' + nomeE + '</b>, a que está escolhida em Cortes › Elevação; troque lá e esta seção se refaz com os números do outro lado.') +
@@ -2589,9 +2612,9 @@ function explicacao(R, S, C) {
         'Posicione a planta: o lado de onde você olha fica virado para baixo, para a elevação. Para a vista ' + nomeE + ', ' + giro + ' (a planta do app tem o 1º lance subindo para o alto do papel). Ponha a elevação embaixo da planta, alinhada.',
         'Na elevação, trace a linha do chão (' + nivel(0) + ') e, acima dela, uma linha fina para cada nível de degrau, de ' + f(R.e, 2) + ' em ' + f(R.e, 2) + ' cm, até ' + nivel(R.H) + '. Para não somar o espelho arredondado, divida a altura por Tales, como no roteiro de desenho à mão.',
         'Da planta já girada, puxe uma linha de chamada vertical de cada canto de degrau até a área da elevação. A posição horizontal de cada canto é a mesma da planta girada; só a altura muda.',
-        R.hel ? 'Cada degrau é uma placa: um retângulo fino da menor à maior chamada dos cantos, do fundo (' + f(R.thk) + ' cm abaixo do topo) até o topo.' : 'Desenhe cada lance como um contorno só: em cima, os dentes (o topo de cada degrau, na altura da tabela); embaixo, a face de baixo da laje, ligando o fundo no começo e no fim de cada degrau (duas colunas da tabela). Num lance visto de lado essa linha é inclinada; num patamar, é horizontal. Dentro da laje não há linha entre um degrau e o outro.',
-        R.hel ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). O pilar fica entre as duas metades: as placas de trás somem atrás dele, entre −' + f(R.helix.rc) + ' e +' + f(R.helix.rc) + ' cm.' : 'A última coluna diz o que se vê de cada degrau. <b>Espelhos</b>: o lance sobe para longe de você, então você vê os espelhos de frente; trace uma linha horizontal no topo de cada degrau. <b>Perfil</b>: o lance corre de lado; você vê o dente de cada degrau e a laje inclinada por baixo. <b>Fundo da laje</b>: o lance sobe na sua direção, então você vê só a face de baixo da laje; desenhe só o contorno, sem linhas de degrau. Onde dois lances se sobrepõem no desenho, vale o de menor distância.',
-        R.hel ? 'Termine com o corrimão, do lado de fora, 92 cm acima da borda de cada placa, a linha tracejada da laje do piso de cima e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.' : 'Termine com o corrimão (a ' + (R.nm.acess ? '92 e 70 cm' : '92 cm') + ' acima dos bocéis), a linha tracejada da laje do piso de cima e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.'
+        R.placas ? 'Cada degrau é uma placa em balanço: um retângulo fino da menor à maior chamada dos cantos, do fundo (' + f(R.st.espDegrau) + ' cm abaixo do topo) até o topo. Entre uma placa e outra o espelho é aberto: não há linha ali.' : 'Desenhe cada lance como um contorno só: em cima, os dentes (o topo de cada degrau, na altura da tabela); embaixo, a face de baixo da laje, ligando o fundo no começo e no fim de cada degrau (duas colunas da tabela). Num lance visto de lado essa linha é inclinada; num patamar, é horizontal. Dentro da laje não há linha entre um degrau e o outro.',
+        R.hel ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). O pilar fica entre as duas metades: os degraus de trás somem atrás dele, entre −' + f(R.helix.rc) + ' e +' + f(R.helix.rc) + ' cm.' : R.placas ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). Como as placas são soltas, entre uma e outra você vê o que está atrás da escada.' : 'A última coluna diz o que se vê de cada degrau. <b>Espelhos</b>: o lance sobe para longe de você, então você vê os espelhos de frente; trace uma linha horizontal no topo de cada degrau. <b>Perfil</b>: o lance corre de lado; você vê o dente de cada degrau e a laje inclinada por baixo. <b>Fundo da laje</b>: o lance sobe na sua direção, então você vê só a face de baixo da laje; desenhe só o contorno, sem linhas de degrau. Onde dois lances se sobrepõem no desenho, vale o de menor distância.',
+        R.hel ? 'Termine com o corrimão, do lado de fora, 92 cm acima da borda de cada degrau, a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.' : 'Termine com o corrimão (a ' + (R.nm.acess ? '92 e 70 cm' : '92 cm') + ' acima dos bocéis), a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.'
       ]) +
       p('<b>Números da vista ' + nomeE + '</b> (cm; a horizontal é medida a partir do ' + (R.hel ? 'eixo do pilar' : 'meio da escada') + ', negativo para a esquerda de quem olha):') +
       tab(['Degrau', 'Topo', 'Fundo no começo', 'Fundo no fim', 'Horizontal', 'Distância', 'Você vê'], linhas);
@@ -2620,9 +2643,10 @@ function explicacao(R, S, C) {
       ['Perfil desenvolvido', 'Não é um corte A-A da edificação: é um esquema da escada esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Serve para ver a sequência de espelhos, a laje da escada, a altura livre (tracejado laranja) e o corrimão' + (nm.acess ? ' a 92 e 70 cm, prolongado 30 cm nas pontas (NBR 9050:2020, 6.9.3.2)' : ' a 92 cm') + ', medido a partir do bocel dos degraus. Para ver a escada como ela é cortada de verdade, use os cortes A-A e B-B.'],
       ['Cortes A-A e B-B', 'Corte é um plano vertical que atravessa a edificação. Na planta ele aparece como uma linha de traço e ponto, com as letras nas pontas e setas que mostram para onde se olha. No desenho do corte, o que o plano atravessa (degraus, laje da escada, laje do piso de cima, chão) aparece hachurado e com traço grosso; o que está além do plano aparece em vista, com traço fino; o que fica atrás de quem olha não aparece. ' + (R.hel ? 'Na helicoidal, A-A e B-B passam pelo centro do pilar, um perpendicular ao outro' : 'O A-A passa ao longo do 1º lance e o B-B atravessa esse lance') + '; você pode deslocar cada linha. Repare na laje de cima: onde a escada passa, ela é interrompida pela abertura.'],
       ['Elevação', 'A escada vista de fora, de um dos lados, sem cortar nada: tudo em traço fino, sem hachura. Mostra contornos e alturas (espelhos, corrimão, patamares). Vista de lado, aparece o contorno da laje inclinada por baixo dos degraus; vista de frente, a laje fica escondida atrás dos degraus. Só o corte mostra a laje atravessada, hachurada. Na aba Cortes você escolhe o lado: frente, direita, esquerda ou fundos.'],
+      ['Estrutura: laje maciça ou degraus em balanço', 'Na laje maciça, os degraus se apoiam numa laje de concreto (inclinada nos lances, horizontal nos patamares e helicoidal na caracol), e o espelho é fechado. Nos degraus em balanço, cada degrau é uma placa presa só de um lado (na parede, numa viga lateral ou no pilar central); embaixo não há laje e o espelho fica aberto. A NBR 9050:2020 (6.7.1) não admite espelho vazado em rota acessível. O cálculo da estrutura (armadura, engaste) não é feito pelo app.'],
       ['Detalhe', 'Ampliação de poucos degraus, com as medidas do espelho, do piso, do bocel e da laje, para mostrar o que a escala da planta não deixa ler.'],
       ['Cotas', 'Todas em centímetros. Níveis em metros: ' + nivel(0) + ' é o piso de baixo e ' + nivel(R.H) + ' o de cima.'],
-      ['3D', 'Modelo para enxergar o conjunto: ' + (R.hel ? 'degraus soltos em volta do pilar, com corrimão do lado de fora' : 'degraus com a face de baixo da laje inclinada de verdade, patamares e corrimãos') + '. Não mostra armadura, revestimento nem acabamentos. Gire arrastando.']
+      ['3D', 'Modelo para enxergar o conjunto: ' + (R.placas ? 'degraus em balanço (placas soltas, sem laje)' : R.hel ? 'degraus sobre a laje helicoidal' : 'degraus com a face de baixo da laje inclinada de verdade e patamares') + (R.hel ? ', pilar e corrimão do lado de fora' : ' e corrimãos') + '. Não mostra armadura, revestimento nem acabamentos. Gire arrastando.']
     ]), false);
 
   /* 9. Erros comuns */
@@ -2759,11 +2783,11 @@ function mount() {
     '<div class="grid2" data-for="helicoidal">' + fieldNum('D', 'Diâmetro externo', 'cm') + fieldNum('Dc', 'Diâmetro do pilar', 'cm') + '</div>' +
     '<div class="field" data-for="helicoidal"><div class="labrow"><label for="nPer">Degraus por volta</label><label class="auto"><input type="checkbox" id="nPerAuto"> automático</label></div><div class="stepper"><button type="button" id="nPerMinus" aria-label="Menos um degrau por volta">−</button><input id="nPer" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="nPerPlus" aria-label="Mais um degrau por volta">+</button></div><p class="hint" id="nPerHint"></p></div>' +
     '<div class="field" data-for="c-patamar z-patamar"><div class="labrow"><label for="nMeioP">Pisos no lance do meio</label><label class="auto"><input type="checkbox" id="nMeioPAuto"> um terço</label></div><div class="inp"><input id="nMeioP" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div></div>' +
-    '<p class="hint" id="semDetalhe" data-for="reta">Esse tipo não tem detalhes extras. Ajuste só as medidas e os degraus.</p></section>' +
+    '<div class="field"><span class="lab" id="estLab">Estrutura</span><div class="seg" id="estrutura" role="group" aria-labelledby="estLab"><button type="button" data-v="laje">Laje de concreto (maciça)</button><button type="button" data-v="balanco">Degraus em balanço</button></div><p class="hint" id="estHint"></p></div></section>' +
     '<details class="card"><summary>Altura livre e laje</summary><div class="grid2" style="margin-top:12px">' +
     fieldNum('hLivre', 'Altura livre mínima', 'cm') + fieldNum('espLaje', 'Laje do piso de cima', 'cm') +
-    '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
-    '<div data-for="helicoidal">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
+    '<div id="tLajeWrap">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
+    '<div id="espDegrauWrap">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
   $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Cortes'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
 }
 function fieldNum(id, label, unit, hint) {
@@ -2797,6 +2821,7 @@ function bind() {
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
+  $('estrutura').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.estrutura = b.dataset.v; render(); });
   $('bocel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bocel = b.dataset.v; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
@@ -2864,10 +2889,14 @@ function render(typing) {
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
   const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
   document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
-  const helB = S.tipo === 'helicoidal';
+  const estM = S.estrutura === 'laje' || S.estrutura === 'balanco' ? S.estrutura : (S.tipo === 'helicoidal' ? 'balanco' : 'laje');
+  document.querySelectorAll('#estrutura button').forEach(b => b.classList.toggle('on', b.dataset.v === estM));
+  $('tLajeWrap').hidden = estM === 'balanco'; $('espDegrauWrap').hidden = estM !== 'balanco';
+  $('estHint').textContent = estM === 'balanco' ? (S.tipo === 'helicoidal' ? 'Cada degrau é uma placa presa no pilar central, sem laje embaixo e com o espelho aberto.' : 'Cada degrau é uma placa presa na parede ou numa viga lateral, sem laje embaixo e com o espelho aberto.') + ' A NBR 9050:2020 (6.7.1) não admite espelho vazado em rota acessível.' : (S.tipo === 'helicoidal' ? 'Uma peça só de concreto: os degraus apoiados numa laje helicoidal, que gira em volta do centro.' : 'Os degraus apoiados numa laje inclinada de concreto, com patamares horizontais.');
+  const helB = estM === 'balanco';
   $('avancoWrap').hidden = bocM === 'sem';
   /* na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar */
-  document.querySelector('#bocel button[data-v="inclinado"]').hidden = helB;
+  document.querySelector('#bocel button[data-v="inclinado"]').hidden = helB || S.tipo === 'helicoidal';
   document.querySelector('#bocel button[data-v="bocel"]').textContent = helB ? 'Placas sobrepostas' : 'Bocel';
   document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
   $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1), no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
@@ -2937,7 +2966,7 @@ function render(typing) {
   if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', R.bal ? 'Degrau balanceado' : 'Leque']);
   if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
   const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
-  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">' + (R.hel ? 'Modelo de estudo: degraus soltos em volta do pilar e corrimão do lado de fora, sem acabamentos.' : 'Modelo de estudo: degraus com o fundo real da laje e corrimãos, sem acabamentos.') + ' Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
+  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">' + ('Modelo de estudo: ' + (R.placas ? (R.hel ? 'degraus em balanço em volta do pilar' : 'degraus em balanço (placas soltas)') : (R.hel ? 'degraus sobre a laje helicoidal' : 'degraus com o fundo real da laje')) + ' e corrimãos, sem acabamentos.') + ' Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
   $('view3dBar').hidden = VIEW !== '3d';
   $('viewPlantaBar').hidden = VIEW !== 'planta';
   $('viewCorteBar').hidden = VIEW !== 'corte';
@@ -2966,9 +2995,9 @@ function quantHTML(R) {
   const linhas = [
     ['Piso dos degraus e patamares', m2(q.aPisos), 'soma das superfícies em planta (revestimento de piso)'],
   ];
-  if (R.hel) linhas[0][2] = 'soma das placas dos degraus; elas se sobrepõem em planta quando a escada dá mais de uma volta';
-  else linhas.push(['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'], ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte']);
-  if (R.hel) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm; pilar fora da conta']);
+  if (R.hel) linhas[0][2] = 'soma dos pisos dos degraus; eles se sobrepõem em planta quando a escada dá mais de uma volta';
+  if (!R.placas) linhas.push(['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'], ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte']);
+  if (R.placas) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm' + (R.hel ? '; pilar fora da conta' : '; apoio na parede ou viga fora da conta')]);
   else {
     linhas.push(['Concreto da escada', fmt(q.volConc / 1e6, 3) + ' m³', 'degraus + laje de ' + fmt(R.st.tLaje) + ' cm, até o chão; sem a laje do piso de cima']);
     linhas.push(['Fôrma do fundo', m2(q.aForma), 'face de baixo da laje inclinada e dos patamares; sem as laterais']);
@@ -2990,7 +3019,7 @@ function legCorte(R, v) {
   if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
   if (v === 'E') return 'Elevação (' + ({ frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' }[S.ladoElev || 'frente']) + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
   if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
-  return R.hel ? 'Detalhe do degrau: ampliação dos degraus soltos da helicoidal (sem laje e sem espelho), com o piso medido na linha de caminhamento e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.';
+  return R.placas ? 'Detalhe do degrau: ampliação dos degraus em balanço (placas soltas, sem laje e com o espelho aberto)' + (R.hel ? ', com o piso medido na linha de caminhamento' : '') + ' e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão' + (R.hel ? ' (na helicoidal, medidos na linha de caminhamento)' : '') + '.';
 }
 function draw3d(hq) {
   if (VIEW !== '3d' || !CUR) return;

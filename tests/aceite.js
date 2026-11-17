@@ -180,7 +180,7 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
 {
   ok(/1,45/.test(calc({avanco:1.45}).checks.find(c=>c.id==='bocel').valor),'avanço 1,45 aparece como 1,45 (não arredonda para 1,5 ao lado do mínimo)');
   let e1=false; try{calc({bocel:'xyz'});}catch(e){e1=!!e.patamar;} ok(e1,'modo de borda inválido dá erro (não vira bocel em silêncio)');
-  let e2=false; try{calc({tipo:'helicoidal',bocel:'inclinado'});}catch(e){e2=!!e.patamar&&/placas soltas/.test(e.message);} ok(e2,'helicoidal não aceita espelho inclinado');
+  let e2=false; try{calc({tipo:'helicoidal',bocel:'inclinado'});}catch(e){e2=!!e.patamar&&/helicoidal/.test(e.message);} ok(e2,'helicoidal não aceita espelho inclinado');
   const hs=calc({tipo:'helicoidal',bocel:'sem'}).checks.find(c=>c.id==='bocel'); ok(/placas/.test(hs.valor) && !/espelho inclinado/.test(hs.nota),'helicoidal: borda descrita como placas, sem falar de espelho inclinado');
   let e3=''; try{calc({bocel:'inclinado',avanco:0});}catch(e){e3=e.message;} ok(/Avanço sobre o degrau de baixo/.test(e3) && /Sem saliência/.test(e3),'avanço zero: mensagem com o nome do campo e a sugestão de "Sem saliência"');
   ok(/nota do 3\.10/.test(calc({bocel:'sem'}).checks.find(c=>c.id==='bocel').nota),'espelho inclinado citado pela nota do 3.10 da NBR 9077:2001');
@@ -224,6 +224,23 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const ph=problemasHTML(calc({tipo:'helicoidal'})); ok(/62,1 cm para ponta de 15 cm/.test(ph) && /29 cm para ponta de 7 cm/.test(ph),'caracol: mesmo diâmetro mínimo da verificação (62,1 e 29 cm)');
   ok(!/9077:2025/.test(ph.replace(/não foi lida|não lida|não foi lido/g,'')) || /2025[^.]*não/.test(ph),'nada atribuído à NBR 9077:2025');
   ok(/class="agora"/.test(problemasHTML(calc({nAuto:false,N:14}))) && !/class="agora"/.test(problemasHTML(calc({norma:'sec'}))),'destaque "nesta escada" só quando há problema');
+}
+/* estrutura: laje maciça x degraus em balanço, em todos os tipos; laje do piso superior na elevação */
+{
+  const hm=calc({tipo:'helicoidal',estrutura:'laje'}); const p6=hm.polys[5]; const c6=p6.pts.reduce((a,q)=>[a[0]+q[0]/p6.pts.length,a[1]+q[1]/p6.pts.length],[0,0]);
+  ok(!hm.placas && hm.zBot(p6,c6)<p6.top-hm.e,'helicoidal maciça: laje helicoidal abaixo do pé do espelho');
+  ok(hm.helix.clearance>=hm.st.hLivre-1e-6 || st(hm,'altura')==='bad','helicoidal maciça: altura livre conta com a laje helicoidal');
+  const rb=calc({tipo:'reta',estrutura:'balanco'}); ok(rb.placas && Math.abs(rb.zBot(rb.polys[5],[50,160])-(rb.polys[5].top-5))<1e-9 && !rb.dente,'reta em balanço: placas de 5 cm, sem dente de chegada');
+  ok(st(calc({tipo:'l-patamar',estrutura:'balanco',norma:'acess',L:120}),'vazado')==='bad','NBR 9050: degraus em balanço (espelho vazado) não atendem (6.7.1)');
+  ok(st(calc({tipo:'reta',estrutura:'balanco'}),'vazado')==='info','fora da NBR 9050: espelho vazado só informado');
+  let eE=false; try{calc({estrutura:'xyz'});}catch(e){eE=!!e.patamar;} ok(eE,'estrutura inválida dá erro');
+  let eB=false; try{calc({estrutura:'balanco',bocel:'inclinado'});}catch(e){eB=!!e.patamar;} ok(eB,'em balanço não há espelho para inclinar');
+  ok(calc({tipo:'helicoidal'}).placas===true && calc({}).placas===false,'padrão: helicoidal em balanço, demais em laje');
+  let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const est of ['laje','balanco']){const X=calc({tipo:t,estrutura:est}); const sv=planSVG(X,{},C)+sectionSVG(X,{},C)+corteSVG(X,{},C,'A')+corteSVG(X,{},C,'B')+elevacaoSVG(X,{},C,'direita')+detalheSVG(X,{},C)+explicacao(X,X.st,C); buildFaces(X,C); if(/NaN|undefined|Infinity/.test(sv)) nan++;}
+  ok(nan===0,'as duas estruturas nos 9 tipos, em todos os desenhos, sem NaN');
+  const ev=elevacaoSVG(calc({}),{},C,'frente'); ok(/<rect x="[^"]+" y="-280" width="[^"]+" height="12" fill="#eee"/.test(ev),'elevação: laje do piso superior desenhada em vista (faixa de 12 cm)');
+  ok(!/laje da escada 0 cm/.test(detalheSVG(calc({estrutura:'balanco'}),{},C)),'detalhe em balanço não fala de laje');
+  const sb=sectionSVG(calc({tipo:'reta',estrutura:'balanco'}),{},C); ok(/degraus em balanço de 5 cm/.test(sb),'perfil: degraus em balanço desenhados como placas');
 }
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}

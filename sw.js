@@ -1,6 +1,6 @@
 /* Service worker do Patamar: guarda o app para abrir sem internet.
    Mudou o app? Troque o número da versão abaixo para o celular baixar de novo. */
-const VERSAO = 'patamar-v6-6';
+const VERSAO = 'patamar-v6-7';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
 self.addEventListener('install', e => {

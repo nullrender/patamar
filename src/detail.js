@@ -11,14 +11,14 @@ let DTL = 0;
 
 function detalheSVG(R, o, C) {
   o = o || {};
-  const e = R.e, p = R.p, st = R.st, hel = !!R.hel;
+  const e = R.e, p = R.p, st = R.st, hel = !!R.hel, plc = !!R.placas; /* plc: degraus em balanço (placas soltas) */
   const modo = R.bocel || 'bocel', b = modo === 'sem' ? 0 : (R.avanco === undefined ? 1.5 : R.avanco); /* avanço da borda */
   const a = Math.atan2(e, p), ca = Math.cos(a), sa = Math.sin(a), tg = e / p;
   const u = [ca, sa], n = [-sa, ca];
   const add = (P, v, t) => [P[0] + v[0] * t, P[1] + v[1] * t];
   const f2 = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const tl = hel ? 0 : Math.max(0, st.tLaje);
-  const tD = hel ? st.espDegrau : 0;
+  const tl = plc ? 0 : Math.max(0, st.tLaje);
+  const tD = plc ? st.espDegrau : 0;
   const span = Math.max(3.6 * p + 30, 4 * e + 50);
   const fs = clamp(span / 42, 2, 4.5);
   const id = 'dtl' + (++DTL);
@@ -84,7 +84,7 @@ function detalheSVG(R, o, C) {
     return [[xr, z1 - tn - 0.9], [xn + 0.5, z1 - tn], [xn, z1 - tn + 0.5], [xn, z1 - 0.45], [xn + 0.45, z1]];
   };
   let zMin = 0, zMax = 4 * e, xMin = -p, xMax = 3 * p + b;
-  if (!hel) {
+  if (!plc) {
     const zc = x => (x - b) * tg;              /* linha dos cantos internos (pé dos espelhos) */
     const zu = x => zc(x) - tl / ca;          /* face inferior da laje: paralela, a tl na perpendicular */
     const prof = [];
@@ -126,7 +126,7 @@ function detalheSVG(R, o, C) {
       s += hDim(0, b, zb, (modo === 'inclinado' ? 'quina ' : 'bocel ') + fmt(b, 2), modo === 'inclinado' ? e : e - tn, modo === 'inclinado' ? 0 : e - tn - 0.9, 'left');
     } else { const tx = 'espelho reto, sem saliência'; s += halo(sText(-fs * 0.6, e * 0.5, tx, fs * 0.8, C.muted, 'end', 0, 500)); B(-fs * 0.6 - tW(tx, fs * 0.8), e * 0.5); }
   } else {
-    /* helicoidal: degraus soltos (placas) de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
+    /* degraus em balanço: placas soltas de espessura espDegrau, vistos na linha de caminhamento; cada placa avança o bocel sobre a de baixo */
     for (let k = 0; k <= 3; k++) {
       const x0 = (k - 1) * p, x1 = k * p + b, z1 = k * e, z0 = z1 - tD;
       const pts = [[x0 + 0.45, z1], [x1, z1], [x1, z0], [x0 + 0.5, z0], [x0, z0 + 0.5], [x0, z1 - 0.45]];
@@ -141,7 +141,7 @@ function detalheSVG(R, o, C) {
   }
   /* espelho e, no degrau 2 (à esquerda do espelho) */
   const xr2 = p + b, dE = Math.min(p * 0.32, fs * 3.5);
-  s += vDim(xr2 - dE, e, 2 * e, 'e ' + f2(e), -1, 0, hel ? p + b : xr2, hel ? p : xr2);
+  s += vDim(xr2 - dE, e, 2 * e, 'e ' + f2(e), -1, 0, plc ? p + b : xr2, plc ? p : xr2);
   /* piso p, de bocel a bocel (degraus 2 e 3) */
   const zp = 3 * e + fs * 1.8;
   s += hDim(p, 2 * p, zp, 'p ' + f2(p), 2 * e, 3 * e);
@@ -181,7 +181,7 @@ function detalheSVG(R, o, C) {
 
   /* seção do corrimão junto à parede, em escala, com um diâmetro dentro da faixa do perfil */
   const xw = 2.25 * p;
-  const zTopLim = hel ? Math.min(zn(xw - 4) - e - tD, e - tD) - fs * 2 : (xw - 4 - b) * tg - tl / ca - fs * 1.5;
+  const zTopLim = plc ? Math.min(zn(xw - 4) - e - tD, e - tD) - fs * 2 : (xw - 4 - b) * tg - tl / ca - fs * 1.5;
   const zi = Math.min(zTopLim - fs * 2.2 - 8, -2);
   s += '<rect x="' + r2(xw - 3) + '" y="' + r2(-(zi + 8)) + '" width="3" height="16" fill="url(#' + id + ')" stroke="' + C.ink + '" stroke-width="1.3" ' + NS + '/>';
   const cx = xw + 4 + rr;
@@ -202,7 +202,7 @@ function detalheSVG(R, o, C) {
   const notas = [
     '2e + p = 2 × ' + f2(e) + ' + ' + f2(p) + ' = ' + f2(2 * e + p) + ' cm (Blondel)',
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
-    hel ? (modo === 'sem' ? 'borda: placas sem sobreposição' : 'borda: cada placa avança ' + fmt(b, 2) + ' cm sobre a de baixo')
+    plc ? (modo === 'sem' ? 'borda: placas sem sobreposição' : 'borda: cada placa avança ' + fmt(b, 2) + ' cm sobre a de baixo')
       : (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 2) + ' cm'),
     '  NBR 9077:2001, 4.7.3.1 e: mín. 1,5 cm; NBR 9050:2020, 6.7.1: máx. 1,5 cm',
     R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
@@ -210,15 +210,16 @@ function detalheSVG(R, o, C) {
     'altura do corrimão (' + alturas.join(' e ') + ' cm) medida na vertical',
     '  a partir da linha dos bocéis'
   ];
+  if (plc) notas.push('degraus em balanço: sem laje; placas soltas de ' + fmt(tD) + ' cm de espessura, espelho aberto');
+  else if (hel) notas.push('helicoidal maciça: laje helicoidal de ' + fmt(st.tLaje) + ' cm sob os degraus');
   if (hel) {
-    notas.push('helicoidal: sem laje; degraus soltos de ' + fmt(tD) + ' cm de espessura');
     notas.push('piso medido na linha de caminhamento (' + fmt(R.helix.rw, 0) + ' cm do eixo);');
     notas.push('fora dela o piso muda: menor perto do eixo, maior perto da borda');
-  } else notas.push('laje da escada ' + fmt(tl) + ' cm, medida na perpendicular à inclinação');
+  } else if (!plc) notas.push('laje da escada ' + fmt(tl) + ' cm, medida na perpendicular à inclinação');
   const fN = fs * 0.78, lh = fs * 1.35;
   const wN = Math.max.apply(null, notas.map(t => tW(t, fN)));
   const tb1 = 'DETALHE DO DEGRAU · AMPLIADO (use a escala gráfica)';
-  const tb2 = (hel ? 'degrau na linha de caminhamento' : 'três degraus retos típicos, ampliados') + ' · medidas em cm';
+  const tb2 = (hel ? 'degraus na linha de caminhamento' : plc ? 'três degraus em balanço típicos, ampliados' : 'três degraus retos típicos, ampliados') + ' · medidas em cm';
   const wT = Math.max(tW(tb1, fs * 0.95), tW(tb2, fs * 0.8));
   const vx = bb[0] - m;
   const vw = Math.max(bb[2] - bb[0] + 2 * m, wN + 3 * fs, wT + 3 * fs);

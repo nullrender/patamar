@@ -224,10 +224,10 @@ function sectionSVG(R, o, C) {
   /* terreno */
   s += '<rect x="' + left + '" y="0" width="' + (0 - left) + '" height="' + r2(fs * 2.2) + '" fill="url(#' + hid + ')" stroke="none"/>';
   s += sLine([left, 0], [0, 0], C.ink, 2.4);
-  /* degraus */
-  if (R.hel) {
+  /* degraus: placas soltas (em balanço) ou laje maciça */
+  if (R.placas) {
     R.polys.forEach(pl => {
-      const top = pl.k * e, bot = Math.max(top - R.thk, 0);
+      const top = pl.k * e, bot = Math.max(top - R.st.espDegrau, 0);
       s += '<rect x="' + r2(pl.x0) + '" y="' + r2(-top) + '" width="' + r2(pl.x1 - pl.x0) + '" height="' + r2(top - bot) + '" fill="' + treadFill(pl.kind, C) + '" stroke="' + C.ink + '" stroke-width="1.3" ' + NS + '/>';
     });
   } else {
@@ -297,7 +297,7 @@ function sectionSVG(R, o, C) {
   s += dimLine([X + slabR, 0], [X + slabR, H], 1, 0, fs * 2.6, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([0, 0], [X, 0], 0, -1, fs * 2.8, fmt(X, 0) + ' (desenvolvido)', fs, C);
   s += dimLine([left, H - st.espLaje], [left, H], -1, 0, fs * 1.0, 'laje ' + fmt(st.espLaje, 0), fs * 0.8, C);
-  s += sText(left + fs * 0.5, -fs * 5.6, 'degrau: espelho ' + fmt(e, 1) + ' × piso ' + fmt(R.p, 1) + ' cm  ·  ' + fmt(R.incl, 1) + '°' + (R.hel ? '' : '  ·  laje da escada ' + fmt(st.tLaje) + ' cm'), fs * 0.9, C.ink, 'start', 0, 500);
+  s += sText(left + fs * 0.5, -fs * 5.6, 'degrau: espelho ' + fmt(e, 1) + ' × piso ' + fmt(R.p, 1) + ' cm  ·  ' + fmt(R.incl, 1) + '°' + (R.placas ? '  ·  degraus em balanço de ' + fmt(st.espDegrau) + ' cm' : '  ·  laje da escada ' + fmt(st.tLaje) + ' cm'), fs * 0.9, C.ink, 'start', 0, 500);
   const t1 = 'PERFIL DESENVOLVIDO · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
   const t2 = 'esquema ao longo da linha de caminhamento (não é corte A-A) · H ' + fmt(H) + ' · ' + R.N + ' espelhos de ' + fmt(e, 1) + ' · cotas em cm';
   s += titleBlock(vx, -fs * 8, vw, fs, t1, t2, C);
@@ -398,7 +398,7 @@ function corteSVG(R, o, C, qual, lado) {
     const sai = idx + 1 < R.polys.length ? R.polys[idx + 1].entry : R.arrival.pts.slice(0, 2);
     const ce = [(pl.entry[0][0] + pl.entry[1][0]) / 2, (pl.entry[0][1] + pl.entry[1][1]) / 2], cs2 = [(sai[0][0] + sai[1][0]) / 2, (sai[0][1] + sai[1][1]) / 2];
     const dl = Math.hypot(cs2[0] - ce[0], cs2[1] - ce[1]) || 1, d = ((cs2[0] - ce[0]) * n[0] + (cs2[1] - ce[1]) * n[1]) / dl;
-    const cls = R.hel ? 'placa' : pl.kind === 'patamar' ? 'plano' : d > 0.35 ? 'frente' : d < -0.35 ? 'baixo' : 'lado';
+    const cls = R.placas ? 'placa' : pl.kind === 'patamar' ? 'plano' : d > 0.35 ? 'frente' : d < -0.35 ? 'baixo' : 'lado';
     itens.push({ k: pl.k, kind: pl.kind, ta, tb, top: pl.top, fundo, prof, cls });
   });
   /* junta degraus seguidos do mesmo lance num só contorno: numa elevação não há aresta entre um degrau e o outro
@@ -470,9 +470,10 @@ function corteSVG(R, o, C, qual, lado) {
   }
   const lajeRet = (a, b) => b - a > 1e-6 ? '<rect x="' + r2(a) + '" y="' + r2(-H) + '" width="' + r2(b - a) + '" height="' + r2(st.espLaje) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="1.8" ' + NS + '/>' : '';
   if (elev) {
-    /* na elevação nada é cortado: a laje do piso de cima aparece só como as duas linhas da borda, em traço fino */
-    s += sLine([s0, zU], [s1, zU], C.muted, 0.9, '10 4') + sLine([s0, H], [s1, H], C.muted, 0.9, '10 4');
-    s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior (laje em linha tracejada)', fs * 0.72, C.muted, 'start', 0, 500);
+    /* na elevação nada é cortado: a laje do piso de cima aparece em vista, como a faixa da borda dela (traço fino, sem hachura).
+       Ela passa na frente do que fica atrás dela nessa altura; por isso é desenhada depois das vistas da escada. */
+    s += '<rect x="' + r2(s0) + '" y="' + r2(-H) + '" width="' + r2(s1 - s0) + '" height="' + r2(st.espLaje) + '" fill="' + C.piso + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>';
+    s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior: laje de ' + fmt(st.espLaje) + ' cm, em vista', fs * 0.72, C.muted, 'start', 0, 500);
   } else if (furo) {
     s += lajeRet(s0, furo[0]) + lajeRet(furo[1], s1);
     s += sLine([furo[0], zU], [furo[1], zU], C.muted, 0.9) + sLine([furo[0], H], [furo[1], H], C.muted, 0.9);
@@ -491,7 +492,7 @@ function corteSVG(R, o, C, qual, lado) {
   /* junta peças vizinhas de degraus consecutivos num só contorno */
   const grupos = [];
   /* na helicoidal os degraus são placas soltas (sem espelho): cada uma tem o próprio contorno */
-  pecas.forEach(pc => { const g = grupos[grupos.length - 1], ult = g && g[g.length - 1]; if (!R.hel && ult && Math.abs(ult.b - pc.a) < 1e-4 && Math.abs(ult.k - pc.k) === 1) g.push(pc); else grupos.push([pc]); });
+  pecas.forEach(pc => { const g = grupos[grupos.length - 1], ult = g && g[g.length - 1]; if (!R.placas && ult && Math.abs(ult.b - pc.a) < 1e-4 && Math.abs(ult.k - pc.k) === 1) g.push(pc); else grupos.push([pc]); });
   grupos.forEach(g => {
     const topo = [], fundo = [];
     g.forEach(pc => { topo.push([pc.a, pc.top], [pc.b, pc.top]); pc.fundo.forEach(q => fundo.push(q)); });
