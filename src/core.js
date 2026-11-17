@@ -20,6 +20,13 @@ const fmt = (n, d) => Number(n).toLocaleString('pt-BR', { minimumFractionDigits:
    Estudo: piso 25, largura 80 e desnível 3,20 m sem patamar são valores usuais, sem norma nacional que os sustente. */
 const NORMAS = {
   res:   { id: 'res',   nome: 'Estudo (valores usuais, sem norma específica)', curto: 'perfil de estudo', eMin: 16, eMax: 18, pMin: 25, pMax: 32, bMin: 63, bMax: 64, Lmin: 80,  hPat: 320, dw: 55, patReto: 0, lqMin: 15, lancoMin: 3, acess: false },
+  /* NBR 9077:2001, 4.7.5.1 (escada secundária: não é rota de fuga, mas pode funcionar como tal): segue 4.7.3 (espelho 16 a 18,
+     Blondel 63 a 64, lanço de 3 a 3,70 m), com ponta de leque de 7 cm e patamar de 80 cm sem a fórmula de 4.7.3.3.
+     4.7.5.2 (exclusivamente de serviço): espelho até 20 cm nas ocupações A a G, sempre com Blondel.
+     Piso: a norma não dá faixa própria; aqui é a que Blondel deixa com o espelho do perfil. Largura de 80 cm: não está na
+     NBR 9077 4.7.5; é o valor das normas dos Bombeiros do PR (NPT 011, 5.7.5.1 b) e de GO (NT 11/2021, 5.7.5.1 b). */
+  sec:   { id: 'sec',   nome: 'NBR 9077:2001, escada secundária (4.7.5.1)', curto: 'escada secundária (NBR 9077:2001, 4.7.5.1)', eMin: 16, eMax: 18, pMin: 27, pMax: 32, bMin: 63, bMax: 64, Lmin: 80, hPat: 370, dw: 55, patReto: 80, patSec: true, lqMin: 7, lancoMin: 3, acess: false },
+  serv:  { id: 'serv',  nome: 'NBR 9077:2001, escada de serviço (4.7.5.2, espelho até 20)', curto: 'escada de serviço (NBR 9077:2001, 4.7.5.2)', eMin: 16, eMax: 20, pMin: 23, pMax: 32, bMin: 63, bMax: 64, Lmin: 80, hPat: 370, dw: 55, patReto: 80, patSec: true, lqMin: 7, lancoMin: 3, acess: false },
   acess: { id: 'acess', nome: 'NBR 9050: conferência dimensional parcial',      curto: 'NBR 9050 (parcial)', eMin: 16, eMax: 18, pMin: 28, pMax: 32, bMin: 63, bMax: 65, Lmin: 120, hPat: 320, dw: 55, patReto: 120, lqMin: 15, lancoMin: 3, acess: true },
 };
 const NMAX = 300; /* limite do aplicativo (capacidade de cálculo), não é norma */
@@ -670,10 +677,10 @@ function calc(inp) {
   chk('lanco', 'Espelhos por lance', lancos.join(' + '), 'mín. ' + fmt(nm.lancoMin) + ' por lance', lMin < nm.lancoMin ? 'bad' : 'ok', lMin < nm.lancoMin ? 'Não atende: lance com ' + lMin + ' espelho(s). Até dois degraus seguidos formam um degrau isolado, que a NBR 9050:2020 (6.7.2) manda evitar; a NBR 9077:2001 (4.7.3.2) pede lance de três degraus no mínimo. ' + (rises.length > 2 && lancos[1] === lMin ? 'O lance curto é o do meio: aumente "Pisos no lance do meio".' : 'Mude a divisão dos lances em "Pisos no 1º lance"' + (rises.length > 2 ? ' ou "Pisos no lance do meio"' : '') + '.') : '');
   if (tipo === 'reta-patamar') {
     const bb2 = 2 * e + p, mn = patRetoMin, ruim = Lp < mn - 1e-6;
-    chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn, 0) + ' cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: patamar curto. ' : '') + (nm.patReto ? 'NBR 9050:2020, 6.8.8: patamar entre lances com pelo menos 120 cm.' : 'NBR 9077:2001, 4.7.3.3 a: (2e + p) × n + p, com n = 1 passo no patamar: 2 × ' + fmt(e, 2) + ' + 2 × ' + fmt(p, 1) + ' = ' + fmt(mn, 1) + ' cm.' + (nm.id === 'custom' ? ' O perfil personalizado não tem limite próprio de patamar.' : '')));
+    chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn, 0) + ' cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: patamar curto. ' : '') + (nm.patSec ? 'Na escada secundária basta patamar de 80 cm, sem a fórmula (NBR 9077:2001, 4.7.5.1 d).' : nm.patReto ? 'NBR 9050:2020, 6.8.8: patamar entre lances com pelo menos 120 cm.' : 'NBR 9077:2001, 4.7.3.3 a: (2e + p) × n + p, com n = 1 passo no patamar: 2 × ' + fmt(e, 2) + ' + 2 × ' + fmt(p, 1) + ' = ' + fmt(mn, 1) + ' cm.' + (nm.id === 'custom' ? ' O perfil personalizado não tem limite próprio de patamar.' : '')));
     chk('patform', 'Fórmula do patamar (NBR 9077:2001, 4.7.3.3 a)', 'n = 1: ' + fmt(bb2 + p, 0) + ' · n = 2: ' + fmt(2 * bb2 + p, 0) + ' · n = 3: ' + fmt(3 * bb2 + p, 0) + ' cm', '(2e + p) × n + p', 'info', 'Comprimentos que dão n passos inteiros no patamar sem quebrar o ritmo da passada. Seu patamar tem ' + fmt(Lp) + ' cm.');
   }
-  if (tipo === 'u-patamar') chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', 'mín. = largura (' + fmt(L) + ' cm)', Lp < L - 1e-6 ? 'bad' : 'ok', (Lp < L - 1e-6 ? 'Não atende: patamar curto. ' : '') + 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).');
+  if (tipo === 'u-patamar') { const mnU = nm.patSec ? 80 : L, rU = Lp < mnU - 1e-6; chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', nm.patSec ? 'mín. 80 cm' : 'mín. = largura (' + fmt(L) + ' cm)', rU ? 'bad' : 'ok', (rU ? 'Não atende: patamar curto. ' : '') + (nm.patSec ? 'Na escada secundária basta patamar de 80 cm, sem a fórmula (NBR 9077:2001, 4.7.5.1 d).' : 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).')); }
   if (tipo === 'l-patamar' || tipo === 'c-patamar' || tipo === 'z-patamar') chk('patprof', tipo === 'l-patamar' ? 'Patamar de canto' : 'Patamares de canto', fmt(L) + ' × ' + fmt(L) + ' cm', 'lados = largura', 'ok', 'Quadrado com lado igual à largura, por construção (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).');
   if (nm.acess && (nLeque || hel)) chk('mudanca', 'Mudança de direção sem patamar', hel ? 'helicoidal' : nLeque + ' leques', 'patamar obrigatório', 'bad', 'Não atende ao perfil NBR 9050: a norma pede patamar nas mudanças de direção. Use um tipo com patamar.');
   if (tipo === 'l-leque' || tipo === 'u-leque') {
@@ -682,7 +689,7 @@ function calc(inp) {
     if (bal) {
       chk('leque', 'Piso dos leques na linha de caminhamento', fmt(p, 1) + ' cm', 'igual ao dos degraus retos', 'ok', 'No balanceamento todos os degraus têm o mesmo piso na linha de caminhamento (NBR 9077:2001, 3.32 e 4.7.9.1 b), então o Blondel da curva é o mesmo dos trechos retos.');
       const pOk = ponta < nm.lqMin - TOL ? 'bad' : 'ok';
-      const refLq = nm.id === 'custom' ? ' Limite digitado por você (a NBR 9077:2001, 4.7.3.1 c, usa 15 cm).' : ' Referência: NBR 9077:2001, 4.7.3.1 c' + (nm.acess ? ', e NBR 9050:2020, 6.8.6 (Figura 75)' : '') + '.';
+      const refLq = nm.id === 'custom' ? ' Limite digitado por você (a NBR 9077:2001, 4.7.3.1 c, usa 15 cm).' : nm.patSec ? ' Referência: NBR 9077:2001, 4.7.5.1 d (escada secundária: ponta de 7 cm no mínimo).' : ' Referência: NBR 9077:2001, 4.7.3.1 c' + (nm.acess ? ', e NBR 9050:2020, 6.8.6 (Figura 75)' : '') + '.';
       chk('ponta', 'Parte mais estreita dos leques (borda interna)', fmt(ponta, 1) + ' cm', 'mín. ' + fmt(nm.lqMin) + ' cm', pOk, (pOk === 'bad' ? 'Não atende: mesmo balanceando ' + lqs.length + ' degraus, a ponta não chega ao mínimo. Aumente a largura, ponha mais pisos retos ' + (tipo === 'u-leque' ? 'no meio ou ' : '') + 'nos lances, ou use patamar.' : 'Balanceamento em ' + lqs.length + ' degraus: a borda interna cresce aos poucos do canto para fora.') + refLq);
       if (kwSubiu) chk('kw', 'Degraus no trecho da curva', kw + ' (você pediu ' + clamp(Math.round(num(st.kLeque, 3)), 2, 6) + ')', 'mín. ' + kwMin, 'info', 'Com piso de ' + fmt(p, 1) + ' cm, a curva da linha de caminhamento (' + fmt(A90, 1) + ' cm) precisa de pelo menos ' + kwMin + ' degraus para manter o piso constante. O app usou ' + kw + '.');
     } else {
@@ -695,12 +702,41 @@ function calc(inp) {
   if (hel) {
     chk('altura', 'Altura livre sob a volta de cima e a chegada', fmt(helix.clearance, 0) + ' cm', 'mín. ' + fmt(st.hLivre, 0) + ' cm', helix.clearance < st.hLivre - 1e-6 ? 'bad' : 'ok', 'Degraus por volta × espelho − espessura do degrau = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk) + '. A laje do piso de cima fica fora do furo, então não passa sobre os degraus.');
     const pPilar = helix.rc * rad(helix.th);
-    chk('pilar', 'Piso junto ao pilar (parte mais estreita)', fmt(pPilar, 1) + ' cm', 'NBR 9077: ≥ ' + fmt(nm.lqMin) + ' cm em lanço curvo', 'warn', 'Na borda do pilar o degrau é bem mais curto que na linha de caminhamento. A NBR 9077:2001 (4.7.3.1 c) pede pelo menos 15 cm na parte mais estreita de lanços curvos, mas o app não sabe se a sua escada está no escopo dessa norma (saídas de emergência) ou se o código local aceita caracol com regra própria. Para aumentar: pilar mais grosso ou menos degraus por volta.');
+    /* ponta junto ao pilar = raio do pilar × ângulo do degrau; diâmetro mínimo do centro para a ponta de referência */
+    const ref = nm.lqMin, dMinC = ref > 0 ? 2 * ref / rad(helix.th) : 0, atende = pPilar >= ref - TOL;
+    chk('pilar', 'Piso junto ao pilar (parte mais estreita)', fmt(pPilar, 1) + ' cm', (nm.patSec ? 'NBR 9077:2001, 4.7.5.1 d: ' : 'NBR 9077:2001, 4.7.3.1 c: ') + '≥ ' + fmt(ref) + ' cm em lanço curvo', atende ? 'ok' : 'warn', atende ? 'A ponta junto ao pilar atende a referência do perfil.' : 'Na borda do pilar o degrau é bem mais curto que na linha de caminhamento. A NBR 9077:2001 pede pelo menos ' + (nm.patSec ? '7 cm na escada secundária (4.7.5.1 d)' : '15 cm em lanço curvo (4.7.3.1 c)') + '. O app mostra como atenção porque não sabe se a sua escada está no escopo dessa norma (a caracol de casa costuma seguir o código de obras do município).');
   }
   if (dw < nm.dw - 1e-9) chk('dw', 'Linha de caminhamento', fmt(dw) + ' cm do lado interno', fmt(nm.dw) + ' cm no perfil', 'info', 'A escada é estreita: a linha passa no eixo (meio da largura). É a regra da NBR 9077:2001 (3.32, nota) para escadas com menos de 1,10 m.');
   if (opening && !hel) chk('laje', 'Vão mínimo na laje superior', fmt(opening.w, 0) + ' × ' + fmt(opening.h, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Cobre os degraus ' + kc + ' a ' + T + ' (a partir do degrau ' + kc + ' o teto ficaria baixo).');
   if (opening && hel) chk('laje', 'Furo mínimo na laje superior', 'Ø ' + fmt(helix.R * 2, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Furo circular na laje, com a chegada no degrau ' + T + '.');
   if (!opening) chk('laje', 'Vão na laje superior', 'não precisa', '', 'info', 'A altura livre fica atendida sem abrir a laje.');
+
+  /* ---- COMO RESOLVER: para cada verificação que não passa, uma saída concreta com os números desta escada ---- */
+  {
+    const nAt = Math.ceil(H / nm.eMax - 1e-9), nAb = Math.floor(H / nm.eMin + 1e-9);
+    const sol = {
+      e: () => e > nm.eMax ? 'Use pelo menos ' + nAt + ' espelhos: o espelho fica com ' + fmt(H / nAt, 2) + ' cm.' + (!nm.acess && nm.eMax < 20 ? ' Se a escada for só de serviço (não é rota de fuga nem rota acessível), o perfil "Escada de serviço" aceita até 20 cm (NBR 9077:2001, 4.7.5.2), sempre com Blondel.' : '')
+        : 'Use no máximo ' + Math.max(2, nAb) + ' espelhos: o espelho fica com ' + fmt(H / Math.max(2, nAb), 2) + ' cm.',
+      p: () => hel ? 'O piso na linha de caminhamento muda com os degraus por volta e com o diâmetro: ' + (pReal < nm.pMin ? 'mais diâmetro ou menos degraus por volta aumentam o piso.' : 'menos diâmetro ou mais degraus por volta diminuem o piso.')
+        : temFaixa ? 'Com este espelho, o piso que atende piso e Blondel vai de ' + fmt(fP[0], 1) + ' a ' + fmt(fP[1], 1) + ' cm. Marque "pela fórmula" no piso.' : null,
+      blondel: () => {
+        if (hel) return temFaixa ? 'Na helicoidal o piso é o da linha de caminhamento: ajuste "Degraus por volta" (ou o diâmetro) até ele ficar entre ' + fmt(fP[0], 1) + ' e ' + fmt(fP[1], 1) + ' cm.' : 'Com este espelho nenhum piso fecha Blondel no perfil: mude o número de espelhos.';
+        if (temFaixa) return 'Com este espelho, o piso deve ficar entre ' + fmt(fP[0], 1) + ' e ' + fmt(fP[1], 1) + ' cm.';
+        const bons = []; for (let n = Math.max(2, nAt - 2); n <= nAb + 2 && bons.length < 3; n++) { const f2 = faixaP(H / n, nm); if (f2[0] <= f2[1] + 1e-9 && H / n >= nm.eMin - TOL && H / n <= nm.eMax + TOL) bons.push(n + ' espelhos (' + fmt(H / n, 2) + ' cm, piso de ' + fmt(f2[0], 1) + ' a ' + fmt(f2[1], 1) + ')'); }
+        return bons.length ? 'Números de espelhos que fecham Blondel: ' + bons.join('; ') + '.' : 'Com este desnível nenhum número de espelhos fecha espelho, piso e Blondel ao mesmo tempo no perfil escolhido.';
+      },
+      L: () => 'Faltam ' + fmt(nm.Lmin - L, 1) + ' cm de largura.' + (hel ? ' Na helicoidal a largura é o raio menos o do pilar: aumente o diâmetro externo.' : '') + (nm.acess ? '' : ' Em escada secundária ou privativa, as normas dos Bombeiros do PR e de GO usam 0,80 m; confira a regra que vale para a sua escada.'),
+      patamar: () => { const nl = Math.ceil(H / nm.hPat - 1e-9); return 'Com lances de até ' + fmt(nm.hPat) + ' cm, este desnível pede pelo menos ' + nl + ' lances, ou seja, ' + (nl - 1) + (nl - 1 === 1 ? ' patamar.' : ' patamares.') + (rises.length === 1 ? ' Escolha um tipo com patamar.' : (nl - 1 > rises.length - 1 ? ' Este tipo tem ' + (rises.length - 1) + '; escolha um com mais patamares (Em C ou Em Z têm dois).' : ' Divida os lances por igual em "Pisos no 1º lance".')); },
+      lanco: () => 'Cada lance precisa de pelo menos ' + nm.lancoMin + ' espelhos. Marque "dividir ao meio" em "Pisos no 1º lance"' + (rises.length > 2 ? ' e "um terço" em "Pisos no lance do meio"' : '') + '. Se o desnível é pequeno demais para isso (menos de ' + fmt(3 * nm.eMin) + ' cm), troque por rampa: a NBR 9077:2001 (4.6.1 c) manda usar rampa abaixo de 0,48 m.',
+      patprof: () => 'Aumente o patamar para pelo menos ' + fmt(tipo === 'u-patamar' ? (nm.patSec ? 80 : L) : patRetoMin, 0) + ' cm (marque o automático).',
+      ponta: () => bal ? 'Para a ponta crescer: mais pisos retos antes e depois da curva (mais desnível ou menos pisos no meio), escada mais larga, ou um tipo com patamar na curva.' + (nm.patSec ? '' : ' Se a escada for secundária, a NBR 9077:2001 (4.7.5.1 d) aceita ponta de 7 cm (perfil "Escada secundária").') : 'Em "Detalhes do tipo", escolha Balanceados.',
+      pilar: () => { const up = v => fmt(Math.ceil(v * 10 - 1e-9) / 10, 1), th = rad(helix.th), n2 = Math.max(4, helix.nPer - 2); return 'Com ' + helix.nPer + ' degraus por volta, o centro precisa de Ø ' + up(2 * 15 / th) + ' cm para a ponta ter 15 cm, ou Ø ' + up(2 * 7 / th) + ' cm para 7 cm (escada secundária, NBR 9077:2001, 4.7.5.1 d). Com ' + n2 + ' degraus por volta bastaria Ø ' + up(2 * 15 / (2 * PI / n2)) + ' cm para 15 cm, mas o piso cresce e a altura livre cai. Se a escada é privativa de uma casa, quem diz se a caracol de pilar fino é aceita é o código de obras do município, que o app não conhece.'; },
+      altura: () => 'Use pelo menos ' + helix.nReq + ' degraus por volta (marque "automático"), ou espelho mais alto, ou degrau mais fino.',
+      bocel: () => nm.acess ? 'Reduza o avanço para 1,5 cm ou escolha "Sem saliência".' : 'Use bocel ou espelho inclinado com avanço de 1,5 cm.',
+      mudanca: () => 'Use um tipo com patamar na curva: Em L com patamar, Em U com patamar, Em C ou Em Z.',
+    };
+    checks.forEach(c => { if ((c.status === 'bad' || c.status === 'warn') && sol[c.id]) { const t = sol[c.id](); if (t) c.sol = t; } });
+  }
 
   /* ---- memória de cálculo ---- */
   const incl = deg(Math.atan(e / pReal));

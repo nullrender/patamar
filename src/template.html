@@ -134,6 +134,8 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .cn{font-size:14px;font-weight:500}
 .cv{font-size:13px;color:var(--muted)} .cv b{font-family:var(--mono);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
 .cnote{font-size:13px;margin-top:2px}
+.csol{font-size:13px;margin-top:4px;padding:4px 8px;border-left:2px solid var(--accent);background:var(--paper)}
+.agora{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 5px;margin-left:6px}
 .memo{counter-reset:m;font-size:14px}
 .memo li{counter-increment:m;padding-left:30px;position:relative}
 .memo li::before{content:counter(m);position:absolute;left:0;top:1px;font:500 12px/1.6 var(--mono);color:var(--muted);width:22px;text-align:right}
@@ -275,7 +277,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
       <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
     </div>
     <section class="card"><h2>Quantitativos (estimativa)</h2><div id="quant"></div></section>
-    <p class="note" id="aviso">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021), conferidos no texto da norma em 16/11/2026. O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001; a edição de 2025 da NBR 9077 não foi lida. Piso mínimo de 25 cm, largura de 80 cm e desnível de 3,20 m sem patamar, no perfil Estudo, não têm norma nacional que os sustente. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
+    <p class="note" id="aviso">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021), conferidos no texto da norma em 16/11/2026. O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001; a edição de 2025 da NBR 9077 não foi lida. Piso mínimo de 25 cm, largura de 80 cm e desnível de 3,20 m sem patamar, no perfil Estudo, não têm norma nacional que os sustente. Os perfis Escada secundária e Escada de serviço seguem a NBR 9077:2001, 4.7.5. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
   </div>
 </main>
 <div hidden><canvas id="cv3" width="800" height="600" aria-label="Vista 3D da escada"></canvas></div>

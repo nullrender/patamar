@@ -206,6 +206,17 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const he=calc({tipo:'helicoidal',ladoElev:'esquerda'}); const xe=explicacao(he,he.st,C); ok(/−110 × sen\(ângulo\)/.test(xe) && !/-450/.test(xe) && /214,6°/.test(xe),'helicoidal: fórmula com o sinal da vista e ângulos de 0 a 360°');
   let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){const X=calc({tipo:t,ladoElev:l}); if(/NaN|undefined|Infinity/.test(explicacao(X,X.st,C))) nan++;} ok(nan===0,'roteiro da elevação sem NaN nos 9 tipos e 4 lados');
 }
+/* perfis de escada secundária e de serviço (NBR 9077:2001, 4.7.5) e "Como resolver" */
+{
+  const sc=calc({norma:'sec',tipo:'l-leque',H:180}); ok(sc.nm.lqMin===7 && st(sc,'ponta')==='ok','secundária: ponta de leque de 7 cm (4.7.5.1 d)');
+  ok(st(calc({norma:'sec',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='ok' && st(calc({norma:'res',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='bad','secundária: patamar de 80 cm basta (sem a fórmula)');
+  ok(st(calc({norma:'serv',H:280,nAuto:false,N:14}),'e')==='ok' && st(calc({norma:'sec',H:280,nAuto:false,N:14}),'e')==='bad','serviço: espelho de 20 cm atende; secundária não');
+  ok(st(calc({norma:'sec',H:350,tipo:'reta'}),'patamar')==='ok' && st(calc({norma:'res',H:350,tipo:'reta'}),'patamar')==='bad','secundária: lance até 3,70 m (NBR 9077:2001, 4.7.3.2)');
+  const e14=calc({nAuto:false,N:14}).checks.find(c=>c.id==='e'); ok(/pelo menos 16 espelhos/.test(e14.sol||''),'como resolver: espelho alto sugere o número de espelhos');
+  const hp=calc({tipo:'helicoidal'}).checks.find(c=>c.id==='pilar'); ok(/Ø 62,1 cm/.test(hp.sol||'') && /Ø 29 cm/.test(hp.sol||''),'como resolver: diâmetro mínimo do centro da caracol (62,1 cm para 15; 29 cm para 7)');
+  ok(calc({}).checks.every(c=>!c.sol),'escada que atende não mostra "como resolver"');
+  ok(/4\.7\.5/.test(explicacao(calc({norma:'sec'}),calc({norma:'sec'}).st,C)),'explicação descreve os perfis da NBR 9077:2001, 4.7.5');
+}
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
