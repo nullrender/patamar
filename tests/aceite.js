@@ -266,4 +266,23 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
+
+/* elevação com planta e elevação lado a lado: medir e copiar, com 4 figuras e o exemplo batendo com a tabela */
+{
+  let ruim=0;
+  for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){
+    const X=calc({tipo:t}); const ex=explicacao(X,Object.assign({},X.st,{ladoElev:l}),C);
+    const i=ex.indexOf('Lado a lado: medir e copiar'); const bloco=ex.slice(i, ex.indexOf('</div>', ex.indexOf('class="passos"'))+6);
+    const nfig=(bloco.match(/<figure class="passo">/g)||[]).length;
+    const m=/Aqui dá <b>([\d.,]+) cm<\/b>/.exec(bloco);
+    /* a distância do exemplo é uma das pontas da coluna Horizontal do degrau 1 (ou da tabela de linhas, na helicoidal) */
+    const val=m?m[1]:'?'; const tabela=ex.slice(ex.indexOf('Números da vista'));
+    const confere=new RegExp('(^|[^\\d,])-?'+val.replace(',','\\,')+'([^\\d,]|$)').test(tabela);
+    if(i<0||nfig!==4||!m||!confere||/NaN|undefined|Infinity/.test(bloco)) { ruim++; if(ruim<4) console.log('  ', t, l, i, nfig, val, confere); }
+  }
+  ok(ruim===0,'elevação lado a lado: roteiro "medir e copiar" com 4 figuras nos 9 tipos e 4 lados, exemplo batendo com a tabela');
+  const Xf=calc({tipo:'helicoidal'}); const exf=explicacao(Xf,Object.assign({},Xf.st,{ladoElev:'fundos'}),C);
+  ok(/vai para a <b>esquerda<\/b> na elevação/.test(exf),'elevação dos fundos lado a lado: avisa que direita e esquerda invertem');
+}
+
 console.log(fail?fail+' falha(s)':'todos passaram');
