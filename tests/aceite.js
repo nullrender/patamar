@@ -189,14 +189,21 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
 {
   let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos'])for(const lado of ['dir','esq']){const sv=elevacaoSVG(calc({tipo:t,lado}),{},C,l); if(/NaN|undefined|Infinity/.test(sv)||/url\(#hcc/.test(sv)||!/ELEVAÇÃO/.test(sv)) ruim++;}
   ok(ruim===0,'elevação nos 9 tipos e 4 lados: sem NaN e sem nada hachurado (nada é cortado)');
-  const ev=elevacaoSVG(calc({tipo:'reta'}),{},C,'direita'); ok((ev.match(/<polygon/g)||[]).length>=15 && /LADO DIREITO/.test(ev),'reta, elevação lateral: os 15 degraus em vista');
+  const ev=elevacaoSVG(calc({tipo:'reta'}),{},C,'direita'); const pv=[...ev.matchAll(/<polygon points="([^"]+)" fill="#ddd"/g)].map(m=>m[1].split(' ').map(p=>+p.split(',')[1]));
+  const pvg=pv.filter(p=>p.length>4); ok(pvg.length===1 && new Set(pvg[0].filter(y=>y<0).map(y=>y.toFixed(2))).size>=15 && /LADO DIREITO/.test(ev),'reta, elevação lateral: um contorno só, com os 15 dentes do perfil (sem linhas atravessando a laje)');
+  const ef=elevacaoSVG(calc({tipo:'reta'}),{},C,'fundos'); ok(!/<line[^>]+stroke-width="0.7"/.test(ef),'reta, elevação dos fundos (vê o fundo da laje): sem linhas de degrau');
+  const en=elevacaoSVG(calc({tipo:'reta'}),{},C,'frente'); ok((en.match(/<line[^>]+stroke-width="0.7"/g)||[]).length>=14,'reta, elevação de frente: linhas dos bocéis');
+  ok(/<polyline/.test(elevacaoSVG(calc({tipo:'helicoidal'}),{},C,'frente')),'helicoidal: corrimão na elevação');
 }
 /* roteiro da elevação na explicação */
 {
   const h=calc({tipo:'helicoidal'}); const xh=explicacao(h,h.st,C);
   ok(/Roteiro para desenhar a elevação \(vista Frente\)/.test(xh) && /-90,5/.test(xh) && /-8,2/.test(xh),'helicoidal: roteiro da elevação com as chamadas dos raios (raio 2: −90,5 e −8,2)');
   const r=calc({tipo:'reta',ladoElev:'direita'}); const xr=explicacao(r,r.st,C);
-  ok(/vista Direita/.test(xr) && /y da planta/.test(xr),'roteiro segue o lado escolhido em Cortes › Elevação');
+  ok(/vista Direita/.test(xr) && /gire a planta 90° no sentido horário/.test(xr),'roteiro segue o lado escolhido em Cortes › Elevação e manda girar a planta');
+  const rp=calc({tipo:'reta-patamar',ladoElev:'direita'}); const xp=explicacao(rp,rp.st,C); ok(/<tr><td>9<\/td><td>157,5<\/td><td>128,3<\/td>/.test(xp),'roteiro: fundo do 1º degrau depois do patamar igual ao desenho (128,3)');
+  ok(/<td>perfil<\/td>/.test(xr) && /<td>espelhos<\/td>/.test(explicacao(calc({tipo:'reta'}),calc({tipo:'reta'}).st,C)) && /<td>fundo da laje<\/td>/.test(explicacao(calc({tipo:'reta',ladoElev:'fundos'}),calc({tipo:'reta',ladoElev:'fundos'}).st,C)),'roteiro diz o que se vê de cada degrau (espelhos, perfil, fundo da laje)');
+  const he=calc({tipo:'helicoidal',ladoElev:'esquerda'}); const xe=explicacao(he,he.st,C); ok(/−110 × sen\(ângulo\)/.test(xe) && !/-450/.test(xe) && /214,6°/.test(xe),'helicoidal: fórmula com o sinal da vista e ângulos de 0 a 360°');
   let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){const X=calc({tipo:t,ladoElev:l}); if(/NaN|undefined|Infinity/.test(explicacao(X,X.st,C))) nan++;} ok(nan===0,'roteiro da elevação sem NaN nos 9 tipos e 4 lados');
 }
 /* varredura */

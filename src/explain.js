@@ -160,38 +160,47 @@ function explicacao(R, S, C) {
     const ladoE = ['frente', 'direita', 'esquerda', 'fundos'].indexOf(S.ladoElev) >= 0 ? S.ladoElev : 'frente';
     const nomeE = { frente: 'Frente', direita: 'Direita', esquerda: 'Esquerda', fundos: 'Fundos' }[ladoE];
     const cs = elevacaoDe(R, ladoE), Sx = q => (q[0] - cs.P0[0]) * cs.u[0] + (q[1] - cs.P0[1]) * cs.u[1], Dq = q => (q[0] - cs.P0[0]) * cs.n[0] + (q[1] - cs.P0[1]) * cs.n[1];
-    /* origem horizontal: o centro da escada (na helicoidal, o eixo do pilar), para os números ficarem pequenos e com sinal */
     const xs = []; R.polys.forEach(pl => pl.pts.forEach(q => xs.push(Sx(q))));
     const x0 = R.hel ? Sx([0, 0]) : Math.round((Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2);
     const X = q => Sx(q) - x0;
-    const eixo = { frente: 'x da planta (da esquerda para a direita)', fundos: 'x da planta, invertido (você está do outro lado)', direita: 'y da planta (do começo para o fim do 1º lance)', esquerda: 'y da planta, invertido' }[ladoE];
+    const giro = { frente: 'não precisa girar a planta', direita: 'gire a planta 90° no sentido horário', esquerda: 'gire a planta 90° no sentido anti-horário', fundos: 'gire a planta 180°' }[ladoE];
     const dmin = Math.min.apply(null, R.polys.map(pl => Math.min.apply(null, pl.pts.map(Dq))));
-    const linhas = R.polys.map(pl => {
-      const sx = pl.pts.map(X), fundo = R.hel ? pl.top - R.thk : Math.min.apply(null, pl.pts.map(q => R.zBot(pl, q)));
-      const prox = Math.min.apply(null, pl.pts.map(Dq)) - dmin;
-      return [pl.k, f(pl.top, 1), f(Math.max(0, fundo), 1), f(Math.min.apply(null, sx), 1) + ' a ' + f(Math.max.apply(null, sx), 1), f(prox, 0)];
+    /* fundo na posição s: o ponto mais baixo do intradorso na fatia do degrau (mesma amostragem do desenho) */
+    const fundoEm = (pl, sx) => { const base = [cs.P0[0] + cs.u[0] * sx, cs.P0[1] + cs.u[1] * sx]; let z = pl.top; cortaPoligono(pl.pts, base, cs.u, cs.n).forEach(iv => [iv[0] + 1e-4, (iv[0] + iv[1]) / 2, iv[1] - 1e-4].forEach(d => { z = Math.min(z, R.zBot(pl, [base[0] + cs.n[0] * d, base[1] + cs.n[1] * d])); })); return Math.max(0, z); };
+    const veQue = (pl, idx) => {
+      if (R.hel) return 'placa';
+      if (pl.kind === 'patamar') return 'patamar';
+      const sai = idx + 1 < R.polys.length ? R.polys[idx + 1].entry : R.arrival.pts.slice(0, 2);
+      const ce = [(pl.entry[0][0] + pl.entry[1][0]) / 2, (pl.entry[0][1] + pl.entry[1][1]) / 2], c2 = [(sai[0][0] + sai[1][0]) / 2, (sai[0][1] + sai[1][1]) / 2];
+      const d = ((c2[0] - ce[0]) * cs.n[0] + (c2[1] - ce[1]) * cs.n[1]) / (Math.hypot(c2[0] - ce[0], c2[1] - ce[1]) || 1);
+      return d > 0.35 ? 'espelhos' : d < -0.35 ? 'fundo da laje' : 'perfil';
+    };
+    const linhas = R.polys.map((pl, idx) => {
+      const sx = pl.pts.map(Sx), a = Math.min.apply(null, sx), b = Math.max.apply(null, sx);
+      const fa = R.hel ? pl.top - R.thk : fundoEm(pl, a + 1e-6), fb = R.hel ? pl.top - R.thk : fundoEm(pl, b - 1e-6);
+      return [pl.k, f(pl.top, 1), f(fa, 1), f(fb, 1), f(a - x0, 1) + ' a ' + f(b - x0, 1), f(Math.min.apply(null, pl.pts.map(Dq)) - dmin, 0), veQue(pl, idx)];
     });
     let corpo = p('Elevação é a escada vista de fora, de um lado, sem cortar nada. Você não precisa imaginar a escada em pé: cada ponto do desenho tem só duas medidas. A <b>horizontal</b> vem da planta, por uma linha de chamada; a <b>altura</b> vem da conta do degrau (número do degrau × ' + f(R.e, 2) + ' cm). Este roteiro usa a vista <b>' + nomeE + '</b>, a que está escolhida em Cortes › Elevação; troque lá e esta seção se refaz com os números do outro lado.') +
       ol([
-        'Ponha a planta e a elevação alinhadas: a planta em cima e a elevação embaixo, de modo que uma linha vertical do papel passe pelo mesmo ponto nas duas. Nesta vista, a horizontal da elevação corresponde ao ' + eixo + '.',
+        'Posicione a planta: o lado de onde você olha fica virado para baixo, para a elevação. Para a vista ' + nomeE + ', ' + giro + ' (a planta do app tem o 1º lance subindo para o alto do papel). Ponha a elevação embaixo da planta, alinhada.',
         'Na elevação, trace a linha do chão (' + nivel(0) + ') e, acima dela, uma linha fina para cada nível de degrau, de ' + f(R.e, 2) + ' em ' + f(R.e, 2) + ' cm, até ' + nivel(R.H) + '. Para não somar o espelho arredondado, divida a altura por Tales, como no roteiro de desenho à mão.',
-        'Da planta, puxe uma linha de chamada vertical de cada canto de degrau até a área da elevação. A posição horizontal de cada canto é a mesma nas duas vistas; só a altura muda.',
-        'Desenhe cada degrau como um retângulo: na horizontal, da menor à maior chamada dos cantos dele; na vertical, do fundo até o topo (tabela abaixo).' + (R.hel ? ' Na helicoidal o fundo é a face de baixo da placa, ' + f(R.thk) + ' cm abaixo do topo.' : ' Nos lances, o fundo é a face de baixo da laje inclinada, que vai subindo de um degrau para o outro.'),
-        'O que fica mais perto de quem olha cobre o que está atrás. A última coluna diz a distância de cada degrau até a frente da escada: onde dois degraus se sobrepõem no desenho, vale o de menor distância. Desenhe primeiro os mais distantes e depois os mais próximos por cima.' + (R.hel ? ' O pilar fica entre as duas metades: as placas de trás somem atrás dele, entre −' + f(R.helix.rc) + ' e +' + f(R.helix.rc) + ' cm.' : ''),
-        'Termine com o corrimão (a ' + (R.nm.acess ? '92 e 70 cm' : '92 cm') + ' acima dos bocéis), a linha tracejada da laje do piso de cima e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.'
+        'Da planta já girada, puxe uma linha de chamada vertical de cada canto de degrau até a área da elevação. A posição horizontal de cada canto é a mesma da planta girada; só a altura muda.',
+        R.hel ? 'Cada degrau é uma placa: um retângulo fino da menor à maior chamada dos cantos, do fundo (' + f(R.thk) + ' cm abaixo do topo) até o topo.' : 'Desenhe cada lance como um contorno só: em cima, os dentes (o topo de cada degrau, na altura da tabela); embaixo, a face de baixo da laje, ligando o fundo no começo e no fim de cada degrau (duas colunas da tabela). Num lance visto de lado essa linha é inclinada; num patamar, é horizontal. Dentro da laje não há linha entre um degrau e o outro.',
+        R.hel ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). O pilar fica entre as duas metades: as placas de trás somem atrás dele, entre −' + f(R.helix.rc) + ' e +' + f(R.helix.rc) + ' cm.' : 'A última coluna diz o que se vê de cada degrau. <b>Espelhos</b>: o lance sobe para longe de você, então você vê os espelhos de frente; trace uma linha horizontal no topo de cada degrau. <b>Perfil</b>: o lance corre de lado; você vê o dente de cada degrau e a laje inclinada por baixo. <b>Fundo da laje</b>: o lance sobe na sua direção, então você vê só a face de baixo da laje; desenhe só o contorno, sem linhas de degrau. Onde dois lances se sobrepõem no desenho, vale o de menor distância.',
+        R.hel ? 'Termine com o corrimão, do lado de fora, 92 cm acima da borda de cada placa, a linha tracejada da laje do piso de cima e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.' : 'Termine com o corrimão (a ' + (R.nm.acess ? '92 e 70 cm' : '92 cm') + ' acima dos bocéis), a linha tracejada da laje do piso de cima e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.'
       ]) +
       p('<b>Números da vista ' + nomeE + '</b> (cm; a horizontal é medida a partir do ' + (R.hel ? 'eixo do pilar' : 'meio da escada') + ', negativo para a esquerda de quem olha):') +
-      tab(['Degrau', 'Topo', 'Fundo', 'Horizontal', 'Distância'], linhas);
+      tab(['Degrau', 'Topo', 'Fundo no começo', 'Fundo no fim', 'Horizontal', 'Distância', 'Você vê'], linhas);
     if (R.hel) {
-      const hx = R.helix, raios = [];
+      const hx = R.helix, raios = [], norm = a => ((a % 360) + 360) % 360;
+      const fm = { frente: ['', 'cos'], fundos: ['−', 'cos'], direita: ['', 'sen'], esquerda: ['−', 'sen'] }[ladoE];
       for (let j = 0; j <= Math.min(R.T, hx.nPer); j++) {
-        const a = rad(hx.phi0 + hx.dir * j * hx.th), ext = [hx.R * Math.cos(a), hx.R * Math.sin(a)], inn = [hx.rc * Math.cos(a), hx.rc * Math.sin(a)];
-        const pe = R.mirror ? [-ext[0], ext[1]] : ext, pi = R.mirror ? [-inn[0], inn[1]] : inn;
-        raios.push([j, f(hx.phi0 + hx.dir * j * hx.th, 1) + '°', f(X(pe), 1), f(X(pi), 1), Dq(pe) - Dq([0, 0]) < 0 ? 'frente' : 'trás']);
+        const ang = hx.phi0 + hx.dir * j * hx.th, a = rad(ang), ext = [hx.R * Math.cos(a), hx.R * Math.sin(a)], inn = [hx.rc * Math.cos(a), hx.rc * Math.sin(a)];
+        raios.push([j, f(norm(ang), 1) + '°', f(X(ext), 1), f(X(inn), 1), Dq(ext) - Dq([0, 0]) < 0 ? 'frente' : 'trás']);
       }
-      corpo += p('<b>Helicoidal: as pontas dos raios.</b> Cada degrau é uma fatia entre dois raios da planta. A tabela dá a chamada de cada raio na ponta externa (raio ' + f(hx.R) + ' cm) e na borda do pilar (raio ' + f(hx.rc) + ' cm). O degrau k fica entre os raios k − 1 e k. Depois de ' + hx.nPer + ' raios a volta se repete, ' + f(hx.nPer * R.e, 1) + ' cm acima.') +
-        tab(['Raio', 'Ângulo', 'Externa', 'No pilar', 'Metade'], raios) +
-        p('Para conferir sem transferidor: na vista Frente, a chamada é ' + f(hx.R) + ' × cos(ângulo) na ponta externa e ' + f(hx.rc) + ' × cos(ângulo) no pilar; os ângulos começam em ' + f(hx.phi0) + '° e mudam ' + f(hx.th, 1) + '° por degrau.' + (ladoE === 'direita' || ladoE === 'esquerda' ? ' Nas vistas laterais entra o seno no lugar do cosseno.' : ''));
+      corpo += p('<b>Helicoidal: as linhas de divisa dos degraus.</b> Cada degrau é uma fatia entre duas linhas que saem do centro da planta. A tabela dá a chamada de cada linha na ponta externa (a ' + f(hx.R) + ' cm do centro) e na borda do pilar (a ' + f(hx.rc) + ' cm). O degrau k fica entre as linhas k − 1 e k. Depois de ' + hx.nPer + ' linhas a volta se repete, ' + f(hx.nPer * R.e, 1) + ' cm acima. O ângulo é medido a partir da direção da direita da planta (0°), girando no sentido anti-horário, de 0° a 360°.') +
+        tab(['Linha', 'Ângulo', 'Externa', 'No pilar', 'Metade'], raios) +
+        p('Para conferir sem transferidor, na vista ' + nomeE + ': chamada externa = ' + fm[0] + f(hx.R) + ' × ' + fm[1] + '(ângulo); no pilar = ' + fm[0] + f(hx.rc) + ' × ' + fm[1] + '(ângulo). O sinal e o seno ou cosseno mudam conforme o lado de onde você olha.');
     }
     corpo += p('<i>O desenho à mão tem que bater com a elevação ' + nomeE + ' da aba Cortes.</i>');
     h += sec('Roteiro para desenhar a elevação (vista ' + nomeE + ')', corpo, false);
@@ -206,7 +215,7 @@ function explicacao(R, S, C) {
       ['Linha de caminhamento', 'A linha laranja com seta: o caminho que uma pessoa faz ao usar a escada. Na planta do pavimento inferior a seta aponta para onde sobe e "SOBE" fica no primeiro degrau, com o nível ' + nivel(0) + '. Na planta do pavimento superior o app marca "DESCE", com a seta no sentido da descida.' + (leq && R.bal ? ' A marca "ponta" mostra o degrau mais estreito na borda interna.' : '')],
       ['Perfil desenvolvido', 'Não é um corte A-A da edificação: é um esquema da escada esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Serve para ver a sequência de espelhos, a laje da escada, a altura livre (tracejado laranja) e o corrimão' + (nm.acess ? ' a 92 e 70 cm, prolongado 30 cm nas pontas (NBR 9050:2020, 6.9.3.2)' : ' a 92 cm') + ', medido a partir do bocel dos degraus. Para ver a escada como ela é cortada de verdade, use os cortes A-A e B-B.'],
       ['Cortes A-A e B-B', 'Corte é um plano vertical que atravessa a edificação. Na planta ele aparece como uma linha de traço e ponto, com as letras nas pontas e setas que mostram para onde se olha. No desenho do corte, o que o plano atravessa (degraus, laje da escada, laje do piso de cima, chão) aparece hachurado e com traço grosso; o que está além do plano aparece em vista, com traço fino; o que fica atrás de quem olha não aparece. ' + (R.hel ? 'Na helicoidal, A-A e B-B passam pelo centro do pilar, um perpendicular ao outro' : 'O A-A passa ao longo do 1º lance e o B-B atravessa esse lance') + '; você pode deslocar cada linha. Repare na laje de cima: onde a escada passa, ela é interrompida pela abertura.'],
-      ['Elevação', 'A escada vista de fora, de um dos lados, sem cortar nada: tudo em traço fino. Mostra contornos e alturas (espelhos, corrimão, patamares), mas não a espessura da laje, que só aparece no corte. Na aba Cortes você escolhe o lado: frente, direita, esquerda ou fundos.'],
+      ['Elevação', 'A escada vista de fora, de um dos lados, sem cortar nada: tudo em traço fino, sem hachura. Mostra contornos e alturas (espelhos, corrimão, patamares). Vista de lado, aparece o contorno da laje inclinada por baixo dos degraus; vista de frente, a laje fica escondida atrás dos degraus. Só o corte mostra a laje atravessada, hachurada. Na aba Cortes você escolhe o lado: frente, direita, esquerda ou fundos.'],
       ['Detalhe', 'Ampliação de poucos degraus, com as medidas do espelho, do piso, do bocel e da laje, para mostrar o que a escala da planta não deixa ler.'],
       ['Cotas', 'Todas em centímetros. Níveis em metros: ' + nivel(0) + ' é o piso de baixo e ' + nivel(R.H) + ' o de cima.'],
       ['3D', 'Modelo para enxergar o conjunto: ' + (R.hel ? 'degraus soltos em volta do pilar, com corrimão do lado de fora' : 'degraus com a face de baixo da laje inclinada de verdade, patamares e corrimãos') + '. Não mostra armadura, revestimento nem acabamentos. Gire arrastando.']

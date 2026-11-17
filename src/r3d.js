@@ -89,6 +89,22 @@ function railLado(R, lado, hR) {
   return lim;
 }
 
+/* corrimão da helicoidal: do lado de fora (raio R − off), 92 cm acima da borda externa de cada degrau; montantes a cada 4 degraus.
+   Usado pelo 3D e pela elevação/cortes. */
+function railHel(R, off) {
+  const rr = R.helix.R - off, sc = rr / R.helix.R, pts = [], postes = [];
+  const ponto = (q, z) => [q[0] * sc, q[1] * sc, z];
+  R.polys.forEach((pl, i) => {
+    const o = pl.arc.outer, z0 = pl.top, z1 = (pl.k + 1) * R.e, m = o.length - 1;
+    [0, m >> 1].forEach(s => pts.push(ponto(o[s], z0 + (z1 - z0) * s / m + 92)));
+    if (i % 4 === 0) postes.push([o[0][0] * sc, o[0][1] * sc, z0, z0 + 92]);
+  });
+  const ch = R.arrival && R.arrival.arc ? R.arrival.arc.outer[0] : R.polys[R.polys.length - 1].arc.outer.slice(-1)[0];
+  pts.push(ponto(ch, R.H + 92));
+  postes.push([ch[0] * sc, ch[1] * sc, R.H, R.H + 92]);
+  return { pts, postes };
+}
+
 /* desloca a poligonal 'off' cm para dentro da escada (lado do centro 'cen' de cada trecho), mantendo z */
 function afastaDentro(R, pts, off) {
   const segN = [];
@@ -201,17 +217,8 @@ function buildFaces(R, C) {
       });
     });
   } else if (R.polys.length && R.hel && R.helix) {
-    const rr = R.helix.R - OFF, sc = rr / R.helix.R, pts = [], postes = [];
-    const ponto = (q, z) => [q[0] * sc, q[1] * sc, z];
-    R.polys.forEach((pl, i) => {
-      const o = pl.arc.outer, z0 = pl.top, z1 = (pl.k + 1) * R.e, m = o.length - 1;
-      [0, m >> 1].forEach(s => pts.push(ponto(o[s], z0 + (z1 - z0) * s / m + 92)));
-      if (i % 4 === 0) postes.push([o[0][0] * sc, o[0][1] * sc, z0, z0 + 92]);
-    });
-    const ch = R.arrival && R.arrival.arc ? R.arrival.arc.outer[0] : R.polys[R.polys.length - 1].arc.outer.slice(-1)[0];
-    pts.push(ponto(ch, R.H + 92));
-    postes.push([ch[0] * sc, ch[1] * sc, R.H, R.H + 92]);
-    corrimao(pts, postes);
+    const c = railHel(R, OFF);
+    corrimao(c.pts, c.postes);
   }
   return faces;
 }
