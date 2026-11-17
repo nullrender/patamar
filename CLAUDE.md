@@ -37,12 +37,14 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 ## Regras técnicas
 
 - Não invente norma, item, número ou fonte. Se um limite não foi conferido no texto da norma, diga isso no app e na resposta.
-- Os perfis ficam em `NORMAS`, no `core.js`. Fontes conferidas no texto das normas em 16/11/2026:
-  - **Estudo**: espelho 16 a 18, piso 25 a 32, Blondel 63 a 64, largura 80, linha a 55 cm (no eixo abaixo de 110 cm), ponta de leque 15 cm, lance de 3 espelhos no mínimo, patamar reto pela fórmula (2e + p) + p. Blondel, linha, ponta, lance e patamar vêm da NBR 9077:2001 (4.7.3.1 b e c, 3.32, 4.7.3.2, 4.7.3.3 a). Piso 25, largura 80 e 3,20 m sem patamar não têm fonte nacional.
+- Os perfis ficam em `NORMAS`, no `core.js`. Fontes conferidas no texto das normas (NBR 9077:2025 em 17/11/2026, as demais em 16/11/2026):
+  - **Estudo**: espelho 16 a 18, piso 25 a 32, Blondel 63 a 64, largura 80, linha a 55 cm (no eixo abaixo de 110 cm), ponta de leque 15 cm, lance de 3 espelhos no mínimo, patamar reto pela fórmula (2e + p) + p. Blondel, linha, ponta, lance e patamar vêm da NBR 9077:2001 (4.7.3.1 b e c, 3.32, 4.7.3.2, 4.7.3.3 a), **cancelada** pela de 2025: são referência de estudo. Piso 25, largura 80 e 3,20 m sem patamar não têm fonte nacional.
+  - **Rota de fuga** (`fuga`): NBR 9077:2025 — 9.1.10 (degraus, patamares e larguras pela NBR 9050), 9.1.11 (sem leque e sem espiral), 9.1.12 (mudança de direção só por patamar, com largura não inferior à dos lances), 9.1.5 (corrimão dos dois lados), 3.11 (espelho não vazado), 4.2 b (pé-direito 2,30 m; 2,10 m sob vigas e obstáculos), 9.4.2.2 (largura pela NBR 9050). Números da NBR 9050.
+  - **Mezanino ou área privativa** (`mez`): NBR 9077:2025, 9.5.9.1 — leque, espiral ou lances retos; população < 20 e altura percorrida até 3,7 m (a); largura 0,80 m (b); piso antiderrapante, atrito dinâmico ≥ 0,5 (c); corrimão, de um lado só se a largura < 1,20 m (d); guarda-corpo (e); Anexo A e patamares de 0,80 m nas escadas curvas e em leque (f). Espelho, piso, Blondel e ponta não são fixados: o perfil usa os do Estudo como referência, e a ponta abaixo de 15 cm é atenção, não "não atende".
   - **NBR 9050:2020**, versão corrigida de 2021: 6.8.2 (espelho 16 a 18, piso 28 a 32, Blondel 63 a 65), 6.8.3 (largura 120), 6.8.6 (linha a 55 cm da borda interna em lances curvos, Figura 75 com ponta ≥ 15), 6.8.7 (patamar a cada 320 cm e nas mudanças de direção), 6.8.8 (patamar reto de 120 cm), 6.9.3.2 (corrimãos a 92 e 70 cm, prolongados 30 cm). É uma conferência dimensional parcial, não uma validação de acessibilidade.
-  - **Escada secundária** e **Escada de serviço**: NBR 9077:2001, 4.7.5.1 e 4.7.5.2 (espelho até 18 / 20 cm, ponta de leque 7 cm, patamar de 80 cm). Use só para escada que não é rota de fuga nem rota acessível.
   - **Personalizada**: limites digitados pelo usuário, validados (positivos, faixas não invertidas, ponta do leque ≥ 0).
-- **NBR 9077:2025** (terceira edição, 16/07/2025) substitui a de 2001 e **não foi lida** (é paga). Todo texto que cita a NBR 9077 precisa dizer que é a edição de 2001.
+- **NBR 9077:2025** (terceira edição, 16/07/2025) cancela a de 2001; o Prefácio deixa usar a de 2001 só em projetos protocolados até 365 dias depois (16/07/2026). Foi lida em 17/11/2026 numa cópia enviada pelo dono (imagem; ficha com os trechos conferidos no histórico do PR). Ela **não** tem escada secundária nem de serviço, nem Blondel, ponta de leque, linha de caminhamento ou fórmula do patamar: remete à NBR 9050. Toda citação da NBR 9077 diz a edição; a de 2001 aparece como cancelada.
+- A NBR 9050:2020 (versão corrigida de 2021) segue vigente: em 17/11/2026 não havia edição nova (só confirmação em 12/2025).
 - Cópias públicas usadas na conferência: NBR 9077:2001 no site do CNMP, NBR 9050:2020 no drive da Prefeitura de São Paulo, NPT 011 dos Bombeiros do PR. O ambiente de nuvem "patamar" libera esses hosts.
 - Status das verificações: `bad` = fora do limite do perfil ("não atende"); `warn` = algo que o app não consegue validar; `info` = só informação. A tolerância é 1e-6 (só erro de arredondamento), nunca uma folga de obra.
 - Entrada inválida não é corrigida em silêncio: `calc` lança erro e a interface mostra a mensagem, sem desenho.
@@ -60,7 +62,7 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 
 - O 3D não mostra armadura nem acabamentos; o detalhe do degrau é sempre de um degrau reto típico.
 - Os quantitativos são estimativas da geometria (sem perdas nem armadura).
-- A edição de 2025 da NBR 9077 não foi lida.
+- A 9.5.9.1 f (patamares de 0,80 m nas escadas curvas e em leque) não diz onde ficam os patamares; o app mostra como atenção.
 - O balanceamento usa progressão aritmética das larguras na borda interna. A NBR 9077:2001 fala em "sistemas de balanceamento recomendados" sem fixar um; outros processos gráficos dão degraus um pouco diferentes.
 - O "Imprimir / PDF" usa `window.print()`; no artefato do claude.ai pode não abrir.
 
