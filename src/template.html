@@ -184,6 +184,10 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .ex .exb svg{margin:4px 0 12px}
 .cn2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
 .tabwrap{overflow-x:auto;margin:0 0 12px}
+.passos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:4px 0 14px}
+.passo{margin:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.passo figcaption{font-size:13px;margin:0 0 6px}
+@media print{.passo{break-inside:avoid}}
 .tab{border-collapse:collapse;font-size:13px;min-width:100%}
 .tab th,.tab td{border-bottom:1px solid var(--line);padding:4px 10px;text-align:right;white-space:nowrap}
 .tab th{font-weight:600;color:var(--muted);font-size:12px}

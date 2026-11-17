@@ -184,6 +184,10 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .ex .exb svg{margin:4px 0 12px}
 .cn2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
 .tabwrap{overflow-x:auto;margin:0 0 12px}
+.passos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:4px 0 14px}
+.passo{margin:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.passo figcaption{font-size:13px;margin:0 0 6px}
+@media print{.passo{break-inside:avoid}}
 .tab{border-collapse:collapse;font-size:13px;min-width:100%}
 .tab th,.tab td{border-bottom:1px solid var(--line);padding:4px 10px;text-align:right;white-space:nowrap}
 .tab th{font-weight:600;color:var(--muted);font-size:12px}
@@ -2538,6 +2542,72 @@ function blondelSVG(R, C) {
   return '<svg viewBox="0 0 ' + W + ' ' + Hh + '" style="width:100%;max-width:520px;height:auto;display:block" role="img" aria-label="Gráfico de Blondel com a área que atende espelho, piso e Blondel e o ponto da sua escada">' + s + '</svg>';
 }
 
+/* Elevação com planta e elevação lado a lado: não dá para puxar linha de chamada, então a medida passa da planta
+   para a elevação com o escalímetro. Cada figura é um passo; planta e elevação na MESMA escala, como no papel.
+   cs = plano da elevação (elevacaoDe), x0 = posição horizontal da referência (eixo do pilar ou meio da escada),
+   Cref = ponto da planta na referência, P = canto de exemplo, zP = altura do topo do degrau dele, pl0 = degrau do exemplo. */
+function medirCopiarSVG(R, C, cs, x0, Cref, P, zP, pl0, passo) {
+  const Sx = q => (q[0] - cs.P0[0]) * cs.u[0] + (q[1] - cs.P0[1]) * cs.u[1];
+  const Dq = q => (q[0] - cs.P0[0]) * cs.n[0] + (q[1] - cs.P0[1]) * cs.n[1];
+  const pts = []; R.polys.forEach(pl => pl.pts.forEach(q => pts.push(q)));
+  if (R.hel) for (let a = 0; a < 360; a += 10) pts.push([R.helix.R * Math.cos(rad(a)), R.helix.R * Math.sin(rad(a))]);
+  const bx = [Math.min.apply(null, pts.map(q => q[0])), Math.min.apply(null, pts.map(q => q[1])), Math.max.apply(null, pts.map(q => q[0])), Math.max.apply(null, pts.map(q => q[1]))];
+  const ss = pts.map(Sx), sA = Math.min.apply(null, ss) - x0, sB = Math.max.apply(null, ss) - x0;
+  const pw = bx[2] - bx[0], ph = bx[3] - bx[1], ew = sB - sA, eh = R.H, hM = Math.max(ph, eh);
+  /* lado de quem olha na planta (na tela): n aponta de quem olha para a escada; na tela o y da planta é invertido */
+  const ox = -cs.n[0], oy = cs.n[1];
+  const W = 340, HMAX = 330, topo = 22, pe = 16, olhoPx = 16;
+  const mL = 14 + (ox < -0.5 ? 34 : 0), gap = 26 + (ox > 0.5 ? 40 : 0), mR = 12, tT = oy < -0.5 ? 28 : 0, tB = oy > 0.5 ? 28 : 0;
+  /* uma escala só para as duas vistas: a medida copiada tem o mesmo tamanho no papel */
+  const k = Math.min((W - mL - gap - mR) / (pw + ew), (HMAX - topo - tT - tB - pe) / hM);
+  const base = topo + tT + hM * k, Hh = base + tB + pe;
+  const px0 = mL, ex0 = mL + pw * k + gap;
+  const PL = q => [px0 + (q[0] - bx[0]) * k, base - (hM - ph) * k / 2 - (q[1] - bx[1]) * k];
+  const EL = (sv, z) => [ex0 + (sv - sA) * k, base - z * k];
+  const xy = q => r2(q[0]) + ',' + r2(q[1]);
+  const ln = (a, b, col, w, d) => '<line x1="' + r2(a[0]) + '" y1="' + r2(a[1]) + '" x2="' + r2(b[0]) + '" y2="' + r2(b[1]) + '" stroke="' + col + '" stroke-width="' + w + '"' + (d ? ' stroke-dasharray="' + d + '"' : '') + '/>';
+  /* texto com contorno da cor do papel, para não sumir sobre as linhas */
+  const tx = (q, t, a, col, sz, w) => { const x = clamp(q[0], 4, W - 4), an = a || 'middle'; return '<text x="' + r2(an === 'middle' ? clamp(x, 24, W - 24) : x) + '" y="' + r2(q[1]) + '" font-size="' + (sz || 9.5) + '" fill="' + (col || C.muted) + '" text-anchor="' + an + '" dominant-baseline="central" font-family="' + FONT + '"' + (w ? ' font-weight="600"' : '') + ' stroke="' + C.paper + '" stroke-width="3" paint-order="stroke">' + t + '</text>'; };
+  const dot = (q, col) => '<circle cx="' + r2(q[0]) + '" cy="' + r2(q[1]) + '" r="3.2" fill="' + col + '"/>';
+  let s = '';
+  /* planta (na mesma posição da aba Planta) */
+  R.polys.forEach(pl => { s += '<polygon points="' + pl.pts.map(q => xy(PL(q))).join(' ') + '" fill="' + C.tread + '" stroke="' + C.muted + '" stroke-width="0.7"/>'; });
+  if (R.hel && R.pole) { const c = PL([0, 0]); s += '<circle cx="' + r2(c[0]) + '" cy="' + r2(c[1]) + '" r="' + r2(R.pole.r * k) + '" fill="' + C.paper + '" stroke="' + C.ink + '" stroke-width="0.8"/>'; }
+  s += tx([px0 + pw * k / 2, 9], 'PLANTA', 'middle', C.ink, 9.5, 1) + tx([ex0 + ew * k / 2, 9], 'ELEVAÇÃO', 'middle', C.ink, 9.5, 1);
+  /* elevação: chão, níveis dos degraus e piso de cima */
+  s += ln(EL(sA - 6 / k, 0), EL(sB + 6 / k, 0), C.ink, 1.6);
+  for (let i = 1; i < R.N; i++) s += ln(EL(sA, i * R.e), EL(sB, i * R.e), C.line, 0.6);
+  s += ln(EL(sA - 6 / k, R.H), EL(sB + 6 / k, R.H), C.muted, 0.9, '4 3');
+  /* linha de referência da planta: passa pela referência e vai até quem olha, um pouco fora da planta */
+  const dRef = Dq(Cref), dsP = pts.map(Dq), perto = Math.min.apply(null, dsP), longe = Math.max.apply(null, dsP);
+  const naRef = dd => [Cref[0] + cs.n[0] * (dd - dRef), Cref[1] + cs.n[1] * (dd - dRef)];
+  const olho = PL(naRef(perto - olhoPx / k));
+  s += ln(PL(naRef(longe + 6 / k)), olho, C.accent, 1.4, '6 3') + dot(olho, C.accent);
+  s += tx([olho[0] + ox * 4, olho[1] + (Math.abs(ox) > 0.5 ? 12 : oy * 13)], 'quem olha', 'middle', C.accent, 8.5, 1);
+  /* linha em pé da elevação */
+  s += ln(EL(0, -4 / k), EL(0, R.H + 4 / k), C.accent, 1.4, '6 3');
+  const d = Sx(P) - x0, F = naRef(Dq(P)), dTxt = fmt(Math.abs(d), 1) + ' cm';
+  if (passo >= 2) {
+    const a = PL(F), b = PL(P);
+    s += ln(a, b, C.ink, 1.3) + dot(b, C.accent) + dot(a, C.ink);
+    const hor = Math.abs(a[1] - b[1]) < Math.abs(a[0] - b[0]);
+    s += hor ? tx([(a[0] + b[0]) / 2, a[1] - 9], dTxt, 'middle', C.ink, 10, 1) : tx([a[0] + (a[0] < 60 ? 5 : -5), (a[1] + b[1]) / 2], dTxt, a[0] < 60 ? 'start' : 'end', C.ink, 10, 1);
+  }
+  if (passo >= 3) {
+    const a = EL(0, zP), b = EL(d, zP);
+    s += ln(a, b, C.ink, 1.3) + dot(b, C.accent);
+    s += tx([(a[0] + b[0]) / 2, a[1] - 9], dTxt, 'middle', C.ink, 10, 1);
+  }
+  if (passo >= 4) {
+    /* os outros cantos do mesmo degrau, na altura do topo dele, ligados */
+    const sv = pl0.pts.map(q => Sx(q) - x0), lo = Math.min.apply(null, sv), hi = Math.max.apply(null, sv);
+    s += '<polygon points="' + pl0.pts.map(q => xy(PL(q))).join(' ') + '" fill="' + C.accent + '" fill-opacity="0.25" stroke="' + C.accent + '" stroke-width="1"/>';
+    s += ln(EL(lo, zP), EL(hi, zP), C.accent, 2.4);
+    s += dot(EL(lo, zP), C.ink) + dot(EL(hi, zP), C.ink);
+  }
+  return '<svg viewBox="0 0 ' + W + ' ' + r2(Hh) + '" style="width:100%;max-width:420px;height:auto;display:block" role="img" aria-label="Passo ' + passo + ' de como passar uma medida da planta para a elevação">' + s + '</svg>';
+}
+
 function explicacao(R, S, C) {
   const nm = R.nm, f = fmt, hel = R.hel, tp = TIPOS.find(x => x.id === R.tipo);
   const leq = R.tipo === 'l-leque' || R.tipo === 'u-leque';
@@ -2668,15 +2738,40 @@ function explicacao(R, S, C) {
     });
     let corpo = p('Elevação é a escada vista de fora, de um lado, sem cortar nada. Você não precisa imaginar a escada em pé: cada ponto do desenho tem só duas medidas. A <b>horizontal</b> vem da planta, por uma linha de chamada; a <b>altura</b> vem da conta do degrau (número do degrau × ' + f(R.e, 2) + ' cm). Este roteiro usa a vista <b>' + nomeE + '</b>, a que está escolhida em Cortes › Elevação; troque lá e esta seção se refaz com os números do outro lado.') +
       ol([
-        'Posicione a planta: o lado de onde você olha fica virado para baixo, para a elevação. Para a vista ' + nomeE + ', ' + giro + ' (a planta do app tem o 1º lance subindo para o alto do papel). Ponha a elevação embaixo da planta, alinhada.',
+        'Veja como as vistas ficam na folha. <b>Elevação embaixo da planta</b>: o lado de onde você olha fica virado para baixo, para a elevação; para a vista ' + nomeE + ', ' + giro + ' (a planta do app tem ' + (R.hel ? 'o degrau 1 começando na linha que sai do centro para baixo' : 'o 1º lance subindo para o alto do papel') + '). <b>Planta e elevação lado a lado</b>: não dá para puxar linha de uma para a outra; siga "Lado a lado: medir e copiar", logo depois desta lista.',
         'Na elevação, trace a linha do chão (' + nivel(0) + ') e, acima dela, uma linha fina para cada nível de degrau, de ' + f(R.e, 2) + ' em ' + f(R.e, 2) + ' cm, até ' + nivel(R.H) + '. Para não somar o espelho arredondado, divida a altura por Tales, como no roteiro de desenho à mão.',
-        'Da planta já girada, puxe uma linha de chamada vertical de cada canto de degrau até a área da elevação. A posição horizontal de cada canto é a mesma da planta girada; só a altura muda.',
+        'Leve a posição horizontal de cada canto de degrau para a elevação. Com a elevação embaixo, puxe da planta uma linha de chamada vertical. Lado a lado, meça na planta e copie na elevação. A posição horizontal é a mesma da planta; só a altura muda.',
         R.placas ? 'Cada degrau é uma placa em balanço: um retângulo fino da menor à maior chamada dos cantos, do fundo (' + f(R.st.espDegrau) + ' cm abaixo do topo) até o topo. Entre uma placa e outra o espelho é aberto: não há linha ali.' : 'Desenhe cada lance como um contorno só: em cima, os dentes (o topo de cada degrau, na altura da tabela); embaixo, a face de baixo da laje, ligando o fundo no começo e no fim de cada degrau (duas colunas da tabela). Num lance visto de lado essa linha é inclinada; num patamar, é horizontal. Dentro da laje não há linha entre um degrau e o outro.',
         R.hel ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). O pilar fica entre as duas metades: os degraus de trás somem atrás dele, entre −' + f(R.helix.rc) + ' e +' + f(R.helix.rc) + ' cm.' : R.placas ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). Como as placas são soltas, entre uma e outra você vê o que está atrás da escada.' : 'A última coluna diz o que se vê de cada degrau. <b>Espelhos</b>: o lance sobe para longe de você, então você vê os espelhos de frente; trace uma linha horizontal no topo de cada degrau. <b>Perfil</b>: o lance corre de lado; você vê o dente de cada degrau e a laje inclinada por baixo. <b>Fundo da laje</b>: o lance sobe na sua direção, então você vê só a face de baixo da laje; desenhe só o contorno, sem linhas de degrau. Onde dois lances se sobrepõem no desenho, vale o de menor distância.',
         R.hel ? 'Termine com o corrimão, do lado de fora, 92 cm acima da borda de cada degrau, a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.' : 'Termine com o corrimão (a ' + (R.nm.acess ? '92 e 70 cm' : '92 cm') + ' acima dos bocéis), a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.'
       ]) +
       p('<b>Números da vista ' + nomeE + '</b> (cm; a horizontal é medida a partir do ' + (R.hel ? 'eixo do pilar' : 'meio da escada') + ', negativo para a esquerda de quem olha):') +
       tab(['Degrau', 'Topo', 'Fundo no começo', 'Fundo no fim', 'Horizontal', 'Distância', 'Você vê'], linhas);
+    /* lado a lado: medir na planta e copiar na elevação, com figuras passo a passo e um canto de exemplo */
+    {
+      const Ds = []; R.polys.forEach(pl => pl.pts.forEach(q => Ds.push(Dq(q))));
+      const Dm = (Math.min.apply(null, Ds) + Math.max.apply(null, Ds)) / 2;
+      const Cref = R.hel ? [0, 0] : [cs.P0[0] + cs.u[0] * x0 + cs.n[0] * Dm, cs.P0[1] + cs.u[1] * x0 + cs.n[1] * Dm];
+      const pl0 = R.polys[0];
+      let P;
+      if (R.hel) { const hx = R.helix, a = rad(hx.phi0 + hx.dir * hx.th); P = [hx.R * Math.cos(a), hx.R * Math.sin(a)]; }
+      else P = pl0.pts.reduce((m, q) => Math.abs(Sx(q) - x0) > Math.abs(Sx(m) - x0) + 1e-6 ? q : m, pl0.pts[0]);
+      const dP = Sx(P) - x0, zP = pl0.top;
+      const linhaRef = { frente: 'em pé (vertical no papel)', fundos: 'em pé (vertical no papel)', direita: 'deitada (horizontal no papel)', esquerda: 'deitada (horizontal no papel)' }[ladoE];
+      const ladoQ = { frente: 'de baixo', fundos: 'de cima', direita: 'da direita', esquerda: 'da esquerda' }[ladoE];
+      const regra = { frente: 'O que está à direita da linha na planta vai para a direita na elevação; à esquerda, para a esquerda.', fundos: 'Aqui o lado inverte: o que está à direita da linha na planta vai para a <b>esquerda</b> na elevação, e vice-versa.', direita: 'O que está acima da linha na planta vai para a direita na elevação; abaixo, para a esquerda.', esquerda: 'O que está abaixo da linha na planta vai para a direita na elevação; acima, para a esquerda.' }[ladoE];
+      const ref = R.hel ? 'o centro do pilar' : 'o meio da escada';
+      const ex = R.hel ? 'a ponta externa da linha 1 (o fim do degrau 1)' : 'o canto do degrau 1 mais longe da linha';
+      const fig = (n, t) => '<figure class="passo"><figcaption><b>' + n + '.</b> ' + t + '</figcaption>' + medirCopiarSVG(R, C, cs, x0, Cref, P, zP, pl0, n) + '</figure>';
+      corpo += p('<b>Lado a lado: medir e copiar.</b> Quando a elevação fica ao lado da planta, nenhuma linha passa de uma para a outra. O que passa é a medida: a distância de cada canto até uma linha de referência é a mesma na planta e na elevação. Você mede com o escalímetro numa e marca na outra. Para a vista ' + nomeE + ', quem olha está do lado ' + ladoQ + ' da planta do app.') +
+        ol([
+          'Na planta, trace uma linha fina passando por ' + ref + ', ' + linhaRef + '. Ela aponta para quem olha. Na elevação, trace a linha do chão, os níveis dos degraus e uma linha em pé no lugar ' + (R.hel ? 'do eixo do pilar' : 'do meio da escada') + '.',
+          'Escolha um canto na planta, por exemplo ' + ex + '. Meça com o escalímetro a distância dele até a linha de referência, reto (formando ângulo de 90° com a linha). Aqui dá <b>' + f(Math.abs(dP), 1) + ' cm</b>.',
+          'Na elevação, marque a mesma distância a partir da linha em pé, na altura do topo do degrau desse canto (' + f(zP, 1) + ' cm). ' + regra + ' Em 1:50, ' + f(Math.abs(dP), 1) + ' cm viram ' + f(Math.abs(dP) / 5, 1) + ' mm no papel.',
+          'Repita com os outros cantos do mesmo degrau, sempre na altura dele, e ligue as marcas. Depois faça o degrau seguinte. Não precisa medir na planta: a coluna Horizontal da tabela acima ' + (R.hel ? '(e as colunas Externa e No pilar, logo abaixo) ' : '') + 'já traz essas distâncias; negativo é à esquerda da linha em pé.'
+        ]) +
+        '<div class="passos">' + fig(1, 'Uma linha de referência em cada vista.') + fig(2, 'Meça o canto até a linha, na planta.') + fig(3, 'Copie a mesma medida na elevação, na altura do degrau.') + fig(4, 'Faça o mesmo com os cantos do degrau e ligue.') + '</div>';
+    }
     if (R.hel) {
       const hx = R.helix, raios = [], norm = a => ((a % 360) + 360) % 360;
       const fm = { frente: ['', 'cos'], fundos: ['−', 'cos'], direita: ['', 'sen'], esquerda: ['−', 'sen'] }[ladoE];
