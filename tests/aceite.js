@@ -191,6 +191,14 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ok(ruim===0,'elevação nos 9 tipos e 4 lados: sem NaN e sem nada hachurado (nada é cortado)');
   const ev=elevacaoSVG(calc({tipo:'reta'}),{},C,'direita'); ok((ev.match(/<polygon/g)||[]).length>=15 && /LADO DIREITO/.test(ev),'reta, elevação lateral: os 15 degraus em vista');
 }
+/* roteiro da elevação na explicação */
+{
+  const h=calc({tipo:'helicoidal'}); const xh=explicacao(h,h.st,C);
+  ok(/Roteiro para desenhar a elevação \(vista Frente\)/.test(xh) && /-90,5/.test(xh) && /-8,2/.test(xh),'helicoidal: roteiro da elevação com as chamadas dos raios (raio 2: −90,5 e −8,2)');
+  const r=calc({tipo:'reta',ladoElev:'direita'}); const xr=explicacao(r,r.st,C);
+  ok(/vista Direita/.test(xr) && /y da planta/.test(xr),'roteiro segue o lado escolhido em Cortes › Elevação');
+  let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){const X=calc({tipo:t,ladoElev:l}); if(/NaN|undefined|Infinity/.test(explicacao(X,X.st,C))) nan++;} ok(nan===0,'roteiro da elevação sem NaN nos 9 tipos e 4 lados');
+}
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
