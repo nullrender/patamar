@@ -1,4 +1,4 @@
-const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG}=require('./carregar.js');
+const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG}=require('./carregar.js');
 const C={paper:'#fff',ink:'#000',muted:'#666',line:'#ccc',accent:'#f60',info:'#06f',tread:'#ddd',winder:'#fdc',patamar:'#cfc',piso:'#eee',t3:'#ddd',w3:'#fdc',p3:'#cfc',f3:'#eee',ground:'#ccc'};
 let fail=0; const ok=(c,m)=>{console.log((c?'PASSA ':'FALHA ')+m); if(!c)fail++;};
 const st=(R,id)=>(R.checks.find(c=>c.id===id)||{}).status;
@@ -184,6 +184,12 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const hs=calc({tipo:'helicoidal',bocel:'sem'}).checks.find(c=>c.id==='bocel'); ok(/placas/.test(hs.valor) && !/espelho inclinado/.test(hs.nota),'helicoidal: borda descrita como placas, sem falar de espelho inclinado');
   let e3=''; try{calc({bocel:'inclinado',avanco:0});}catch(e){e3=e.message;} ok(/Avanço sobre o degrau de baixo/.test(e3) && /Sem saliência/.test(e3),'avanço zero: mensagem com o nome do campo e a sugestão de "Sem saliência"');
   ok(/nota do 3\.10/.test(calc({bocel:'sem'}).checks.find(c=>c.id==='bocel').nota),'espelho inclinado citado pela nota do 3.10 da NBR 9077:2001');
+}
+/* elevação */
+{
+  let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos'])for(const lado of ['dir','esq']){const sv=elevacaoSVG(calc({tipo:t,lado}),{},C,l); if(/NaN|undefined|Infinity/.test(sv)||/url\(#hcc/.test(sv)||!/ELEVAÇÃO/.test(sv)) ruim++;}
+  ok(ruim===0,'elevação nos 9 tipos e 4 lados: sem NaN e sem nada hachurado (nada é cortado)');
+  const ev=elevacaoSVG(calc({tipo:'reta'}),{},C,'direita'); ok((ev.match(/<polygon/g)||[]).length>=15 && /LADO DIREITO/.test(ev),'reta, elevação lateral: os 15 degraus em vista');
 }
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}

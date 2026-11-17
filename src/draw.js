@@ -349,10 +349,24 @@ function ladoDeLa(pts, P0, n) {
   return out;
 }
 
-function corteSVG(R, o, C, qual) {
+/* ELEVAÇÃO: o mesmo mecanismo do corte, com o plano posto fora da escada, do lado de quem olha. Nada é atravessado,
+   então tudo aparece em vista (traço fino). lado: 'frente' (de quem vai subir o 1º lance), 'direita', 'esquerda', 'fundos'.
+   Direita e esquerda são as de quem sobe o 1º lance. */
+const LADOS_ELEV = { frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' };
+function elevacaoDe(R, lado) {
+  const pts = []; R.polys.forEach(pl => pl.pts.forEach(q => pts.push(q))); R.arrival.pts.forEach(q => pts.push(q));
+  if (R.hel) pts.push([-R.helix.R, -R.helix.R], [R.helix.R, R.helix.R]);
+  const b = bboxOf(pts), mg = 40;
+  const v = { frente: { P0: [0, b[1] - mg], n: [0, 1] }, fundos: { P0: [0, b[3] + mg], n: [0, -1] }, direita: { P0: [b[2] + mg, 0], n: [-1, 0] }, esquerda: { P0: [b[0] - mg, 0], n: [1, 0] } }[LADOS_ELEV[lado] ? lado : 'frente'];
+  return { P0: v.P0, n: v.n, u: [v.n[1], -v.n[0]] };
+}
+function elevacaoSVG(R, o, C, lado) { return corteSVG(R, o, C, 'E', lado); }
+
+function corteSVG(R, o, C, qual, lado) {
   o = o || {};
-  qual = qual === 'B' ? 'B' : 'A';
-  const cs = cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u, st = R.st, H = R.H, e = R.e;
+  const elev = qual === 'E';
+  qual = elev ? 'E' : qual === 'B' ? 'B' : 'A';
+  const cs = elev ? elevacaoDe(R, lado) : cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u, st = R.st, H = R.H, e = R.e;
   const S = q => (q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1], Dp = q => (q[0] - P0[0]) * n[0] + (q[1] - P0[1]) * n[1];
   const ptAt = (s, d) => [P0[0] + u[0] * s + n[0] * d, P0[1] + u[1] * s + n[1] * d];
   /* extensão do desenho */
@@ -422,7 +436,11 @@ function corteSVG(R, o, C, qual) {
     else { const b = R.opening.bbox; const box = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]; const iv = cortaPoligono(box, P0, n, u); if (iv.length) furo = iv[0]; }
   }
   const lajeRet = (a, b) => b - a > 1e-6 ? '<rect x="' + r2(a) + '" y="' + r2(-H) + '" width="' + r2(b - a) + '" height="' + r2(st.espLaje) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="1.8" ' + NS + '/>' : '';
-  if (furo) {
+  if (elev) {
+    /* na elevação nada é cortado: a laje do piso de cima aparece só como as duas linhas da borda, em traço fino */
+    s += sLine([s0, zU], [s1, zU], C.muted, 0.9, '10 4') + sLine([s0, H], [s1, H], C.muted, 0.9, '10 4');
+    s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior (laje em linha tracejada)', fs * 0.72, C.muted, 'start', 0, 500);
+  } else if (furo) {
     s += lajeRet(s0, furo[0]) + lajeRet(furo[1], s1);
     s += sLine([furo[0], zU], [furo[1], zU], C.muted, 0.9) + sLine([furo[0], H], [furo[1], H], C.muted, 0.9);
   } else s += lajeRet(s0, s1);
@@ -461,8 +479,9 @@ function corteSVG(R, o, C, qual) {
   s += dimLine([s1, 0], [s1, H], 1, 0, fs * 2.4, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([s1, zU], [s1, H], 1, 0, fs * 0.9, fmt(st.espLaje, 0), fs * 0.75, C);
   if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500);
-  const t1 = 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
-  const t2 = 'hachura: cortado · traço fino: em vista · cm';
+  const nomeT = R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase();
+  const t1 = elev ? 'ELEVAÇÃO · ' + LADOS_ELEV[LADOS_ELEV[lado] ? lado : 'frente'].toUpperCase() + ' · ESCADA ' + nomeT : 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + nomeT;
+  const t2 = elev ? 'vista de fora, sem cortar nada · tudo em traço fino · cm' : 'hachura: cortado · traço fino: em vista · cm';
   const ymin = -fs * 9.5;
   s += titleBlock(s0 - fs * 2, -fs * 3, s1 - s0 + fs * 8, fs, t1, t2, C);
   const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11, ymax = H + (R.hel ? 0 : 92) + fs * 5;

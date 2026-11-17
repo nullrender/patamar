@@ -249,7 +249,8 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
           <label>Inclinar <input type="range" id="pit" min="12" max="80" value="42"></label>
         </div>
         <div class="barP" id="viewCorteBar" hidden>
-          <div class="seg segC" id="vistaC" role="group" aria-label="Qual desenho"><button type="button" data-v="A">Corte A-A</button><button type="button" data-v="B">Corte B-B</button><button type="button" data-v="perfil">Perfil</button><button type="button" data-v="detalhe">Detalhe</button></div>
+          <div class="seg segC" id="vistaC" role="group" aria-label="Qual desenho"><button type="button" data-v="A">Corte A-A</button><button type="button" data-v="B">Corte B-B</button><button type="button" data-v="E">Elevação</button><button type="button" data-v="perfil">Perfil</button><button type="button" data-v="detalhe">Detalhe</button></div>
+          <div class="seg segC" id="ladoE" role="group" aria-label="Lado da elevação"><button type="button" data-v="frente">Frente</button><button type="button" data-v="direita">Direita</button><button type="button" data-v="esquerda">Esquerda</button><button type="button" data-v="fundos">Fundos</button></div>
           <label id="deslWrap">Deslocar a linha <input class="mini" id="desl" type="text" inputmode="decimal" autocomplete="off"> cm</label>
         </div>
         <div class="barP" id="viewPlantaBar" hidden>
@@ -333,7 +334,7 @@ const DEFAULTS = {
   lado: 'dir', kLeque: 3, nMeio: 1, nMeioP: 4, nMeioPAuto: true, vao: 10, LpAuto: true, Lp: 100, leque: 'bal',
   D: 220, Dc: 20, nPerAuto: true, nPer: 13,
   hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5, bocel: 'bocel', avanco: 1.5,
-  zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true, showCortes: true, vistaCorte: 'A', corteA: 0, corteB: 0,
+  zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true, showCortes: true, vistaCorte: 'A', corteA: 0, corteB: 0, ladoElev: 'frente',
   cEmin: 16, cEmax: 18, cPmin: 25, cPmax: 32, cBmin: 63, cBmax: 64, cLmin: 80, cHpat: 320, cDw: 55, cLq: 15,
 };
 
@@ -1366,10 +1367,24 @@ function ladoDeLa(pts, P0, n) {
   return out;
 }
 
-function corteSVG(R, o, C, qual) {
+/* ELEVAÇÃO: o mesmo mecanismo do corte, com o plano posto fora da escada, do lado de quem olha. Nada é atravessado,
+   então tudo aparece em vista (traço fino). lado: 'frente' (de quem vai subir o 1º lance), 'direita', 'esquerda', 'fundos'.
+   Direita e esquerda são as de quem sobe o 1º lance. */
+const LADOS_ELEV = { frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' };
+function elevacaoDe(R, lado) {
+  const pts = []; R.polys.forEach(pl => pl.pts.forEach(q => pts.push(q))); R.arrival.pts.forEach(q => pts.push(q));
+  if (R.hel) pts.push([-R.helix.R, -R.helix.R], [R.helix.R, R.helix.R]);
+  const b = bboxOf(pts), mg = 40;
+  const v = { frente: { P0: [0, b[1] - mg], n: [0, 1] }, fundos: { P0: [0, b[3] + mg], n: [0, -1] }, direita: { P0: [b[2] + mg, 0], n: [-1, 0] }, esquerda: { P0: [b[0] - mg, 0], n: [1, 0] } }[LADOS_ELEV[lado] ? lado : 'frente'];
+  return { P0: v.P0, n: v.n, u: [v.n[1], -v.n[0]] };
+}
+function elevacaoSVG(R, o, C, lado) { return corteSVG(R, o, C, 'E', lado); }
+
+function corteSVG(R, o, C, qual, lado) {
   o = o || {};
-  qual = qual === 'B' ? 'B' : 'A';
-  const cs = cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u, st = R.st, H = R.H, e = R.e;
+  const elev = qual === 'E';
+  qual = elev ? 'E' : qual === 'B' ? 'B' : 'A';
+  const cs = elev ? elevacaoDe(R, lado) : cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u, st = R.st, H = R.H, e = R.e;
   const S = q => (q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1], Dp = q => (q[0] - P0[0]) * n[0] + (q[1] - P0[1]) * n[1];
   const ptAt = (s, d) => [P0[0] + u[0] * s + n[0] * d, P0[1] + u[1] * s + n[1] * d];
   /* extensão do desenho */
@@ -1439,7 +1454,11 @@ function corteSVG(R, o, C, qual) {
     else { const b = R.opening.bbox; const box = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]; const iv = cortaPoligono(box, P0, n, u); if (iv.length) furo = iv[0]; }
   }
   const lajeRet = (a, b) => b - a > 1e-6 ? '<rect x="' + r2(a) + '" y="' + r2(-H) + '" width="' + r2(b - a) + '" height="' + r2(st.espLaje) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="1.8" ' + NS + '/>' : '';
-  if (furo) {
+  if (elev) {
+    /* na elevação nada é cortado: a laje do piso de cima aparece só como as duas linhas da borda, em traço fino */
+    s += sLine([s0, zU], [s1, zU], C.muted, 0.9, '10 4') + sLine([s0, H], [s1, H], C.muted, 0.9, '10 4');
+    s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior (laje em linha tracejada)', fs * 0.72, C.muted, 'start', 0, 500);
+  } else if (furo) {
     s += lajeRet(s0, furo[0]) + lajeRet(furo[1], s1);
     s += sLine([furo[0], zU], [furo[1], zU], C.muted, 0.9) + sLine([furo[0], H], [furo[1], H], C.muted, 0.9);
   } else s += lajeRet(s0, s1);
@@ -1478,8 +1497,9 @@ function corteSVG(R, o, C, qual) {
   s += dimLine([s1, 0], [s1, H], 1, 0, fs * 2.4, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([s1, zU], [s1, H], 1, 0, fs * 0.9, fmt(st.espLaje, 0), fs * 0.75, C);
   if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500);
-  const t1 = 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
-  const t2 = 'hachura: cortado · traço fino: em vista · cm';
+  const nomeT = R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase();
+  const t1 = elev ? 'ELEVAÇÃO · ' + LADOS_ELEV[LADOS_ELEV[lado] ? lado : 'frente'].toUpperCase() + ' · ESCADA ' + nomeT : 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + nomeT;
+  const t2 = elev ? 'vista de fora, sem cortar nada · tudo em traço fino · cm' : 'hachura: cortado · traço fino: em vista · cm';
   const ymin = -fs * 9.5;
   s += titleBlock(s0 - fs * 2, -fs * 3, s1 - s0 + fs * 8, fs, t1, t2, C);
   const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11, ymax = H + (R.hel ? 0 : 92) + fs * 5;
@@ -2202,6 +2222,7 @@ function explicacao(R, S, C) {
       ['Linha de caminhamento', 'A linha laranja com seta: o caminho que uma pessoa faz ao usar a escada. Na planta do pavimento inferior a seta aponta para onde sobe e "SOBE" fica no primeiro degrau, com o nível ' + nivel(0) + '. Na planta do pavimento superior o app marca "DESCE", com a seta no sentido da descida.' + (leq && R.bal ? ' A marca "ponta" mostra o degrau mais estreito na borda interna.' : '')],
       ['Perfil desenvolvido', 'Não é um corte A-A da edificação: é um esquema da escada esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Serve para ver a sequência de espelhos, a laje da escada, a altura livre (tracejado laranja) e o corrimão' + (nm.acess ? ' a 92 e 70 cm, prolongado 30 cm nas pontas (NBR 9050:2020, 6.9.3.2)' : ' a 92 cm') + ', medido a partir do bocel dos degraus. Para ver a escada como ela é cortada de verdade, use os cortes A-A e B-B.'],
       ['Cortes A-A e B-B', 'Corte é um plano vertical que atravessa a edificação. Na planta ele aparece como uma linha de traço e ponto, com as letras nas pontas e setas que mostram para onde se olha. No desenho do corte, o que o plano atravessa (degraus, laje da escada, laje do piso de cima, chão) aparece hachurado e com traço grosso; o que está além do plano aparece em vista, com traço fino; o que fica atrás de quem olha não aparece. ' + (R.hel ? 'Na helicoidal, A-A e B-B passam pelo centro do pilar, um perpendicular ao outro' : 'O A-A passa ao longo do 1º lance e o B-B atravessa esse lance') + '; você pode deslocar cada linha. Repare na laje de cima: onde a escada passa, ela é interrompida pela abertura.'],
+      ['Elevação', 'A escada vista de fora, de um dos lados, sem cortar nada: tudo em traço fino. Mostra contornos e alturas (espelhos, corrimão, patamares), mas não a espessura da laje, que só aparece no corte. Na aba Cortes você escolhe o lado: frente, direita, esquerda ou fundos.'],
       ['Detalhe', 'Ampliação de poucos degraus, com as medidas do espelho, do piso, do bocel e da laje, para mostrar o que a escala da planta não deixa ler.'],
       ['Cotas', 'Todas em centímetros. Níveis em metros: ' + nivel(0) + ' é o piso de baixo e ' + nivel(R.H) + ' o de cima.'],
       ['3D', 'Modelo para enxergar o conjunto: ' + (R.hel ? 'degraus soltos em volta do pilar, com corrimão do lado de fora' : 'degraus com a face de baixo da laje inclinada de verdade, patamares e corrimãos') + '. Não mostra armadura, revestimento nem acabamentos. Gire arrastando.']
@@ -2370,6 +2391,7 @@ function bind() {
   $('showDims').addEventListener('change', e => { S.showDims = e.target.checked; render(); });
   $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
   $('showCortes').addEventListener('change', e => { S.showCortes = e.target.checked; render(); });
+  $('ladoE').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.ladoElev = b.dataset.v; render(); });
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
@@ -2519,6 +2541,8 @@ function render(typing) {
   $('viewCorteBar').hidden = VIEW !== 'corte';
   document.querySelectorAll('#vistaC button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.vistaCorte || 'A')));
   $('deslWrap').hidden = !(S.vistaCorte === 'A' || S.vistaCorte === 'B' || !S.vistaCorte);
+  $('ladoE').hidden = S.vistaCorte !== 'E';
+  document.querySelectorAll('#ladoE button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.ladoElev || 'frente')));
   if (document.activeElement !== $('desl')) $('desl').classList.remove('err');
   setVal('desl', plain(num(S.vistaCorte === 'B' ? S.corteB : S.corteA, 0)));
   $('showCortes').checked = S.showCortes !== false;
@@ -2555,12 +2579,14 @@ function svgCorte(R, o, C) {
   const v = S.vistaCorte || 'A';
   if (v === 'perfil') return sectionSVG(R, o, C);
   if (v === 'detalhe') return detalheSVG(R, o, C);
+  if (v === 'E') return elevacaoSVG(R, o, C, S.ladoElev || 'frente');
   return corteSVG(R, o, C, v);
 }
 function legCorte(R, v) {
   const fora = R.st['corte' + v] ? ' A linha foi deslocada ' + fmt(R.st['corte' + v]) + ' cm.' : '';
   if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do pilar, marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
   if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
+  if (v === 'E') return 'Elevação (' + ({ frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' }[S.ladoElev || 'frente']) + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
   if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
   return R.hel ? 'Detalhe do degrau: ampliação dos degraus soltos da helicoidal (sem laje e sem espelho), com o piso medido na linha de caminhamento e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.';
 }
@@ -2597,6 +2623,7 @@ function montarRelatorio() {
   h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
   h += '<div class="quebra"></div><figure>' + corteSVG(R, {}, C, 'A') + '<figcaption>Corte A-A, marcado na planta.</figcaption></figure>';
   h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
+  h += '<figure>' + elevacaoSVG(R, {}, C, S.ladoElev || 'direita') + '<figcaption>Elevação: a escada vista de fora, sem cortar nada.</figcaption></figure>';
   const det = detalheSVG(R, {}, C); if (det) h += '<figure>' + det + '<figcaption>Detalhe do degrau.</figcaption></figure>';
   h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('') + '</ul>';
   h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
@@ -2617,7 +2644,7 @@ function copiar(txt, msg) {
 
 function gerarImagem() {
   const T = THEME || getTheme();
-  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? 'corte-' + (S.vistaCorte || 'A') : VIEW) + '.png'; $('modal').hidden = false; };
+  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? (S.vistaCorte === 'E' ? 'elevacao-' + (S.ladoElev || 'frente') : 'corte-' + (S.vistaCorte || 'A')) : VIEW) + '.png'; $('modal').hidden = false; };
   if (VIEW === '3d') { draw3d(true); done(CV3.toDataURL('image/png')); return; }
   const svg = VIEW === 'corte' ? svgCorte(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
   const m = svg.match(/width="(\d+)" height="(\d+)"/); const w = +m[1], h = +m[2];

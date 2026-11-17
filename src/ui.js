@@ -95,6 +95,7 @@ function bind() {
   $('showDims').addEventListener('change', e => { S.showDims = e.target.checked; render(); });
   $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
   $('showCortes').addEventListener('change', e => { S.showCortes = e.target.checked; render(); });
+  $('ladoE').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.ladoElev = b.dataset.v; render(); });
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
@@ -244,6 +245,8 @@ function render(typing) {
   $('viewCorteBar').hidden = VIEW !== 'corte';
   document.querySelectorAll('#vistaC button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.vistaCorte || 'A')));
   $('deslWrap').hidden = !(S.vistaCorte === 'A' || S.vistaCorte === 'B' || !S.vistaCorte);
+  $('ladoE').hidden = S.vistaCorte !== 'E';
+  document.querySelectorAll('#ladoE button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.ladoElev || 'frente')));
   if (document.activeElement !== $('desl')) $('desl').classList.remove('err');
   setVal('desl', plain(num(S.vistaCorte === 'B' ? S.corteB : S.corteA, 0)));
   $('showCortes').checked = S.showCortes !== false;
@@ -280,12 +283,14 @@ function svgCorte(R, o, C) {
   const v = S.vistaCorte || 'A';
   if (v === 'perfil') return sectionSVG(R, o, C);
   if (v === 'detalhe') return detalheSVG(R, o, C);
+  if (v === 'E') return elevacaoSVG(R, o, C, S.ladoElev || 'frente');
   return corteSVG(R, o, C, v);
 }
 function legCorte(R, v) {
   const fora = R.st['corte' + v] ? ' A linha foi deslocada ' + fmt(R.st['corte' + v]) + ' cm.' : '';
   if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do pilar, marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
   if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
+  if (v === 'E') return 'Elevação (' + ({ frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' }[S.ladoElev || 'frente']) + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
   if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
   return R.hel ? 'Detalhe do degrau: ampliação dos degraus soltos da helicoidal (sem laje e sem espelho), com o piso medido na linha de caminhamento e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.';
 }
@@ -322,6 +327,7 @@ function montarRelatorio() {
   h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
   h += '<div class="quebra"></div><figure>' + corteSVG(R, {}, C, 'A') + '<figcaption>Corte A-A, marcado na planta.</figcaption></figure>';
   h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
+  h += '<figure>' + elevacaoSVG(R, {}, C, S.ladoElev || 'direita') + '<figcaption>Elevação: a escada vista de fora, sem cortar nada.</figcaption></figure>';
   const det = detalheSVG(R, {}, C); if (det) h += '<figure>' + det + '<figcaption>Detalhe do degrau.</figcaption></figure>';
   h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('') + '</ul>';
   h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
@@ -342,7 +348,7 @@ function copiar(txt, msg) {
 
 function gerarImagem() {
   const T = THEME || getTheme();
-  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? 'corte-' + (S.vistaCorte || 'A') : VIEW) + '.png'; $('modal').hidden = false; };
+  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? (S.vistaCorte === 'E' ? 'elevacao-' + (S.ladoElev || 'frente') : 'corte-' + (S.vistaCorte || 'A')) : VIEW) + '.png'; $('modal').hidden = false; };
   if (VIEW === '3d') { draw3d(true); done(CV3.toDataURL('image/png')); return; }
   const svg = VIEW === 'corte' ? svgCorte(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
   const m = svg.match(/width="(\d+)" height="(\d+)"/); const w = +m[1], h = +m[2];
