@@ -1,4 +1,4 @@
-const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG,problemasHTML}=require('./carregar.js');
+const {calc,NORMAS,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG,problemasHTML}=require('./carregar.js');
 const C={paper:'#fff',ink:'#000',muted:'#666',line:'#ccc',accent:'#f60',info:'#06f',tread:'#ddd',winder:'#fdc',patamar:'#cfc',piso:'#eee',t3:'#ddd',w3:'#fdc',p3:'#cfc',f3:'#eee',ground:'#ccc'};
 let fail=0; const ok=(c,m)=>{console.log((c?'PASSA ':'FALHA ')+m); if(!c)fail++;};
 const st=(R,id)=>(R.checks.find(c=>c.id===id)||{}).status;
@@ -206,27 +206,35 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const he=calc({tipo:'helicoidal',ladoElev:'esquerda'}); const xe=explicacao(he,he.st,C); ok(/−110 × sen\(ângulo\)/.test(xe) && !/-450/.test(xe) && /214,6°/.test(xe),'helicoidal: fórmula com o sinal da vista e ângulos de 0 a 360°');
   let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){const X=calc({tipo:t,ladoElev:l}); if(/NaN|undefined|Infinity/.test(explicacao(X,X.st,C))) nan++;} ok(nan===0,'roteiro da elevação sem NaN nos 9 tipos e 4 lados');
 }
-/* perfis de escada secundária e de serviço (NBR 9077:2001, 4.7.5) e "Como resolver" */
+/* perfis da NBR 9077:2025 e "Como resolver" */
 {
-  const sc=calc({norma:'sec',tipo:'l-leque',H:180}); ok(sc.nm.lqMin===7 && st(sc,'ponta')==='ok','secundária: ponta de leque de 7 cm (4.7.5.1 d)');
-  ok(st(calc({norma:'sec',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='ok' && st(calc({norma:'res',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='bad','secundária: patamar de 80 cm basta (sem a fórmula)');
-  ok(st(calc({norma:'serv',H:280,nAuto:false,N:14}),'e')==='ok' && st(calc({norma:'sec',H:280,nAuto:false,N:14}),'e')==='bad','serviço: espelho de 20 cm atende; secundária não');
-  ok(st(calc({norma:'sec',H:350,tipo:'reta'}),'patamar')==='ok' && st(calc({norma:'res',H:350,tipo:'reta'}),'patamar')==='bad','secundária: lance até 3,70 m (NBR 9077:2001, 4.7.3.2)');
+  /* NBR 9077:2025: rota de fuga (9.1.10 a 9.1.12) e mezanino ou área privativa (9.5.9.1) */
+  ok(st(calc({norma:'fuga',tipo:'l-leque',L:120}),'mudanca')==='bad' && st(calc({norma:'fuga',tipo:'helicoidal',D:300}),'mudanca')==='bad','rota de fuga 2025: leque e espiral proibidos (9.1.11)');
+  ok(/9\.1\.11/.test((calc({norma:'fuga',tipo:'u-leque',L:120}).checks.find(c=>c.id==='mudanca')||{}).nota||''),'rota de fuga 2025: cita o item 9.1.11');
+  ok(!calc({norma:'fuga',tipo:'l-patamar',L:120}).checks.some(c=>c.id==='mudanca'),'rota de fuga 2025: L com patamar não tem alerta de leque');
+  ok(st(calc({norma:'fuga',estrutura:'balanco',L:120}),'vazado')==='bad' && /3\.11/.test(calc({norma:'fuga',estrutura:'balanco',L:120}).checks.find(c=>c.id==='vazado').nota),'rota de fuga 2025: espelho vazado não atende (3.11)');
+  ok(st(calc({norma:'fuga',L:100}),'L')==='bad' && st(calc({norma:'fuga',L:120}),'L')==='ok','rota de fuga 2025: largura mínima de 120 cm (9.4.2.2, pela NBR 9050)');
+  ok(st(calc({norma:'mez',tipo:'helicoidal'}),'L')==='ok' && !calc({norma:'mez',tipo:'helicoidal'}).checks.some(c=>c.id==='mudanca'),'mezanino 2025: espiral permitida, largura de 80 cm (9.5.9.1 b)');
+  ok(st(calc({norma:'mez',H:380,tipo:'reta-patamar'}),'htot')==='bad' && st(calc({norma:'mez',H:370,tipo:'reta-patamar'}),'htot')==='ok','mezanino 2025: altura percorrida até 3,7 m (9.5.9.1 a)');
+  ok(st(calc({norma:'mez',tipo:'l-leque'}),'patcurva')==='warn' && st(calc({norma:'mez',tipo:'l-patamar'}),'patcurva')===undefined,'mezanino 2025: patamar de 80 cm em escada curva ou em leque (9.5.9.1 f) como atenção');
+  ok(st(calc({norma:'mez'}),'mezreq')==='warn' && /20 pessoas/.test(calc({norma:'mez'}).checks.find(c=>c.id==='mezreq').nota),'mezanino 2025: condições que o app não confere aparecem como atenção');
+  ok(st(calc({norma:'mez',tipo:'u-leque',L:80,H:150}),'ponta')==='warn' && st(calc({norma:'res',tipo:'u-leque',L:80,H:150}),'ponta')==='bad','mezanino 2025: ponta do leque abaixo da referência é atenção, não "não atende"');
+  ok(!Object.keys(NORMAS).some(k=>k==='sec'||k==='serv'),'perfis da NBR 9077:2001 (4.7.5) removidos: a edição de 2025 não os tem');
   const R14=calc({nAuto:false,N:14}); R14.resolver(); const e14=R14.checks.find(c=>c.id==='e'); ok(/Use 16 espelhos/.test(e14.sol||'') && calc({nAuto:false,N:16}).checks.find(c=>c.id==='e').status==='ok','como resolver: espelho alto sugere um número de espelhos que atende');
   /* a sugestão do pilar é uma combinação testada: aplicada, a ponta passa a atender */
   const RH=calc({tipo:'helicoidal'}); RH.resolver(); const hp=RH.checks.find(c=>c.id==='pilar'); const mm=/Ø (\d+) cm, diâmetro externo de (\d+) cm e (\d+) degraus/.exec(hp.sol||'');
   ok(mm && calc({tipo:'helicoidal',Dc:+mm[1],D:+mm[2],nPerAuto:false,nPer:+mm[3]}).checks.find(c=>c.id==='pilar').status==='ok','como resolver: pilar da caracol sugere combinação que atende');
   const R0=calc({}); R0.resolver(); ok(R0.checks.every(c=>!c.sol),'escada que atende não mostra "como resolver"');
   const Rl=calc({}); ok(Rl.checks.every(c=>c.sol===undefined) && typeof Rl.resolver==='function','"como resolver" só é calculado quando pedido (resolver)');
-  ok(/4\.7\.5/.test(explicacao(calc({norma:'sec'}),calc({norma:'sec'}).st,C)),'explicação descreve os perfis da NBR 9077:2001, 4.7.5');
+  ok(/9\.5\.9\.1/.test(explicacao(calc({norma:'mez'}),calc({norma:'mez'}).st,C)),'explicação descreve o perfil de mezanino (NBR 9077:2025, 9.5.9.1)');
 }
 /* seção Problemas comuns */
 {
-  let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','sec','serv','acess']){const X=calc({tipo:t,norma:no,L:120}); const ex=explicacao(X,X.st,C); if(!/Problemas comuns e como os profissionais resolvem/.test(ex)||/NaN|undefined|Infinity/.test(ex)) ruim++;}
+  let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','fuga','mez','acess']){const X=calc({tipo:t,norma:no,L:120}); const ex=explicacao(X,X.st,C); if(!/Problemas comuns e como os profissionais resolvem/.test(ex)||/NaN|undefined|Infinity/.test(ex)) ruim++;}
   ok(ruim===0,'seção Problemas comuns nos 9 tipos e 4 perfis, sem NaN');
   const ph=problemasHTML(calc({tipo:'helicoidal'})); ok(/62,1 cm para ponta de 15 cm/.test(ph) && /29 cm para ponta de 7 cm/.test(ph),'caracol: mesmo diâmetro mínimo da verificação (62,1 e 29 cm)');
   ok(!/9077:2025/.test(ph.replace(/não foi lida|não lida|não foi lido/g,'')) || /2025[^.]*não/.test(ph),'nada atribuído à NBR 9077:2025');
-  ok(/class="agora"/.test(problemasHTML(calc({nAuto:false,N:14}))) && !/class="agora"/.test(problemasHTML(calc({norma:'sec'}))),'destaque "nesta escada" só quando há problema');
+  ok(/class="agora"/.test(problemasHTML(calc({nAuto:false,N:14}))) && !/class="agora"/.test(problemasHTML(calc({norma:'res',tipo:'l-patamar'}))),'destaque "nesta escada" só quando há problema');
   /* o destaque só vale para o problema que acontece de fato: "Espelho alto" só com espelho acima do limite, "Leque convergente" só no convergente */
   const tituloMarcado=(h,t)=>{const i=h.indexOf(t); if(i<0) return false; const j=h.indexOf('</',i); const k=h.lastIndexOf('<h',i); return /class="agora"/.test(h.slice(k,j+120));};
   ok(!tituloMarcado(problemasHTML(calc({nAuto:false,N:18})),'Espelho alto') && tituloMarcado(problemasHTML(calc({nAuto:false,N:14})),'Espelho alto'),'Espelho alto marcado só com espelho acima do limite');
