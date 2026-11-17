@@ -4,7 +4,9 @@
    É isso que garante a escala: em 1:50, 1 m da escada vira 20 mm no papel.
    Margens, moldura e carimbo seguem o uso comum em escolas de arquitetura (margem esquerda maior, para encadernar;
    carimbo no canto inferior direito). Não citamos norma de desenho técnico porque o texto dela não foi conferido.
-   montarPrancha(R, C, op) devolve, além do SVG, a escala usada, o retângulo de cada vista e o aviso (o que não coube). */
+   montarPrancha(R, C, op) devolve as folhas (cada uma com o SVG, as vistas e o carimbo), a escala usada e o aviso (o que não coube).
+   Com op.folhas = 'varias' (padrão) a escala fica e as vistas se dividem em quantas folhas forem precisas;
+   com op.folhas = 'uma' tudo vai numa folha só, com a escala reduzida se for preciso. */
 const FOLHAS = { A4: [297, 210], A3: [420, 297], A2: [594, 420] };
 const FOLHA_MAIOR = { A4: 'A3', A3: 'A2', A2: null };
 const ESCALAS_AUTO = [50, 75, 100];
@@ -80,9 +82,19 @@ function celula(x, y, w, h, rotulo, valor, C, tamValor, peso) {
   return s;
 }
 
+/* ordem das vistas nas folhas (modo "várias"): plantas na folha 1, depois cortes, elevação e detalhe */
+const ORDEM_FOLHAS = ['planta', 'plantaSup', 'corteA', 'corteB', 'elevacao', 'detalhe'];
+/* modo "uma", quando nem tudo cabe: a planta do pavimento inferior entra primeiro; o detalhe, a planta superior e o corte B-B são os primeiros a sair */
+const PRIORIDADE_UMA = ['planta', 'corteA', 'elevacao', 'corteB', 'plantaSup', 'detalhe'];
+const nomeMin = v => NOME_VISTA[v].toLowerCase().replace(/ ([ab]-[ab])$/, m => m.toUpperCase());
+const dois = n => String(n).padStart(2, '0');
+
+/* op.folhas: 'varias' (padrão) mantém a escala e usa quantas folhas forem precisas, todas do mesmo formato;
+   'uma' põe tudo numa folha só, reduzindo a escala, e avisa o que não coube. */
 function montarPrancha(R, C, op) {
   op = op || {};
   const formato = FOLHAS[op.formato] ? op.formato : 'A3';
+  const modo = op.folhas === 'uma' ? 'uma' : 'varias';
   const [W, H] = FOLHAS[formato];
   /* papel branco; o resto das cores vem do tema claro */
   const Cp = Object.assign({}, C, { paper: '#ffffff' });
@@ -93,13 +105,15 @@ function montarPrancha(R, C, op) {
   const tipo = TIPOS.find(t => t.id === R.tipo) || { nome: '' };
   const titulo = String(op.titulo || '').trim() || ('ESCADA ' + tipo.nome.toUpperCase());
 
-  /* moldura e carimbo */
+  /* moldura e carimbo (iguais em todas as folhas) */
   const mold = [MARGEM_ESQ, MARGEM, W - MARGEM, H - MARGEM];
-  const cw = Math.min(175, mold[2] - mold[0]), lin = [12, 9, 9, 9, 9, 9, 13], ch = lin.reduce((a, b) => a + b, 0);
+  /* na A4 o carimbo fica mais estreito (148 mm, o mínimo para a régua de 100 mm e a nota ao lado), para sobrar lugar para a planta */
+  const cw = Math.min(formato === 'A4' ? 148 : 175, mold[2] - mold[0]), lin = [12, 9, 9, 9, 9, 9, 13], ch = lin.reduce((a, b) => a + b, 0);
   const carimbo = [mold[2] - cw, mold[3] - ch, mold[2], mold[3]];
   const area = [mold[0] + RECUO, mold[1] + RECUO, mold[2] - RECUO, mold[3] - RECUO];
+  /* área livre (para descartar logo o que não pode caber): a área menos o carimbo com a folga */
+  const livre = (area[2] - area[0]) * (area[3] - area[1]) - Math.max(0, area[2] - (carimbo[0] - FOLGA)) * Math.max(0, area[3] - (carimbo[1] - FOLGA));
 
-  /* tenta uma escala principal e uma do detalhe; devolve o arranjo ou null */
   const cache = {};
   const vista = (v, esc) => { const k = v + '@' + esc; if (!(k in cache)) cache[k] = abrirDesenho(desenhoDaVista(Rp, Cp, v, esc, lado)); return cache[k]; };
   const caixaDe = (v, esc) => {
@@ -109,90 +123,162 @@ function montarPrancha(R, C, op) {
     const w = d.vb[2] * 10 / esc, h = d.vb[3] * 10 / esc;
     return { v, d, esc, nome, sub, w: Math.max(w, largTxt(nome, 3), largTxt(sub, 2.5)), h: h + 11, dw: w, dh: h };
   };
+  /* tenta pôr uma lista de vistas numa folha, com a escala principal e a do detalhe; devolve o arranjo ou null (com cache) */
+  const memo = {};
   const tentar = (esc, escD, lista) => {
+    const chave = esc + '|' + escD + '|' + lista.join(',');
+    if (chave in memo) return memo[chave];
     const caixas = lista.map(v => caixaDe(v, v === 'detalhe' ? escD : esc)).filter(Boolean);
-    let pos = arranjar(caixas, area, [carimbo]);
-    if (!pos) {
-      /* outras ordens de encaixe: primeiro das mais altas para as mais baixas, depois todas as permutações (no máximo 6 vistas = 720) */
-      const ords = [caixas.slice().sort((a, b) => b.h - a.h || b.w - a.w)];
-      const perm = (a) => a.length <= 1 ? [a] : [].concat.apply([], a.map((x, i) => perm(a.slice(0, i).concat(a.slice(i + 1))).map(r => [x].concat(r))));
-      if (caixas.length <= 6) perm(caixas).forEach(o => ords.push(o));
-      for (const ord of ords) { const p2 = arranjar(ord, area, [carimbo]); if (p2) { pos = caixas.map(c => p2[ord.indexOf(c)]); break; } }
+    let pos = null;
+    if (caixas.reduce((a, c) => a + c.w * c.h, 0) <= livre + 1e-9) {
+      pos = arranjar(caixas, area, [carimbo]);
+      if (!pos) {
+        /* outras ordens de encaixe: primeiro das mais altas para as mais baixas, depois todas as permutações (no máximo 6 vistas = 720) */
+        const ords = [caixas.slice().sort((a, b) => b.h - a.h || b.w - a.w)];
+        const perm = (a) => a.length <= 1 ? [a] : [].concat.apply([], a.map((x, i) => perm(a.slice(0, i).concat(a.slice(i + 1))).map(r => [x].concat(r))));
+        if (caixas.length <= 6) perm(caixas).forEach(o => ords.push(o));
+        for (const ord of ords) { const p2 = arranjar(ord, area, [carimbo]); if (p2) { pos = caixas.map(c => p2[ord.indexOf(c)]); break; } }
+      }
     }
-    return pos ? { caixas, pos } : null;
+    return (memo[chave] = pos ? { caixas, pos } : null);
   };
-  const escalas = op.escala === undefined || op.escala === 'auto' ? ESCALAS_AUTO : [Number(op.escala)].filter(e => e > 0);
+  const auto = op.escala === undefined || op.escala === 'auto';
+  const escalas = auto ? ESCALAS_AUTO.slice() : [Number(op.escala)].filter(e => e > 0);
   if (!escalas.length) escalas.push(50);
   const temDet = pedidas.indexOf('detalhe') >= 0;
-  let res = null, esc = escalas[escalas.length - 1], escD = temDet ? ESCALAS_DET[ESCALAS_DET.length - 1] : null;
-  fora: for (const e of escalas) for (const ed of (temDet ? ESCALAS_DET : [null])) {
-    const r = tentar(e, ed, pedidas);
-    if (r) { res = r; esc = e; escD = ed; break fora; }
-  }
-  /* não coube tudo: na menor escala, põe uma vista de cada vez, na ordem pedida, e avisa o que ficou de fora */
+  let esc = escalas[escalas.length - 1], escD = temDet ? ESCALAS_DET[ESCALAS_DET.length - 1] : null;
   const omitidas = [];
-  if (!res) {
-    let lista = [];
-    for (const v of pedidas) { const r = tentar(esc, escD, lista.concat([v])); if (r) { lista.push(v); res = r; } else omitidas.push(v); }
-    if (!res) res = { caixas: [], pos: [] };
+  let grupos = []; /* uma lista de vistas por folha, cada uma com o seu arranjo */
+
+  if (modo === 'uma') {
+    let res = null;
+    fora: for (const e of escalas) for (const ed of (temDet ? ESCALAS_DET : [null])) {
+      const r = tentar(e, ed, pedidas);
+      if (r) { res = r; esc = e; escD = ed; break fora; }
+    }
+    /* não coube tudo: na menor escala, põe uma vista de cada vez, com a planta do pavimento inferior primeiro, e avisa o que ficou de fora */
+    if (!res) {
+      const lista = [];
+      PRIORIDADE_UMA.filter(v => pedidas.indexOf(v) >= 0).forEach(v => {
+        const l2 = pedidas.filter(x => x === v || lista.indexOf(x) >= 0); /* mantém a ordem pedida dentro da folha */
+        const r = tentar(esc, escD, l2); if (r) { lista.push(v); res = r; } else omitidas.push(v);
+      });
+      omitidas.sort((a, b) => pedidas.indexOf(a) - pedidas.indexOf(b));
+      if (!res) res = { caixas: [], pos: [] };
+    }
+    grupos = [res];
+  } else {
+    /* várias folhas: a escala é a pedida; na automática, a maior em que cada vista (fora o detalhe) cabe sozinha numa folha */
+    const principais = pedidas.filter(v => v !== 'detalhe');
+    const cabem = e => principais.filter(v => tentar(e, null, [v])).length;
+    if (auto) {
+      const tudo = escalas.find(e => cabem(e) === principais.length);
+      if (tudo) esc = tudo;
+      else { let melhor = -1; escalas.forEach(e => { const n = cabem(e); if (n > melhor) { melhor = n; esc = e; } }); }
+    } else esc = escalas[0];
+    const ordem = ORDEM_FOLHAS.filter(v => pedidas.indexOf(v) >= 0);
+    /* distribui no menor número de folhas; entre as distribuições com o mesmo número, a que põe as vistas da ordem acima mais cedo */
+    const distribuir = (ed) => {
+      const itens = ordem.filter(v => tentar(esc, ed, [v]));
+      let melhor = null;
+      const blocos = [];
+      const passo = (i) => {
+        if (melhor && blocos.length >= melhor.length) return;
+        if (i === itens.length) { melhor = blocos.map(b => b.slice()); return; }
+        for (let k = 0; k <= blocos.length; k++) {
+          if (k === blocos.length) { if (melhor && blocos.length + 1 >= melhor.length) break; blocos.push([itens[i]]); passo(i + 1); blocos.pop(); }
+          else { const b = blocos[k].concat([itens[i]]); if (!tentar(esc, ed, b)) continue; blocos[k] = b; passo(i + 1); blocos[k] = b.slice(0, -1); }
+          if (melhor && blocos.length >= melhor.length) return;
+        }
+      };
+      passo(0);
+      return { itens, blocos: melhor || [] };
+    };
+    let dist = null;
+    if (temDet) {
+      /* o detalhe: a maior ampliação (1:5, 1:10, ...) que não aumenta o número de folhas */
+      for (const ed of ESCALAS_DET) {
+        if (!tentar(esc, ed, ['detalhe'])) continue;
+        const d = distribuir(ed);
+        if (!dist || d.blocos.length < dist.d.blocos.length) dist = { d, ed };
+      }
+      if (dist) escD = dist.ed; else dist = { d: distribuir(escD), ed: escD };
+      dist = dist.d;
+    } else dist = distribuir(null);
+    pedidas.forEach(v => { if (dist.itens.indexOf(v) < 0) omitidas.push(v); });
+    grupos = dist.blocos.map(b => tentar(esc, escD, b));
+    if (!grupos.length) grupos = [{ caixas: [], pos: [] }];
   }
+
   let aviso = '';
   if (omitidas.length) {
     const maior = FOLHA_MAIOR[formato];
-    aviso = 'Não coube na folha ' + formato + ' em 1:' + esc + ': ' + omitidas.map(v => NOME_VISTA[v].toLowerCase().replace(/ ([ab]-[ab])$/, m => m.toUpperCase())).join(', ') + '. ' +
+    aviso = 'Não coube na folha ' + formato + ' em 1:' + esc + ': ' + omitidas.map(nomeMin).join(', ') + '. ' +
       [maior ? 'use a folha ' + maior : '', esc < 100 ? 'a escala 1:100 (desenho menor)' : '', 'desmarque alguma vista'].filter(Boolean).join(', ').replace(/^./, c => c.toUpperCase()).replace(/, ([^,]+)$/, ' ou $1') + '.';
   }
+  const comDet = grupos.some(g => g.caixas.some(c => c.v === 'detalhe'));
+  const total = grupos.length;
+  const folhas = grupos.map((g, i) => montarFolha(g, i, total));
+  const f0 = folhas[0];
+  return { folhas, modo, svg: f0.svg, W, H, formato, escala: esc, escalaDetalhe: comDet ? escD : null, vistas: f0.vistas, omitidas, aviso, moldura: f0.moldura, carimbo: f0.carimbo };
 
-  /* ---- monta a folha ---- */
-  const T = (x, y, t, tam, cor, anc, peso, extra) => '<text x="' + mm(x) + '" y="' + mm(y) + '" font-size="' + mm(tam) + '" fill="' + cor + '" font-family="' + FONT + '"' + (anc ? ' text-anchor="' + anc + '"' : '') + (peso ? ' font-weight="' + peso + '"' : '') + (extra || '') + '>' + escXml(t) + '</text>';
-  let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + 'mm" height="' + H + 'mm" viewBox="0 0 ' + W + ' ' + H + '" class="folha" data-formato="' + formato + '" data-escala="' + esc + '"' + (escD ? ' data-escala-detalhe="' + escD + '"' : '') + (aviso ? ' data-aviso="' + escXml(aviso).replace(/"/g, '&quot;') + '"' : '') + ' role="img" aria-label="' + escXml('Prancha ' + formato + ': ' + titulo).replace(/"/g, '&quot;') + '">';
-  if (aviso) s += '<!-- AVISO: ' + aviso.replace(/--/g, '—') + ' -->';
-  s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#ffffff"/>';
-  s += '<rect x="' + mold[0] + '" y="' + mold[1] + '" width="' + (mold[2] - mold[0]) + '" height="' + (mold[3] - mold[1]) + '" fill="none" stroke="' + Cp.ink + '" stroke-width="0.5" data-moldura="1"/>';
-  const vistas = [];
-  res.caixas.forEach((c, i) => {
-    const p = res.pos[i], dx = p[0] + (c.w - c.dw) / 2, dy = p[1];
-    s += '<g data-vista="' + c.v + '">';
-    s += '<svg x="' + mm(dx) + '" y="' + mm(dy) + '" width="' + mm(c.dw) + '" height="' + mm(c.dh) + '" viewBox="' + c.d.vb.join(' ') + '" overflow="hidden" data-escala="' + c.esc + '">' + c.d.corpo + '</svg>';
-    const cx = p[0] + c.w / 2, yt = dy + c.dh + 4.5, lt = Math.max(largTxt(c.nome, 3), largTxt(c.sub, 2.5));
-    s += T(cx, yt, c.nome, 3, Cp.ink, 'middle', 600);
-    s += '<line x1="' + mm(cx - lt / 2) + '" y1="' + mm(yt + 1.2) + '" x2="' + mm(cx + lt / 2) + '" y2="' + mm(yt + 1.2) + '" stroke="' + Cp.ink + '" stroke-width="0.35"/>';
-    s += T(cx, yt + 5, c.sub, 2.5, Cp.muted, 'middle');
-    s += '</g>';
-    vistas.push({ id: c.v, nome: c.nome, escala: c.esc, vb: c.d.vb.slice(), x: dx, y: dy, w: c.dw, h: c.dh, caixa: { x: p[0], y: p[1], w: c.w, h: c.h } });
-  });
+  /* ---- monta uma folha ---- */
+  function montarFolha(res, idx, n) {
+    const T = (x, y, t, tam, cor, anc, peso, extra) => '<text x="' + mm(x) + '" y="' + mm(y) + '" font-size="' + mm(tam) + '" fill="' + cor + '" font-family="' + FONT + '"' + (anc ? ' text-anchor="' + anc + '"' : '') + (peso ? ' font-weight="' + peso + '"' : '') + (extra || '') + '>' + escXml(t) + '</text>';
+    const qual = n > 1 ? ' (folha ' + (idx + 1) + ' de ' + n + ')' : '';
+    let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + 'mm" height="' + H + 'mm" viewBox="0 0 ' + W + ' ' + H + '" class="folha" data-formato="' + formato + '" data-escala="' + esc + '"' + (escD ? ' data-escala-detalhe="' + escD + '"' : '') + ' data-folha="' + (idx + 1) + '" data-folhas="' + n + '"' + (aviso ? ' data-aviso="' + escXml(aviso).replace(/"/g, '&quot;') + '"' : '') + ' role="img" aria-label="' + escXml('Prancha ' + formato + qual + ': ' + titulo).replace(/"/g, '&quot;') + '">';
+    if (aviso) s += '<!-- AVISO: ' + aviso.replace(/--/g, '—') + ' -->';
+    s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#ffffff"/>';
+    s += '<rect x="' + mold[0] + '" y="' + mold[1] + '" width="' + (mold[2] - mold[0]) + '" height="' + (mold[3] - mold[1]) + '" fill="none" stroke="' + Cp.ink + '" stroke-width="0.5" data-moldura="1"/>';
+    const vistas = [];
+    res.caixas.forEach((c, i) => {
+      const p = res.pos[i], dx = p[0] + (c.w - c.dw) / 2, dy = p[1];
+      s += '<g data-vista="' + c.v + '">';
+      s += '<svg x="' + mm(dx) + '" y="' + mm(dy) + '" width="' + mm(c.dw) + '" height="' + mm(c.dh) + '" viewBox="' + c.d.vb.join(' ') + '" overflow="hidden" data-escala="' + c.esc + '">' + c.d.corpo + '</svg>';
+      const cx = p[0] + c.w / 2, yt = dy + c.dh + 4.5, lt = Math.max(largTxt(c.nome, 3), largTxt(c.sub, 2.5));
+      s += T(cx, yt, c.nome, 3, Cp.ink, 'middle', 600);
+      s += '<line x1="' + mm(cx - lt / 2) + '" y1="' + mm(yt + 1.2) + '" x2="' + mm(cx + lt / 2) + '" y2="' + mm(yt + 1.2) + '" stroke="' + Cp.ink + '" stroke-width="0.35"/>';
+      s += T(cx, yt + 5, c.sub, 2.5, Cp.muted, 'middle');
+      s += '</g>';
+      vistas.push({ id: c.v, nome: c.nome, escala: c.esc, vb: c.d.vb.slice(), x: dx, y: dy, w: c.dw, h: c.dh, caixa: { x: p[0], y: p[1], w: c.w, h: c.h } });
+    });
 
-  /* carimbo */
-  const [kx, ky] = carimbo;
-  let y = ky, k = '<g data-carimbo="1">';
-  k += '<rect x="' + mm(kx) + '" y="' + mm(ky) + '" width="' + mm(cw) + '" height="' + mm(ch) + '" fill="#ffffff" stroke="' + Cp.ink + '" stroke-width="0.5"/>';
-  const w1 = cw - 60, wm = cw / 2;
-  k += celula(kx, y, cw, lin[0], 'TÍTULO', titulo, Cp, 4.5, 600); y += lin[0];
-  k += celula(kx, y, w1, lin[1], 'ALUNA(O)', op.aluno, Cp) + celula(kx + w1, y, 60, lin[1], 'DATA', op.data || hojeBR(), Cp); y += lin[1];
-  k += celula(kx, y, wm, lin[2], 'DISCIPLINA', op.disciplina, Cp) + celula(kx + wm, y, cw - wm, lin[2], 'PROFESSOR(A)', op.professor, Cp); y += lin[2];
-  const escTxt = 'PLANTAS E CORTES 1:' + esc + (escD && vistas.some(v => v.id === 'detalhe') ? ' · DETALHE 1:' + escD : '');
-  k += celula(kx, y, w1, lin[3], 'ESCALAS', escTxt, Cp) + celula(kx + w1, y, 60, lin[3], 'FOLHA', '01/01 · ' + formato, Cp); y += lin[3];
-  const nm = R.nm || {};
-  k += celula(kx, y, cw, lin[4], 'PERFIL NORMATIVO', nm.rotulo || nm.nome || 'Personalizada', Cp); y += lin[4];
-  const resumo = R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm · piso ' + fmt(R.p, 1) + ' cm · Blondel ' + fmt(R.bl, 1) + ' cm · desnível ' + fmt(R.H) + ' cm';
-  k += celula(kx, y, cw, lin[5], 'RESUMO', resumo, Cp); y += lin[5];
-  /* régua de conferência: 100 mm no papel */
-  k += '<rect x="' + mm(kx) + '" y="' + mm(y) + '" width="' + mm(cw) + '" height="' + lin[6] + '" fill="none" stroke="' + Cp.ink + '" stroke-width="0.25"/>';
-  const rx = kx + 4, ry = y + 7.5;
-  k += '<g data-regua="100">';
-  k += '<line x1="' + mm(rx) + '" y1="' + mm(ry) + '" x2="' + mm(rx + 100) + '" y2="' + mm(ry) + '" stroke="' + Cp.ink + '" stroke-width="0.4" data-regua-traco="1"/>';
-  for (let i = 0; i <= 10; i++) { const t = i % 5 === 0 ? 2.2 : 1.2; k += '<line x1="' + mm(rx + i * 10) + '" y1="' + mm(ry - t) + '" x2="' + mm(rx + i * 10) + '" y2="' + mm(ry) + '" stroke="' + Cp.ink + '" stroke-width="0.25"/>'; }
-  k += T(rx, ry + 3.6, '0', 2, Cp.muted, 'middle') + T(rx + 50, ry + 3.6, '50', 2, Cp.muted, 'middle') + T(rx + 100, ry + 3.6, '100 mm', 2, Cp.muted, 'middle');
-  k += T(rx, y + 3, 'Este traço mede 100 mm no papel:', 2, Cp.ink, 'start');
-  k += '</g>';
-  const nx = rx + 108;
-  k += T(nx, y + 5.2, 'Imprimir em tamanho real', 2.4, Cp.ink, 'start', 600, ' data-nota="1"');
-  k += T(nx, y + 8.6, '(escala 100%).', 2.4, Cp.ink, 'start', 600);
-  k += T(nx, y + 11.6, 'Cotas em cm · níveis em m', 2, Cp.muted, 'start');
-  k += '</g>';
-  s += k + '</svg>';
-
-  return { svg: s, W, H, formato, escala: esc, escalaDetalhe: vistas.some(v => v.id === 'detalhe') ? escD : null, vistas, omitidas, aviso, moldura: { x: mold[0], y: mold[1], w: mold[2] - mold[0], h: mold[3] - mold[1] }, carimbo: { x: kx, y: ky, w: cw, h: ch } };
+    /* carimbo */
+    const [kx, ky] = carimbo;
+    let y = ky, k = '<g data-carimbo="1">';
+    k += '<rect x="' + mm(kx) + '" y="' + mm(ky) + '" width="' + mm(cw) + '" height="' + mm(ch) + '" fill="#ffffff" stroke="' + Cp.ink + '" stroke-width="0.5"/>';
+    const w1 = cw - 60, wm = cw / 2;
+    k += celula(kx, y, cw, lin[0], 'TÍTULO', titulo, Cp, 4.5, 600);
+    if (n > 1) k += T(kx + cw - 1.5, y + 2.8, 'PRANCHA ' + (idx + 1) + ' DE ' + n, 2.2, Cp.ink, 'end', 600, ' data-prancha="' + (idx + 1) + '/' + n + '"');
+    y += lin[0];
+    k += celula(kx, y, w1, lin[1], 'ALUNA(O)', op.aluno, Cp) + celula(kx + w1, y, 60, lin[1], 'DATA', op.data || hojeBR(), Cp); y += lin[1];
+    k += celula(kx, y, wm, lin[2], 'DISCIPLINA', op.disciplina, Cp) + celula(kx + wm, y, cw - wm, lin[2], 'PROFESSOR(A)', op.professor, Cp); y += lin[2];
+    const temD = vistas.some(v => v.id === 'detalhe'), temP = vistas.some(v => v.id !== 'detalhe');
+    const escTxt = (temP || !temD ? 'PLANTAS E CORTES 1:' + esc : '') + (temP && temD ? ' · ' : '') + (temD ? 'DETALHE 1:' + escD : '');
+    k += celula(kx, y, w1, lin[3], 'ESCALAS', escTxt, Cp) + celula(kx + w1, y, 60, lin[3], 'FOLHA', dois(idx + 1) + '/' + dois(n) + ' · ' + formato, Cp); y += lin[3];
+    const nm = R.nm || {};
+    k += celula(kx, y, cw, lin[4], 'PERFIL NORMATIVO', nm.rotulo || nm.nome || 'Personalizada', Cp); y += lin[4];
+    const resumo = R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm · piso ' + fmt(R.p, 1) + ' cm · Blondel ' + fmt(R.bl, 1) + ' cm · desnível ' + fmt(R.H) + ' cm';
+    k += celula(kx, y, cw, lin[5], 'RESUMO', resumo, Cp); y += lin[5];
+    /* régua de conferência: 100 mm no papel */
+    k += '<rect x="' + mm(kx) + '" y="' + mm(y) + '" width="' + mm(cw) + '" height="' + lin[6] + '" fill="none" stroke="' + Cp.ink + '" stroke-width="0.25"/>';
+    const rx = kx + 4, ry = y + 7.5;
+    k += '<g data-regua="100">';
+    k += '<line x1="' + mm(rx) + '" y1="' + mm(ry) + '" x2="' + mm(rx + 100) + '" y2="' + mm(ry) + '" stroke="' + Cp.ink + '" stroke-width="0.4" data-regua-traco="1"/>';
+    for (let i = 0; i <= 10; i++) { const t = i % 5 === 0 ? 2.2 : 1.2; k += '<line x1="' + mm(rx + i * 10) + '" y1="' + mm(ry - t) + '" x2="' + mm(rx + i * 10) + '" y2="' + mm(ry) + '" stroke="' + Cp.ink + '" stroke-width="0.25"/>'; }
+    k += T(rx, ry + 3.6, '0', 2, Cp.muted, 'middle') + T(rx + 50, ry + 3.6, '50', 2, Cp.muted, 'middle') + T(rx + 100, ry + 3.6, '100 mm', 2, Cp.muted, 'middle');
+    k += T(rx, y + 3, 'Este traço mede 100 mm no papel:', 2, Cp.ink, 'start');
+    k += '</g>';
+    const nx = rx + 108;
+    k += T(nx, y + 5.2, 'Imprimir em tamanho real', 2.4, Cp.ink, 'start', 600, ' data-nota="1"');
+    k += T(nx, y + 8.6, '(escala 100%).', 2.4, Cp.ink, 'start', 600);
+    k += T(nx, y + 11.6, 'Cotas em cm · níveis em m', 2, Cp.muted, 'start');
+    k += '</g>';
+    s += k + '</svg>';
+    return { svg: s, W, H, vistas, moldura: { x: mold[0], y: mold[1], w: mold[2] - mold[0], h: mold[3] - mold[1] }, carimbo: { x: kx, y: ky, w: cw, h: ch } };
+  }
 }
 
+/* SVG da primeira folha (compatibilidade) e de todas as folhas */
 function pranchaSVG(R, C, op) { return montarPrancha(R, C, op).svg; }
+function pranchasSVG(R, C, op) { return montarPrancha(R, C, op).folhas.map(f => f.svg); }
