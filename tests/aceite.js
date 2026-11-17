@@ -1,7 +1,36 @@
-const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG,problemasHTML}=require('./carregar.js');
+const {calc,NORMAS,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG,problemasHTML}=require('./carregar.js');
 const C={paper:'#fff',ink:'#000',muted:'#666',line:'#ccc',accent:'#f60',info:'#06f',tread:'#ddd',winder:'#fdc',patamar:'#cfc',piso:'#eee',t3:'#ddd',w3:'#fdc',p3:'#cfc',f3:'#eee',ground:'#ccc'};
 let fail=0; const ok=(c,m)=>{console.log((c?'PASSA ':'FALHA ')+m); if(!c)fail++;};
 const st=(R,id)=>(R.checks.find(c=>c.id===id)||{}).status;
+/* interface: todo id que o ui.js procura existe no index.html gerado (no HTML do template ou nos trechos que o mount() escreve) */
+{
+  const fs=require('fs'), path=require('path');
+  const ui=fs.readFileSync(path.join(__dirname,'..','src','ui.js'),'utf8');
+  const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  ok(html.includes(ui.trim().slice(0,200)),'index.html gerado com o ui.js atual (rode node build.js)');
+  const existe=new Set([...html.matchAll(/id="([A-Za-z][\w-]*)"/g)].map(m=>m[1]));
+  /* campos montados por fieldNum('id', ...) e os da lista FIELDS (id e caixinha "auto") */
+  for(const m of ui.matchAll(/fieldNum\('([\w-]+)'/g)) existe.add(m[1]);
+  const usados=new Set([...ui.matchAll(/\$\('([\w-]+)'\)/g)].map(m=>m[1]));
+  for(const m of ui.matchAll(/querySelector(?:All)?\('#([\w-]+)/g)) usados.add(m[1]);
+  const campos=[...ui.matchAll(/\{ id: '([\w-]+)', key: '[\w-]+', kind: '\w+'(?:, auto: '([\w-]+)')? \}/g)];
+  campos.forEach(m=>{usados.add(m[1]); if(m[2]) usados.add(m[2]);});
+  const faltam=[...usados].filter(id=>!existe.has(id));
+  ok(usados.size>60 && campos.length>20 && faltam.length===0,'ui.js: '+usados.size+' ids usados, todos existem no index.html'+(faltam.length?' (faltam: '+faltam.join(', ')+')':''));
+  ok(['painel-dados','painel-desenho','painel-verif','mnav','tipos','tabs','stage','printArea','notaNorma','avisoMigra'].every(id=>existe.has(id)),'template: três painéis, barra do celular, faixa de tipos, impressão e avisos');
+  /* migração dos perfis removidos: 'sec' e 'serv' (NBR 9077:2001, 4.7.5) viram 'mez' (NBR 9077:2025, 9.5.9.1) */
+  const fn=/function migrarNorma\(s\) \{[\s\S]*?\n\}/.exec(ui);
+  const migrarNorma=fn&&new Function(fn[0]+'\nreturn migrarNorma;')();
+  const a={norma:'sec',H:300}, b={norma:'serv'}, c={norma:'acess'}, d={norma:'custom'};
+  ok(migrarNorma && migrarNorma(a)===true && a.norma==='mez' && a.H===300 && migrarNorma(b)===true && b.norma==='mez','estado salvo com perfil "sec" ou "serv" passa para "mez"');
+  ok(migrarNorma && migrarNorma(c)===false && c.norma==='acess' && migrarNorma(d)===false && d.norma==='custom' && migrarNorma(null)===false,'migração não mexe nos outros perfis');
+  ok(NORMAS.mez && !NORMAS.sec && !NORMAS.serv,'perfil de destino da migração existe e os antigos não');
+  ok(/NBR 9077:2001, cancelada pela edição de 2025/.test(ui) && /Mezanino ou área privativa \(NBR 9077:2025, 9\.5\.9\.1\)/.test(ui),'aviso da migração explica a troca de perfil');
+  const aviso=(/<p class="note[^"]*" id="aviso">([^<]+)</.exec(html)||[])[1]||'';
+  ok(/NBR 9077:2025/.test(aviso) && !/secundária|de serviço|não foi lida/.test(aviso),'aviso do rodapé atualizado para a NBR 9077:2025');
+  /* toda citação da NBR 9077 nos textos da interface diz a edição */
+  ok(!/NBR 9077(?!:20(01|25))/.test(ui) && !/NBR 9077(?!:20(01|25))/.test(fs.readFileSync(path.join(__dirname,'..','src','template.html'),'utf8')),'interface: toda NBR 9077 citada com a edição');
+}
 ok(st(calc({H:288.64,nAuto:false,N:16}),'e')==='bad','e = 18,04 cm dá "não atende"');
 ok(st(calc({tipo:'helicoidal',D:160,Dc:20}),'L')==='bad','helicoidal D 160 / pilar 20: largura "não atende"');
 const h=calc({tipo:'helicoidal'}); ok(!/soma/.test(h.memo.join(' ')),'memória da helicoidal sem "soma"');
@@ -50,7 +79,7 @@ ok(st(calc({tipo:'reta-patamar',n1Auto:false,n1:1}),'lanco')==='bad','lance com 
 ok(st(calc({tipo:'reta-patamar'}),'lanco')==='ok','lances divididos ao meio atendem o mínimo de 3');
 ok(st(calc({tipo:'reta-patamar'}),'patform')==='info','reta com patamar mostra a fórmula do patamar da NBR 9077');
 ok(st(calc({L:90}),'dw')==='info','escada estreita: linha no eixo é informação, não alerta');
-ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pilar em atenção');
+ok(st(calc({tipo:'helicoidal'}),'pilar')==='bad' && st(calc({tipo:'helicoidal',norma:'mez'}),'pilar')==='warn','helicoidal: ponta junto ao pilar abaixo de 15 cm não atende no Estudo e fica em atenção no Mezanino');
 /* v5: corrimão prolongado 30 cm no perfil NBR 9050; ids de hachura únicos */
 {
   const A=calc({norma:'acess',tipo:'reta-patamar',L:120}); const sa=sectionSVG(A,{},C);
@@ -61,7 +90,7 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
 /* v5: explicação */
 {
   const X=calc({tipo:'l-leque'}); const ex2=explicacao(X,X.st,C);
-  ok(/edição nova em 16\/07\/2025/.test(ex2),'explicação avisa da NBR 9077:2025 não lida');
+  ok(/cancela e substitui a edição de 2001/.test(ex2) && /16\/07\/2026/.test(ex2),'explicação diz que a NBR 9077:2025 cancelou a de 2001, com a transição até 16/07/2026');
   ok(/piso p \(cm\)/.test(ex2) && /sua escada/.test(ex2),'explicação tem o gráfico de Blondel');
   ok(/Borda interna/.test(ex2) && /progressão aritmética/.test(ex2),'explicação do balanceamento com tabela');
   ok(/Tales/.test(ex2) && /1:50/.test(ex2),'roteiro de desenho à mão');
@@ -206,27 +235,34 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const he=calc({tipo:'helicoidal',ladoElev:'esquerda'}); const xe=explicacao(he,he.st,C); ok(/−110 × sen\(ângulo\)/.test(xe) && !/-450/.test(xe) && /214,6°/.test(xe),'helicoidal: fórmula com o sinal da vista e ângulos de 0 a 360°');
   let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){const X=calc({tipo:t,ladoElev:l}); if(/NaN|undefined|Infinity/.test(explicacao(X,X.st,C))) nan++;} ok(nan===0,'roteiro da elevação sem NaN nos 9 tipos e 4 lados');
 }
-/* perfis de escada secundária e de serviço (NBR 9077:2001, 4.7.5) e "Como resolver" */
+/* perfis da NBR 9077:2025 e "Como resolver" */
 {
-  const sc=calc({norma:'sec',tipo:'l-leque',H:180}); ok(sc.nm.lqMin===7 && st(sc,'ponta')==='ok','secundária: ponta de leque de 7 cm (4.7.5.1 d)');
-  ok(st(calc({norma:'sec',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='ok' && st(calc({norma:'res',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='bad','secundária: patamar de 80 cm basta (sem a fórmula)');
-  ok(st(calc({norma:'serv',H:280,nAuto:false,N:14}),'e')==='ok' && st(calc({norma:'sec',H:280,nAuto:false,N:14}),'e')==='bad','serviço: espelho de 20 cm atende; secundária não');
-  ok(st(calc({norma:'sec',H:350,tipo:'reta'}),'patamar')==='ok' && st(calc({norma:'res',H:350,tipo:'reta'}),'patamar')==='bad','secundária: lance até 3,70 m (NBR 9077:2001, 4.7.3.2)');
+  /* NBR 9077:2025: rota de fuga (9.1.10 a 9.1.12) e mezanino ou área privativa (9.5.9.1) */
+  ok(st(calc({norma:'fuga',tipo:'l-leque',L:120}),'mudanca')==='bad' && st(calc({norma:'fuga',tipo:'helicoidal',D:300}),'mudanca')==='bad','rota de fuga 2025: leque e espiral proibidos (9.1.11)');
+  ok(/9\.1\.11/.test((calc({norma:'fuga',tipo:'u-leque',L:120}).checks.find(c=>c.id==='mudanca')||{}).nota||''),'rota de fuga 2025: cita o item 9.1.11');
+  ok(!calc({norma:'fuga',tipo:'l-patamar',L:120}).checks.some(c=>c.id==='mudanca'),'rota de fuga 2025: L com patamar não tem alerta de leque');
+  ok(st(calc({norma:'fuga',estrutura:'balanco',L:120}),'vazado')==='bad' && /3\.11/.test(calc({norma:'fuga',estrutura:'balanco',L:120}).checks.find(c=>c.id==='vazado').nota),'rota de fuga 2025: espelho vazado não atende (3.11)');
+  ok(st(calc({norma:'fuga',L:100}),'L')==='bad' && st(calc({norma:'fuga',L:120}),'L')==='ok','rota de fuga 2025: largura mínima de 120 cm (9.4.2.2, pela NBR 9050)');
+  ok(st(calc({norma:'mez',tipo:'helicoidal'}),'L')==='ok' && !calc({norma:'mez',tipo:'helicoidal'}).checks.some(c=>c.id==='mudanca'),'mezanino 2025: espiral permitida, largura de 80 cm (9.5.9.1 b)');
+  ok(st(calc({norma:'mez',H:380,tipo:'reta-patamar'}),'htot')==='bad' && st(calc({norma:'mez',H:370,tipo:'reta-patamar'}),'htot')==='ok','mezanino 2025: altura percorrida até 3,7 m (9.5.9.1 a)');
+  ok(st(calc({norma:'mez',tipo:'l-leque'}),'patcurva')==='warn' && st(calc({norma:'mez',tipo:'l-patamar'}),'patcurva')===undefined,'mezanino 2025: patamar de 80 cm em escada curva ou em leque (9.5.9.1 f) como atenção');
+  ok(st(calc({norma:'mez'}),'mezreq')==='warn' && /20 pessoas/.test(calc({norma:'mez'}).checks.find(c=>c.id==='mezreq').nota),'mezanino 2025: condições que o app não confere aparecem como atenção');
+  ok(st(calc({norma:'mez',tipo:'u-leque',L:80,H:150}),'ponta')==='warn' && st(calc({norma:'res',tipo:'u-leque',L:80,H:150}),'ponta')==='bad','mezanino 2025: ponta do leque abaixo da referência é atenção, não "não atende"');
+  ok(!Object.keys(NORMAS).some(k=>k==='sec'||k==='serv'),'perfis da NBR 9077:2001 (4.7.5) removidos: a edição de 2025 não os tem');
   const R14=calc({nAuto:false,N:14}); R14.resolver(); const e14=R14.checks.find(c=>c.id==='e'); ok(/Use 16 espelhos/.test(e14.sol||'') && calc({nAuto:false,N:16}).checks.find(c=>c.id==='e').status==='ok','como resolver: espelho alto sugere um número de espelhos que atende');
   /* a sugestão do pilar é uma combinação testada: aplicada, a ponta passa a atender */
   const RH=calc({tipo:'helicoidal'}); RH.resolver(); const hp=RH.checks.find(c=>c.id==='pilar'); const mm=/Ø (\d+) cm, diâmetro externo de (\d+) cm e (\d+) degraus/.exec(hp.sol||'');
   ok(mm && calc({tipo:'helicoidal',Dc:+mm[1],D:+mm[2],nPerAuto:false,nPer:+mm[3]}).checks.find(c=>c.id==='pilar').status==='ok','como resolver: pilar da caracol sugere combinação que atende');
   const R0=calc({}); R0.resolver(); ok(R0.checks.every(c=>!c.sol),'escada que atende não mostra "como resolver"');
   const Rl=calc({}); ok(Rl.checks.every(c=>c.sol===undefined) && typeof Rl.resolver==='function','"como resolver" só é calculado quando pedido (resolver)');
-  ok(/4\.7\.5/.test(explicacao(calc({norma:'sec'}),calc({norma:'sec'}).st,C)),'explicação descreve os perfis da NBR 9077:2001, 4.7.5');
+  ok(/9\.5\.9\.1/.test(explicacao(calc({norma:'mez'}),calc({norma:'mez'}).st,C)),'explicação descreve o perfil de mezanino (NBR 9077:2025, 9.5.9.1)');
 }
 /* seção Problemas comuns */
 {
-  let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','sec','serv','acess']){const X=calc({tipo:t,norma:no,L:120}); const ex=explicacao(X,X.st,C); if(!/Problemas comuns e como os profissionais resolvem/.test(ex)||/NaN|undefined|Infinity/.test(ex)) ruim++;}
+  let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','fuga','mez','acess']){const X=calc({tipo:t,norma:no,L:120}); const ex=explicacao(X,X.st,C); if(!/Problemas comuns e como os profissionais resolvem/.test(ex)||/NaN|undefined|Infinity/.test(ex)) ruim++;}
   ok(ruim===0,'seção Problemas comuns nos 9 tipos e 4 perfis, sem NaN');
   const ph=problemasHTML(calc({tipo:'helicoidal'})); ok(/62,1 cm para ponta de 15 cm/.test(ph) && /29 cm para ponta de 7 cm/.test(ph),'caracol: mesmo diâmetro mínimo da verificação (62,1 e 29 cm)');
-  ok(!/9077:2025/.test(ph.replace(/não foi lida|não lida|não foi lido/g,'')) || /2025[^.]*não/.test(ph),'nada atribuído à NBR 9077:2025');
-  ok(/class="agora"/.test(problemasHTML(calc({nAuto:false,N:14}))) && !/class="agora"/.test(problemasHTML(calc({norma:'sec'}))),'destaque "nesta escada" só quando há problema');
+  ok(/class="agora"/.test(problemasHTML(calc({nAuto:false,N:14}))) && !/class="agora"/.test(problemasHTML(calc({norma:'res',tipo:'l-patamar'}))),'destaque "nesta escada" só quando há problema');
   /* o destaque só vale para o problema que acontece de fato: "Espelho alto" só com espelho acima do limite, "Leque convergente" só no convergente */
   const tituloMarcado=(h,t)=>{const i=h.indexOf(t); if(i<0) return false; const j=h.indexOf('</',i); const k=h.lastIndexOf('<h',i); return /class="agora"/.test(h.slice(k,j+120));};
   ok(!tituloMarcado(problemasHTML(calc({nAuto:false,N:18})),'Espelho alto') && tituloMarcado(problemasHTML(calc({nAuto:false,N:14})),'Espelho alto'),'Espelho alto marcado só com espelho acima do limite');
@@ -283,6 +319,171 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   ok(ruim===0,'elevação lado a lado: roteiro "medir e copiar" com 4 figuras nos 9 tipos e 4 lados, exemplo batendo com a tabela');
   const Xf=calc({tipo:'helicoidal'}); const exf=explicacao(Xf,Object.assign({},Xf.st,{ladoElev:'fundos'}),C);
   ok(/vai para a <b>esquerda<\/b> na elevação/.test(exf),'elevação dos fundos lado a lado: avisa que direita e esquerda invertem');
+}
+
+/* textos de norma da Explicação pela NBR 9077:2025 (sem a seção Problemas comuns, que tem texto próprio) */
+{
+  const TIP=['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'];
+  const semTag=x=>x.replace(/<svg[\s\S]*?<\/svg>/g,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  let nan=0, velho=0, s91111=0, s9591=0, atrib=[];
+  for(const t of TIP)for(const no of ['res','fuga','mez','acess'])for(const lq of ['bal','conv']){
+    const X=calc({tipo:t,norma:no,L:120,leque:lq}); let ex=explicacao(X,X.st,C);
+    if(/NaN|undefined|Infinity/.test(ex)) nan++;
+    ex=semTag(ex.replace(problemasHTML(X),''));
+    if(/Escada secundária|Escada de serviço/i.test(ex)) velho++;
+    if(/9\.1\.11/.test(ex)) s91111++;
+    if(/9\.5\.9\.1/.test(ex)) s9591++;
+    /* frase a frase: nenhuma que fale da edição de 2025 pode trazer Blondel 63 a 64 ou ponta de 15 cm */
+    ex.split(/(?<=[.;:])\s+/).forEach(fr=>{ if(/2025/.test(fr) && (/63 a 64/.test(fr) || /ponta[^.]*\b15\b|\b15 cm[^.]*ponta/.test(fr))) atrib.push(fr); });
+  }
+  const tot=TIP.length*4*2;
+  ok(nan===0,'explicação dos 9 tipos nos perfis res/fuga/mez/acess sem NaN nem undefined');
+  ok(velho===0,'explicação sem "Escada secundária" nem "Escada de serviço" em nenhum perfil');
+  ok(s91111===tot && s9591===tot,'explicação cita 9.1.11 e 9.5.9.1 em todos os casos ('+s91111+'/'+s9591+' de '+tot+')');
+  ok(atrib.length===0,'nenhuma frase atribui à NBR 9077:2025 o Blondel de 63 a 64 ou a ponta de 15 cm'+(atrib.length?': '+atrib[0]:''));
+  const Xm=calc({norma:'mez'}), em=semTag(explicacao(Xm,Xm.st,C));
+  ok(/menor que 20 pessoas/.test(em) && /3,7 m/.test(em) && /0,80 m/.test(em) && /0,5/.test(em) && /1,20 m, basta corrimão de um lado/.test(em) && /Anexo A/.test(em),'explicação traz as alíneas a a f da 9.5.9.1 com os números');
+  const Xf=calc({norma:'fuga'}), ef=semTag(explicacao(Xf,Xf.st,C));
+  ok(['9.1.5','9.1.10','9.1.12','4.2 b','3.11','9.4.1 d','9.4.2.2'].every(k=>ef.indexOf(k)>=0),'explicação da rota de fuga cita 9.1.5, 9.1.10, 9.1.12, 4.2 b, 3.11, 9.4.1 d e 9.4.2.2');
+  ok(/edição cancelada/.test(ef) && /referência de estudo|como referência/.test(ef),'perfil Estudo: diz que os números de 2001 são da edição cancelada, como referência');
+  const dz=detalheSVG(calc({norma:'mez'}),{},C); ok(/3,0 a 4,5/.test(dz) && !/3,8 a 6,5/.test(dz),'detalhe no perfil Mezanino: corrimão pela NBR 9050 (a NBR 9077:2025 remete a ela)');
+  ok(/cancelada/.test(detalheSVG(calc({}),{},C)),'detalhe no perfil Estudo: diz que a NBR 9077:2001 foi cancelada');
+}
+/* Problemas comuns pela NBR 9077:2025: sem "escada secundária" vigente, sem item 4.x da edição de 2001 atribuído à de 2025 */
+{
+  const dtMarcado=(h,t)=>{const i=h.indexOf('<dt>'+t); if(i<0) return null; return /class="agora"/.test(h.slice(i,h.indexOf('</dt>',i)));};
+  const item=(h,t)=>{const i=h.indexOf('<dt>'+t); return i<0?'':h.slice(i,h.indexOf('</dd>',i));};
+  let sec=0, de4=0, nan=0, n=0;
+  for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of Object.keys(NORMAS)){
+    const X=calc({tipo:t,norma:no,L:120}); const ph=problemasHTML(X); n++;
+    if(/NaN|undefined|Infinity/.test(ph)) nan++;
+    /* toda menção a escada secundária ou de serviço vem junto da edição de 2001 (cancelada) */
+    for(const m of ph.matchAll(/escadas? (secundária|de serviço)|secundárias?\b/gi)){ const viz=ph.slice(Math.max(0,m.index-260),m.index+260); if(!/2001/.test(viz)){ sec++; if(sec<4) console.log('   secundária sem 2001:', viz.slice(200,330)); } }
+    /* nenhuma citação "NBR 9077:2025, 4.x.y" (os itens 4.4 a 4.8 eram da edição de 2001) */
+    for(const m of ph.matchAll(/9077:2025/g)){ const resto=ph.slice(m.index, m.index+80).split(/[;)]|\. /)[0]; if(/\b4\.[4-9]\b/.test(resto)){ de4++; if(de4<4) console.log('   4.x na de 2025:', resto); } }
+  }
+  ok(nan===0,'problemas comuns: '+n+' casos (9 tipos × perfis) sem NaN');
+  ok(sec===0,'problemas comuns: "escada secundária" ou "de serviço" só como categoria da NBR 9077:2001 (cancelada)');
+  ok(de4===0,'problemas comuns: nenhum item 4.x da edição de 2001 atribuído à NBR 9077:2025');
+  const ph=problemasHTML(calc({tipo:'helicoidal'})); const car=item(ph,'Caracol com pilar central fino');
+  ok(/9\.1\.11/.test(car) && /9\.5\.9\.1/.test(car),'item do caracol cita 9.1.11 e 9.5.9.1 (NBR 9077:2025)');
+  ok(/escada secundária \(4\.7\.5\.1 d\)/.test(car) && /2001, cancelada/.test(car),'item do caracol: a ponta de 7 cm da escada secundária aparece como regra da edição de 2001, cancelada');
+  const tE='Escada em leque ou curva usada como saída de emergência';
+  ok(dtMarcado(problemasHTML(calc({norma:'fuga',tipo:'l-leque',L:120})),tE)===true,'rota de fuga com leque: marca "nesta escada" no item de leque em saída de emergência');
+  ok(dtMarcado(problemasHTML(calc({norma:'fuga',tipo:'helicoidal',D:300})),tE)===true && dtMarcado(problemasHTML(calc({norma:'fuga',tipo:'helicoidal',D:300})),'Caracol com pilar central fino')===true,'rota de fuga helicoidal: marca leque/curva em emergência e o caracol');
+  ok(dtMarcado(problemasHTML(calc({norma:'fuga',tipo:'l-patamar',L:120})),tE)===false && dtMarcado(problemasHTML(calc({norma:'mez',tipo:'l-leque'})),tE)===false && dtMarcado(problemasHTML(calc({norma:'acess',tipo:'l-leque',L:120})),tE)===false,'leque em emergência não é marcado com patamar, em mezanino nem na NBR 9050 sozinha');
+  ok(dtMarcado(problemasHTML(calc({norma:'fuga',tipo:'l-leque',L:120})),'Caracol com pilar central fino')===false,'L com leque em rota de fuga não marca o item do caracol');
+  ok(dtMarcado(problemasHTML(calc({norma:'mez',H:380,tipo:'reta-patamar'})),'Lance longo sem patamar')===true,'mezanino acima de 3,7 m marca o lance longo (htot)');
+  ok(dtMarcado(problemasHTML(calc({norma:'mez',tipo:'l-leque'})),'Patamar curto')===true && dtMarcado(problemasHTML(calc({norma:'mez',tipo:'l-leque'})),'Caracol ou leque em mezanino')===true,'mezanino com leque marca patamar de 80 cm (patcurva) e o item de mezanino');
+  const pi=problemasHTML(calc({norma:'fuga'})); ok(/NBR 9077:2025/.test(pi.slice(0,pi.indexOf('<h4>'))) && !/Toda citação da NBR 9077 é da edição de 2001/.test(pi),'introdução dos problemas comuns cita a NBR 9077:2025');
+  const qual=item(pi,'Não saber qual regra vale'); ok(/9\.5\.9\.1/.test(qual) && /9\.1\.11/.test(qual) && /cancelada/.test(qual),'item "qual regra vale" pela edição de 2025');
+}
+
+/* revisão adversarial (NBR 9077:2025): perfis, ponta, "como resolver", erros de entrada e textos */
+{
+  const g=(R,id)=>R.checks.find(c=>c.id===id)||{};
+  const semTag=x=>x.replace(/<[^>]+>/g,'');
+  /* 1. Mezanino: espelho, piso, Blondel, lance e patamar reto fora da referência viram atenção */
+  const M1=calc({norma:'mez',nAuto:false,N:14});
+  ok(g(M1,'e').status==='warn' && g(M1,'blondel').status==='warn' && /^Fora da referência de estudo:/.test(g(M1,'e').nota) && /9\.5\.9\.1 da NBR 9077:2025 não fixa/.test(g(M1,'e').nota),'mezanino: espelho e Blondel fora da referência ficam em atenção, citando a 9.5.9.1');
+  const M2=calc({norma:'mez',tipo:'helicoidal',H:300,D:200}); ok(g(M2,'blondel').status==='warn' && g(M2,'pilar').status==='warn','mezanino helicoidal: Blondel e ponta junto ao pilar em atenção');
+  const M3=calc({norma:'mez',tipo:'reta-patamar',Lp:40,LpAuto:false}); ok(g(M3,'patprof').status==='warn' && /^Fora da referência de estudo:/.test(g(M3,'patprof').nota),'mezanino: patamar reto curto em atenção');
+  const M4=calc({norma:'mez',tipo:'c-patamar',H:100}); ok(g(M4,'lanco').status==='warn','mezanino: lance com menos de 3 espelhos em atenção');
+  ok(g(calc({nAuto:false,N:14}),'e').status==='bad','perfil Estudo continua "não atende" no espelho fora da faixa');
+  const M5=calc({norma:'mez',tipo:'l-leque',leque:'conv',H:280,L:100}); ok(g(M5,'ponta').status==='warn' && /Por isso aparece como atenção/.test(g(M5,'ponta').nota),'mezanino: ponta do leque convergente em atenção');
+  const M6=calc({norma:'mez',tipo:'l-leque',L:80}); ok(g(M6,'ponta').status==='ok' && !/aparece como atenção/.test(g(M6,'ponta').nota),'mezanino: ponta ok não diz "aparece como atenção"');
+  const M7=calc({norma:'mez',tipo:'reta',H:371}); ok(!M7.checks.some(c=>c.id==='patamar') && g(M7,'htot').status==='bad','mezanino: sem "desnível sem patamar" (quem limita é a altura percorrida)');
+  const M8=calc({norma:'mez',tipo:'reta-patamar',H:400}); const pm=semTag(explicacao(M8,M8.st,C));
+  ok(/3,7 m de altura percorrida/.test(pm) && /patamar não resolve/.test(pm) && !/patamar é obrigatório/.test(pm),'mezanino: "Quando uso patamar?" fala da altura de 3,7 m, não manda pôr patamar');
+  const mzx=semTag(explicacao(calc({norma:'mez'}),calc({norma:'mez'}).st,C));
+  ok(/9\.5\.9\.1 d/.test(mzx) && /só o corrimão a 92 cm/.test(mzx),'mezanino: explicação diz que o corrimão fica só a 92 cm (9.5.9.1 d)');
+  /* 2. ponta mínima: mesmo critério no leque e na helicoidal */
+  ok(g(calc({tipo:'helicoidal'}),'pilar').status==='bad' && g(calc({tipo:'u-leque',L:80,H:150}),'ponta').status==='bad','Estudo: ponta do leque e junto ao pilar abaixo de 15 cm não atendem');
+  const A1=calc({norma:'acess',tipo:'helicoidal'}); ok(g(A1,'pilar').status==='bad' && /6\.8\.6 \(Figura 75\)/.test(g(A1,'pilar').nota),'NBR 9050: ponta junto ao pilar não atende, citando 6.8.6 (Figura 75)');
+  const P1=calc({norma:'custom',tipo:'helicoidal',cLq:15,Dc:20}); ok(g(P1,'pilar').status==='bad' && !/norma em vigor/.test(g(P1,'pilar').nota),'personalizado: pilar abaixo do limite digitado não atende');
+  ok(!/^referência/.test(g(calc({tipo:'helicoidal'}),'pilar').regra),'regra do pilar sem a palavra "referência" repetida');
+  /* 3. NBR 9050 e curva: ressalva da 6.8.6 */
+  const A2=g(calc({norma:'acess',tipo:'l-leque',L:120}),'mudanca'); ok(A2.status==='bad' && /6\.8\.7/.test(A2.nota) && /6\.8\.6/.test(A2.nota) && /leitura mais segura/.test(A2.nota),'NBR 9050 com leque: cita 6.8.7, a ressalva da 6.8.6 e a leitura adotada');
+  const A3=calc({norma:'acess',tipo:'l-leque',L:120}); ok(/leitura mais segura/.test(explicacao(A3,A3.st,C)) && /leitura mais segura/.test(problemasHTML(A3)),'NBR 9050 com leque: mesma ressalva na Explicação e em Problemas comuns');
+  /* 4. rota de fuga: altura livre (4.2 b) */
+  const F1=calc({norma:'fuga',tipo:'reta',L:120,H:300,hLivre:150}); ok(g(F1,'hlivre').status==='bad' && /4\.2 b/.test(g(F1,'hlivre').nota) && /2,30 m/.test(g(F1,'hlivre').nota),'rota de fuga: altura livre de 150 cm não atende (4.2 b) e lembra o pé-direito de 2,30 m');
+  ok(g(calc({norma:'fuga',L:120}),'hlivre').status==='ok' && !calc({}).checks.some(c=>c.id==='hlivre'),'rota de fuga: 210 cm atende; outros perfis sem a verificação');
+  const pf=explicacao(calc({norma:'fuga',L:120}),calc({norma:'fuga',L:120}).st,C); const pp=pf.slice(pf.indexOf('<b>Altura livre e laje.</b>'),pf.indexOf('</li>',pf.indexOf('<b>Altura livre e laje.</b>')));
+  ok(/4\.2 b/.test(pp),'rota de fuga: passo da altura livre cita a 4.2 b');
+  /* 5. como resolver: tipo proibido não ganha ajuste de medidas; nunca sugere leque em fuga/acess */
+  const F2=calc({norma:'fuga',tipo:'helicoidal',H:100}); F2.resolver(); ok(!['p','blondel','L','pilar','ponta','altura'].some(id=>g(F2,id).sol) && g(F2,'mudanca').sol,'rota de fuga helicoidal: só a saída de "mudança de direção"');
+  const F3=calc({norma:'fuga',tipo:'c-patamar',H:100,L:120}); F3.resolver(); ok(g(F3,'lanco').sol && !/leque|Helicoidal/i.test(g(F3,'lanco').sol),'rota de fuga: "como resolver" do lance não sugere leque');
+  const F4=calc({norma:'acess',tipo:'c-patamar',H:100,L:120}); F4.resolver(); ok(g(F4,'lanco').sol && !/leque/i.test(g(F4,'lanco').sol),'NBR 9050: "como resolver" do lance não sugere leque');
+  /* 6. erros de entrada com o campo */
+  const err=x=>{try{calc(x);return {};}catch(e){return e;}};
+  const e1=err({H:2.8}); ok(e1.campo==='H' && e1.message==='O desnível é em centímetros: para 2,80 m digite 280.','desnível em metros: erro no campo H');
+  const e2=err({L:20}); ok(e2.campo==='L' && /centímetros/.test(e2.message),'largura em metros: erro no campo L');
+  ok(err({nAuto:false,N:1}).campo==='N' && err({pAuto:false,p:5}).campo==='p' && err({tipo:'helicoidal',Dc:500}).campo==='Dc' && err({LpAuto:false,Lp:5}).campo==='Lp' && err({espLaje:-1}).campo==='espLaje' && err({norma:'custom',cEmin:0}).campo==='cEmin','erros de entrada trazem o campo (N, p, Dc, Lp, espLaje, limites personalizados)');
+  ok(g(calc({nAuto:false,N:2,H:30}),'e').nota.indexOf('Diminua')<0,'com 2 espelhos não manda diminuir o número de espelhos');
+  /* 8. contagem sem zero */
+  const U=calc({tipo:'u-leque'}); const ur=semTag(explicacao(U,U.st,C)); ok(U.contagem==='15 degraus balanceados' && !/\b0 pisos/.test(ur),'contagem sem "0 pisos comuns"');
+  /* 9. rótulos curtos */
+  ok(NORMAS.res.rotulo==='Estudo' && NORMAS.fuga.rotulo==='Rota de fuga · NBR 9077:2025' && NORMAS.mez.rotulo==='Mezanino ou área privativa · NBR 9077:2025' && NORMAS.acess.rotulo==='Rota acessível · NBR 9050','perfis com rótulo curto');
+  /* textos */
+  const X1=calc({norma:'fuga',tipo:'l-leque',L:120}), x1=explicacao(X1,X1.st,C);
+  ok((x1.match(/Divisão do tipo/g)||[]).length===1 && /há 1 item que/.test(semTag(x1)) && !/item\(ns\)|verificações implementadas/.test(x1),'explicação: "Divisão do tipo" uma vez, concordância e frase sem "verificações implementadas"');
+  const pr=problemasHTML(calc({})); ok(/<li><b>Rota de fuga<\/b>/.test(pr.slice(0,pr.indexOf('<h4>'))),'Problemas comuns: os quatro enquadramentos em lista');
+  const lp=(semTag(explicacao(calc({tipo:'l-leque'}),calc({tipo:'l-leque'}).st,C))+semTag(problemasHTML(calc({tipo:'l-leque'})))).match(/[^.]*linha de percurso[^.]*/g)||[];
+  ok(lp.every(t=>/2001|chamava/.test(t) || /Linha de caminhamento \(linha de percurso\)/.test(t)),'"linha de percurso" só como o termo da NBR 9077:2001'+(lp.find(t=>!/2001|chamava|Linha de caminhamento \(linha de percurso\)/.test(t))||''));
+  const ef=semTag(explicacao(calc({norma:'fuga',L:120}),calc({norma:'fuga',L:120}).st,C));
+  ok(/9\.4\.2\.1, Tabela 10/.test(ef) && /para rota acessível \(6\.8\.3\)/.test(ef),'rota de fuga: largura de 1,20 m com a ressalva da NBR 9050 (6.8.3) e da 9.4.2.1');
+  ok(/\(4\.8\.1\.2\)/.test(semTag(explicacao(calc({}),calc({}).st,C))),'guarda-corpo da edição de 2001 citado como 4.8.1.2');
+  const fs=require('fs'), path=require('path'); const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  const aviso=(/<p class="note[^"]*" id="aviso">([^<]+)</.exec(html)||[])[1]||'';
+  ok(/9\.5\.9\.1 b/.test(aviso) && /6\.8\.7/.test(aviso) && !/não têm norma nacional/.test(aviso),'aviso: 80 cm (9.5.9.1 b) e 3,20 m (NBR 9050, 6.8.7) com fonte; só o piso de 25 cm sem fonte');
+  let sem01=0; for(const t of ['reta-patamar','u-patamar','l-patamar','l-leque','helicoidal','c-patamar'])for(const no of ['res','fuga','mez','acess','custom'])for(const H of [100,300]){const X=calc({tipo:t,norma:no,L:120,H,D:240,leque:'conv'}); X.resolver(); X.checks.forEach(c=>[c.nota,c.regra,c.sol,c.nome].forEach(tx=>{ if(tx && /9077:2001/.test(tx) && !/cancelada/.test(tx)) sem01++; }));}
+  ok(sem01===0,'toda nota que cita a NBR 9077:2001 diz que ela foi cancelada');
+}
+/* interface no celular, tablet e PC (revisão de 17/11/2026): conferências no código do ui.js e do template */
+{
+  const fs=require('fs'), path=require('path');
+  const ui=fs.readFileSync(path.join(__dirname,'..','src','ui.js'),'utf8');
+  const tpl=fs.readFileSync(path.join(__dirname,'..','src','template.html'),'utf8');
+  const fn=nome=>{const m=new RegExp('function '+nome+'\\([^)]*\\) \\{[\\s\\S]*?\\n\\}|function '+nome+'\\([^)]*\\) \\{[^\\n]*\\}').exec(ui); return m&&m[0];};
+  const cel=(/@media \(max-width:699px\)\{([\s\S]*?)\n\}/.exec(tpl)||[])[1]||'';
+  ok(!/min-width:\s*(520|600)px/.test(cel) && /\.stage svg\{width:100%;height:auto/.test(cel),'celular: o desenho cabe na largura (sem min-width de 520/600 px)');
+  ok(/id="btnAmpliar"/.test(tpl) && /id="zoom"/.test(tpl) && /id="btnAjustar"/.test(tpl) && /touchmove/.test(ui) && /ctrlKey/.test(ui),'botão Ampliar abre o desenho em tela cheia com pinça; Ajustar volta');
+  const rend=fn('render')||'';
+  ok(!/R\.resolver\(\)/.test(rend) && /agendarSol\(R/.test(rend) && /SOL_CACHE/.test(ui) && /requestIdleCallback/.test(ui),'"Como resolver" sai do render: roda depois de desenhar, numa pausa, e fica guardado por estado');
+  ok(/lembrarAbertas\(\)/.test(rend) && /reabrir\(\)/.test(rend),'Explicação: seções abertas continuam abertas quando um dado muda');
+  const ch=new Function(fn('chaveSecao')+'\nreturn chaveSecao;')();
+  const sm=t=>({querySelector:()=>({textContent:t})});
+  ok(ch(sm('Sobre o tipo escolhido: Em L com leques'),0)===ch(sm('Sobre o tipo escolhido: Reta'),0) && ch(sm('Roteiro para desenhar a elevação (vista frente)'),0)===ch(sm('Roteiro para desenhar a elevação (vista fundos)'),0),'chave da seção ignora o que muda com o tipo');
+  ok(/@media \(min-width:700px\) and \(max-height:950px\)/.test(tpl) && /\.tipos \.th\{display:none\}/.test(tpl),'pouca altura: faixa de tipos compacta e resumo numa linha');
+  ok(/@media \(min-width:700px\)\{\s*\.tipos button\{flex:1 1 0;min-width:96px/.test(tpl) && /maisDir/.test(tpl) && /marcarRolagemTipos/.test(ui),'faixa de tipos cabe em 1024 px e mostra degradê quando rola');
+  ok(/orientation:portrait\)\{\s*\.app\{grid-template-columns:clamp\(228px/.test(tpl),'tablet em pé: coluna de dados estreita');
+  const gi=fn('gerarImagem')||'';
+  ok(/temaClaro\(\)/.test(gi) && !/THEME/.test(gi) && /\$\('btnSvg'\)[^\n]*temaClaro\(\)/.test(ui),'Gerar imagem e Copiar SVG sempre no tema claro');
+  const lg=fn('legendaHTML')||'';
+  ok(/--t3/.test(lg) && /--w3/.test(lg) && /--p3/.test(lg) && /Cortado pelo plano/.test(lg) && /detalhe/.test(lg),'legenda por vista: 3D com as cores do modelo, cortes com hachura e traço fino, detalhe sem legenda');
+  ok(/id="printExp"/.test(tpl) && !/id="printExp" checked/.test(tpl) && /EX_CURTA/.test(ui),'impressão: "explicação completa" desmarcada por padrão');
+  ok(/elevacaoSVG\(R, \{\}, C, lado\)/.test(ui) && !/'direita'\)/.test(ui),'relatório: elevação com o mesmo lado da tela (frente por padrão)');
+  ok(/aria-controls="board"/.test(ui) && /b\.tabIndex = on \? 0 : -1/.test(ui) && /\$\('tabs'\)\.addEventListener\('keydown'/.test(ui),'abas e tipos com tabindex móvel e setas');
+  ok(/prenderFoco/.test(ui) && /abrirDialogo\('modal', 'modalDl'\)/.test(ui),'modal prende o foco e devolve ao fechar');
+  ok(/id="miniBtn"/.test(tpl) && !/\$\('miniRes'\)\.innerHTML/.test(ui),'resumo fixo do celular: botão montado uma vez (o primeiro toque não se perde)');
+  ok(/err\.campo/.test(ui) && /aria-invalid/.test(ui) && /id="erroDados"/.test(tpl),'erro de entrada: marca o campo (e.campo) e mostra a mensagem no painel Dados');
+  ok(/n\.rotulo \|\| n\.nome/.test(ui) && /id="normaHint"/.test(ui),'seletor de perfil com rótulo curto e nome completo na dica');
+  ok(/TEMA_ICO/.test(ui) && /id="temaIco"/.test(tpl),'botão de tema mostra o tema ativo pelo ícone');
+  const nt=new Function(fn('nomeTipoFrase')+'\nreturn nomeTipoFrase;')();
+  ok(nt({nome:'Em U com leques'})==='em U com leques' && nt({nome:'Em C (dois patamares)'})==='em C (dois patamares)','"Copiar resumo": letra da forma maiúscula');
+  ok(/' · perfil: '/.test(fn('resumo')||''),'"Copiar resumo" sem parênteses dentro de parênteses');
+  ok(/const metros = v => v\.toLocaleString\('pt-BR', \{ minimumFractionDigits: 2/.test(ui),'"Em planta" com duas casas fixas');
+  ok(/R\.nReto \? R\.nReto \+ ' retos' : ''/.test(ui),'bloco Pisos sem "0 retos"');
+}
+
+
+/* acabamentos finais: contagem no singular, patamar do U no mezanino, perfil salvo desconhecido, rótulo do limite */
+{
+  ok(calc({tipo:'l-leque',L:100,H:280,nMeio:1}).contagem.indexOf('1 pisos')<0 && !/(^|\D)1 (pisos|degraus|leques|patamares)/.test(['reta','l-leque','u-leque','l-patamar','u-patamar'].map(t=>calc({tipo:t}).contagem).join(' ')),'contagem no singular quando é 1');
+  ok(st(calc({norma:'mez',tipo:'u-patamar',LpAuto:false,Lp:60}),'patprof')==='warn' && st(calc({norma:'res',tipo:'u-patamar',LpAuto:false,Lp:60}),'patprof')==='bad','mezanino: patamar de retorno curto é atenção (a 9.5.9.1 não fixa)');
+  const ui2=require('fs').readFileSync(require('path').join(__dirname,'..','src','ui.js'),'utf8');
+  ok(/!NORMAS\[S\.norma\]\) \{ S\.norma = 'res'; avisoM = AVISO_DESC/.test(ui2),'perfil salvo desconhecido volta ao Estudo com aviso (não em silêncio)');
+  ok(/'limite: '/.test(ui2) && !/<span>referência ' \+ c\.regra/.test(ui2),'lista de verificações: "limite:" nas exigências e "referência:" só em atenção/informação');
 }
 
 console.log(fail?fail+' falha(s)':'todos passaram');

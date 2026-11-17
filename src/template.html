@@ -40,134 +40,348 @@
   --t3:#3f7396; --w3:#c0703f; --p3:#3f8f78; --f3:#3a4d5c; --ground:#1a2e3f;
   color-scheme:dark;
 }
+/* tokens da interface (botões, sombra, seleção); as cores do desenho continuam nos tokens acima */
+:root{--btn:#b8440f; --btn-ink:#ffffff; --sel:#fff4ed; --shadow:0 1px 2px rgba(19,36,47,.05),0 6px 18px rgba(19,36,47,.06); --navh:64px; --gut:16px}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--btn:#ff8a4c; --btn-ink:#1a1008; --sel:#2b2118; --shadow:0 1px 2px rgba(0,0,0,.25)} }
+:root[data-theme="dark"]{--btn:#ff8a4c; --btn-ink:#1a1008; --sel:#2b2118; --shadow:0 1px 2px rgba(0,0,0,.25)}
+
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%}
+html{scroll-padding-top:12px}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%;overflow-x:hidden}
 h1,h2,h3{margin:0;text-wrap:balance}
 button,input,select{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--btn);outline-offset:2px;border-radius:4px}
 [hidden]{display:none !important}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;z-index:30;background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:6px;text-decoration:none}
+.skip:focus{top:8px}
 
-
-.top{max-width:1280px;margin:0 auto;padding:18px 16px 4px;display:flex;align-items:center;gap:12px}
+/* ---- topo ---- */
+.top{display:flex;align-items:center;gap:12px;padding:12px var(--gut) 8px}
 .mark{width:34px;height:34px;flex:none}
-.top h1{font:600 30px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
-.top p{margin:0;color:var(--muted);font-size:13px}
-.app{max-width:1280px;margin:0 auto;padding:12px 16px 32px;display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;align-items:start}
-@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
-.ctrl{display:flex;flex-direction:column;gap:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
-.card h2,.sec h2{font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
-summary{cursor:pointer;font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.brand{min-width:0;flex:1}
+.top h1{font:600 28px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.top p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.3}
+.ibtn{flex:none;min-width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:0 12px;cursor:pointer;font-size:13px;color:var(--ink)}
+.ibtn:hover{border-color:var(--muted)}
+.ibtn svg{width:18px;height:18px}
 
-.tipos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.tipos button{display:flex;flex-direction:column;gap:6px;align-items:stretch;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px;cursor:pointer;text-align:left}
+/* aviso de perfil migrado */
+.avisoM{margin:0 var(--gut) 8px;display:flex;gap:10px;align-items:flex-start;background:var(--infobg);border:1px solid var(--line);border-left:4px solid var(--info);border-radius:8px;padding:10px 6px 10px 12px;font-size:14px}
+.avisoM p{margin:0;flex:1;padding-top:2px}
+.avisoM button{flex:none;width:36px;height:36px;border:0;background:transparent;border-radius:6px;cursor:pointer;font-size:22px;line-height:1;color:var(--muted)}
+.avisoM button:hover{background:var(--panel);color:var(--ink)}
+
+/* ---- faixa de tipos de escada (rola na horizontal quando não cabe) ---- */
+.tipobar{padding:0 var(--gut) 4px}
+.tipos{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding:2px 2px 8px;scrollbar-width:thin}
+.tipos button{flex:1 0 108px;max-width:190px;scroll-snap-align:start;display:flex;flex-direction:column;gap:4px;align-items:stretch;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px 7px;cursor:pointer;text-align:left;min-height:44px;color:var(--ink)}
 .tipos button:hover{border-color:var(--muted)}
-.tipos button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--panel)}
-.tipos .th{display:block;height:84px;overflow:hidden}
+.tipos button.on{border-color:var(--btn);box-shadow:inset 0 0 0 1px var(--btn);background:var(--sel)}
+.tipos .th{display:block;height:50px;overflow:hidden}
 .tipos .th svg{width:100%;height:100%;display:block}
-.tipos .nm{font-size:13px;font-weight:600;line-height:1.2}
+.tipos .nm{font-size:12px;font-weight:600;line-height:1.2}
+.tipos.maisDir{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent)}
+.tipos.maisEsq{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent)}
+.tipos.maisDir.maisEsq{-webkit-mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent)}
 
+/* ---- três painéis: dados | desenho | verificações ---- */
+.app{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:8px var(--gut) 28px;align-items:start}
+.painel{min-width:0}
+.ctrl{display:flex;flex-direction:column;gap:12px}
+.ctrlIn{display:flex;flex-direction:column;gap:12px}
+.out{display:flex;flex-direction:column;gap:12px;container-type:inline-size}
+.side{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.card h2,.sec h2{font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+details.card>summary{cursor:pointer;font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:24px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"+";font:500 20px/1 var(--body);color:var(--muted)}
+details.card[open]>summary::after{content:"−"}
+
+/* resumo que acompanha os dados no celular */
+.miniRes{display:none}
+
+/* ---- campos ---- */
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .field{display:flex;flex-direction:column;gap:5px;margin-top:12px}
 .grid2 .field{margin-top:0}
 .field>label,.lab,.labrow label:first-child{font-size:13px;font-weight:500}
-.labrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.auto{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;cursor:pointer;white-space:nowrap}
-.auto input{accent-color:var(--accent);margin:0}
-.inp{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
-.inp:focus-within,.stepper:focus-within{border-color:var(--accent)}
-.inp input,.stepper input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:9px 10px;font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;outline:none}
+.labrow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.auto{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap;min-height:28px}
+.auto input{accent-color:var(--btn);margin:0;width:16px;height:16px}
+.inp{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:7px;background:var(--paper);overflow:hidden;min-height:42px}
+.inp:focus-within,.stepper:focus-within{border-color:var(--btn);box-shadow:0 0 0 2px color-mix(in srgb,var(--btn) 25%,transparent)}
+.inp input,.stepper input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:9px 10px;font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;outline:none}
 .un{padding:0 10px;display:flex;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
-.stepper{display:flex;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
-.stepper button{width:44px;border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--ink)}
+.stepper{display:flex;border:1px solid var(--line);border-radius:7px;background:var(--paper);overflow:hidden;min-height:44px}
+.stepper button{width:48px;border:0;background:transparent;font-size:22px;cursor:pointer;color:var(--ink)}
 .stepper button:hover{background:var(--line)}
 .stepper input{text-align:center}
-select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:9px 10px;font-size:14px}
-.hint{margin:0;font-size:12px;color:var(--muted)}
-.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.seg button{flex:1;border:0;background:var(--paper);padding:9px;cursor:pointer;font-size:14px}
+select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(--paper);padding:9px 10px;font-size:15px;min-height:44px}
+.hint{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--paper)}
+.seg button{flex:1;border:0;background:transparent;padding:8px;cursor:pointer;font-size:14px;min-height:40px;color:var(--ink);line-height:1.2}
 .seg button+button{border-left:1px solid var(--line)}
+.seg button:hover:not(.on){background:var(--line)}
 .seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
-#bocel button{font-size:13px;padding:9px 4px}
+#bocel button{font-size:13px;padding:8px 4px}
 
-.out{display:flex;flex-direction:column;gap:12px;min-width:0}
-.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+/* ---- resultado ---- */
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.headT{flex:1 1 260px;min-width:0}
 .head h2{font:600 28px/1.1 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0}
-.head p{margin:0;color:var(--muted);font-size:13px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
-.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.head p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:36px;border-radius:99px;padding:4px 14px;font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.chip.ok{background:var(--okbg);color:var(--ok)} .chip.warn{background:var(--warnbg);color:var(--warn)} .chip.bad{background:var(--badbg);color:var(--bad)}
+.chip:hover{border-color:currentColor}
+.chip .curto{display:none}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:1px;min-width:0;box-shadow:var(--shadow)}
 .tl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.tv{font:500 18px/1.2 var(--mono);font-variant-numeric:tabular-nums}
-.ts{font-size:12px;color:var(--muted)}
-.tabs{display:flex;gap:4px}
-.tabs button{border:1px solid var(--line);background:var(--panel);padding:8px 18px;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;border-bottom:0}
+.tv{font:500 18px/1.25 var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ts{font-size:12px;color:var(--muted);line-height:1.35}
+/* resumo em 6 colunas só quando a coluna do desenho é larga */
+@container (min-width:760px){ .tiles{grid-template-columns:repeat(6,minmax(0,1fr))} }
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);padding:8px 20px;min-height:44px;border-radius:8px 8px 0 0;cursor:pointer;font-weight:500;border-bottom:0;color:var(--ink)}
+.tabs button:hover:not(.on){background:var(--paper)}
 .tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.board{background:var(--panel);border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:12px;margin-top:-13px}
-.stage{min-height:260px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;border-radius:4px;padding:6px;overflow:hidden}
-.stage svg{max-height:70vh}
+.board{background:var(--panel);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:12px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.stageW{position:relative}
+.stage{min-height:260px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;border-radius:6px;padding:6px;overflow:hidden}
+.stage svg{max-height:min(72vh,900px)}
+/* botão "Ampliar" no canto do desenho (planta e cortes) */
+.zoomBtn{position:absolute;top:6px;right:6px;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;box-shadow:var(--shadow)}
+.zoomBtn:hover{border-color:var(--muted)}
+.zoomBtn svg{width:16px;height:16px}
+/* desenho ampliado em tela cheia */
+.zoom{position:fixed;inset:0;z-index:45;background:var(--paper);display:flex;flex-direction:column}
+.zbar{display:flex;align-items:center;gap:8px;padding:8px var(--gut);padding-top:calc(8px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--line);background:var(--panel)}
+.zbar .zdica{flex:1;font-size:12px;color:var(--muted);line-height:1.3}
+.zbar .btn{min-height:44px;min-width:44px;flex:none;font-size:16px}
+.zarea{flex:1;overflow:auto;touch-action:pan-x pan-y;overscroll-behavior:contain;padding:8px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+.zarea svg{display:block;margin:0 auto;max-width:none}
+body.travado{overflow:hidden}
+.chkPrint{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);min-height:40px;cursor:pointer}
+.chkPrint input{accent-color:var(--btn);width:16px;height:16px;margin:0}
+/* erro de entrada no painel Dados, logo abaixo do campo */
+.errDados{grid-column:1 / -1;margin-top:8px;padding:10px 12px;border:1px solid var(--bad);border-left-width:4px;border-radius:8px;background:var(--badbg);color:var(--ink);font-size:13px;line-height:1.45}
+.errDados b{color:var(--bad)}
+#painel-dados>.errDados{margin:0}
+.mrErr{color:var(--bad);font-weight:500}
 .stage canvas{display:block;touch-action:none;cursor:grab;border-radius:4px}
 .cap{margin:8px 4px 2px;font-size:12px;color:var(--muted)}
 .bar3{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0 0 10px}
-.bar3 label{display:flex;align-items:center;gap:8px;font-size:13px}
-.bar3 input{accent-color:var(--accent)}
+.bar3 label{display:flex;align-items:center;gap:8px;font-size:13px;min-height:36px}
+.bar3 input{accent-color:var(--btn)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
 .lg{display:flex;align-items:center;gap:6px}
-.sw{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block}
-.ln{width:22px;height:0;border-top:2.5px solid var(--accent);display:inline-block}
+.sw{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block;flex:none}
+.ln{width:22px;height:0;border-top:2.5px solid var(--accent);display:inline-block;flex:none}
 .ln.dash{border-top:2px dashed var(--info)}
+.ln.dash.acc{border-top-color:var(--accent)}
+.ln.dashdot{border-top:0;height:2px;background:repeating-linear-gradient(to right,var(--info) 0 8px,transparent 8px 10px,var(--info) 10px 12px,transparent 12px 14px)}
+.ln.fino{border-top:1px solid var(--ink)}
+.sw.hach{background:repeating-linear-gradient(135deg,var(--ink) 0 1.2px,transparent 1.2px 4px)}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.btn{border:1px solid var(--ink);background:transparent;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500;font-size:14px}
+.btn{border:1px solid var(--ink);background:transparent;border-radius:7px;padding:8px 14px;min-height:40px;cursor:pointer;font-weight:500;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
 .btn:hover{background:var(--ink);color:var(--paper)}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.pri:hover{filter:brightness(1.08);background:var(--accent);color:var(--accent-ink)}
+.btn.pri{background:var(--btn);border-color:var(--btn);color:var(--btn-ink)}
+.btn.pri:hover{filter:brightness(1.08);background:var(--btn);color:var(--btn-ink)}
+.barP{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin:0 0 10px;font-size:13px}
+.barP .seg{min-width:240px}
+.barP .segC{min-width:0;flex-wrap:wrap}
+.barP .segC button{white-space:nowrap}
+.barP .seg button{padding:7px 12px;font-size:13px;min-height:38px}
+.barP label{display:flex;align-items:center;gap:7px;min-height:38px}
+.barP input[type=checkbox]{accent-color:var(--btn);width:16px;height:16px;margin:0}
+.barP input.mini{width:68px;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit;font-family:var(--mono)}
 
-.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-@media (max-width:1100px){.two{grid-template-columns:minmax(0,1fr)}}
-.cs{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;margin-bottom:10px}
+/* ---- verificações e memória ---- */
+.cs{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;margin-bottom:10px}
 .cs.ok{background:var(--okbg);color:var(--ok)} .cs.warn{background:var(--warnbg);color:var(--warn)} .cs.bad{background:var(--badbg);color:var(--bad)}
-.checks,.memo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.notaN{margin:0 0 12px;font-size:12px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 10px}
+.checks,.memo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .ck{display:flex;gap:10px;align-items:flex-start;border-left:3px solid var(--line);padding:2px 0 2px 10px}
 .ck.ok{border-color:var(--ok)} .ck.warn{border-color:var(--warn)} .ck.bad{border-color:var(--bad)} .ck.info{border-color:var(--info)}
+.cb{min-width:0}
 .pill{flex:none;width:62px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:2px 0;margin-top:2px}
 .ck.ok .pill{background:var(--okbg);color:var(--ok)} .ck.warn .pill{background:var(--warnbg);color:var(--warn)} .ck.bad .pill{background:var(--badbg);color:var(--bad)} .ck.info .pill{background:var(--infobg);color:var(--info)}
 .cn{font-size:14px;font-weight:500}
 .cv{font-size:13px;color:var(--muted)} .cv b{font-family:var(--mono);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
 .cnote{font-size:13px;margin-top:2px}
-.csol{font-size:13px;margin-top:4px;padding:4px 8px;border-left:2px solid var(--accent);background:var(--paper)}
-.agora{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 5px;margin-left:6px}
+.csol{font-size:13px;margin-top:4px;padding:4px 8px;border-left:2px solid var(--btn);background:var(--paper)}
+.agora{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--btn);border:1px solid var(--btn);border-radius:4px;padding:0 5px;margin-left:6px}
 .memo{counter-reset:m;font-size:14px}
-.memo li{counter-increment:m;padding-left:30px;position:relative}
+.memo li{counter-increment:m;padding-left:30px;position:relative;overflow-wrap:anywhere}
 .memo li::before{content:counter(m);position:absolute;left:0;top:1px;font:500 12px/1.6 var(--mono);color:var(--muted);width:22px;text-align:right}
 .note{font-size:12px;color:var(--muted);margin:0}
+#quant{overflow-x:auto}
 
-.modal{position:fixed;inset:0;background:rgba(8,16,24,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal{position:fixed;inset:0;background:rgba(8,16,24,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
 .modal .box{background:var(--panel);border-radius:10px;padding:14px;max-width:min(1100px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
 .modal img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff}
 .modal .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
 .toast.on{opacity:1;transform:translateX(-50%)}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
-@media (max-width:900px){
-  .app{display:flex;flex-direction:column;align-items:stretch}
-  .ctrl{display:contents}
-  .ctrl>*{order:4}
-  .ctrl>.o1{order:1} .ctrl>.o2{order:2} .out{order:3}
+
+.inp input.err,.stepper input.err,input.err{outline:2px solid var(--bad);outline-offset:-2px}
+.errbox{padding:22px;border:1px solid var(--bad);border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
+.errbox p{margin:8px 0 0}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.stage[data-view=erro]{background:none;min-height:0}
+
+/* barra de painéis: só no celular */
+.mnav{display:none}
+
+/* ===== tablet e PC pequeno (700 a 1279 px): dados à esquerda, desenho e verificações à direita ===== */
+@media (min-width:700px){
+  .app{grid-template-columns:clamp(272px,34vw,330px) minmax(0,1fr);grid-template-areas:"dados desenho" "dados verif"}
+  #painel-dados{grid-area:dados;position:sticky;top:10px;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 4px 4px 0;margin-right:-4px}
+  #painel-desenho{grid-area:desenho}
+  #painel-verif{grid-area:verif}
 }
-@media (max-width:640px){
-  .stage{overflow-x:auto}
-  .stage[data-view=corte] svg{min-width:640px}
-  .stage[data-view=planta] svg{min-width:560px}
+/* de 700 a 1279 px os 9 tipos dividem a largura; em 1024 px cabem todos, abaixo disso a faixa rola (com degradê na borda) */
+@media (min-width:700px){
+  .tipos button{flex:1 1 0;min-width:96px;max-width:none}
 }
-.barP{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:0 0 10px;font-size:13px}
-.barP .seg{min-width:250px}
-.barP .segC{min-width:0;flex-wrap:wrap}
-.barP .segC button{white-space:nowrap}
-@media (max-width:640px){.barP .segC{width:100%}.barP .segC button{flex:1 1 40%}}
-.barP .seg button{padding:7px 12px;font-size:13px}
-.barP label{display:flex;align-items:center;gap:7px}
-.barP input[type=checkbox]{accent-color:var(--accent)}
-.barP input.mini{width:64px;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);font:inherit}
+@media (min-width:700px) and (max-width:1023px){
+  .top p{display:none}
+  .head h2{font-size:24px}
+  .ctrl .grid2{grid-template-columns:minmax(0,1fr)}
+  .ctrl .grid2 .field+.field{margin-top:0}
+}
+/* tablet em pé: coluna de dados mais estreita para o desenho ganhar largura; resumo compacto */
+@media (min-width:700px) and (max-width:1023px) and (orientation:portrait){
+  .app{grid-template-columns:clamp(228px,29vw,248px) minmax(0,1fr);gap:12px}
+  .ctrl .card{padding:12px}
+  .stepper button{width:40px}
+}
+/* telas de pouca altura (tablet deitado, notebook de 768 a 850 px): a faixa de tipos e o resumo encolhem para o desenho começar perto do topo */
+@media (min-width:700px) and (max-height:950px){
+  .top{padding-top:6px;padding-bottom:4px}
+  .mark{width:28px;height:28px}
+  .top h1{font-size:22px}
+  .top p{display:none}
+  .tipos{padding-bottom:6px}
+  .tipos .th{display:none}
+  .tipos button{min-height:40px;justify-content:center;padding:4px 8px}
+  .app{padding-top:4px}
+  .out{gap:8px}
+  .head h2{font-size:22px}
+  .head p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip{min-height:32px}
+  .barP{flex-wrap:nowrap;gap:8px 12px}
+  .barP .seg{min-width:0;flex:none}
+  .barP .seg button{padding:6px 10px}
+  .barP label{white-space:nowrap}
+  #viewCorteBar{flex-wrap:wrap}
+}
+/* resumo numa linha só: pouca altura ou tablet em pé */
+@media (min-width:700px) and (max-height:950px),(min-width:700px) and (max-width:1023px) and (orientation:portrait){
+  .tiles{display:flex;flex-wrap:wrap;gap:6px}
+  .tile{flex:1 1 auto;flex-direction:row;align-items:baseline;gap:6px;padding:4px 10px;border-radius:8px}
+  .tile .ts{display:none}
+  .tv{font-size:15px;white-space:nowrap}
+  .tl{font-size:10px;letter-spacing:.05em}
+}
+@media (min-width:1024px){
+  .side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .side>.wide{grid-column:1 / -1}
+}
+/* ===== PC (1280 px ou mais): dados | desenho | verificações e memória ===== */
+@media (min-width:1280px){
+  :root{--gut:24px}
+  .app{grid-template-columns:290px minmax(0,1fr) clamp(330px,24vw,460px);grid-template-areas:"dados desenho verif";gap:20px}
+  #painel-verif{position:sticky;top:10px;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 4px 4px 0;margin-right:-4px;display:flex}
+  .side>.wide{grid-column:auto}
+  .tipos button{min-width:110px}
+}
+@media (min-width:1680px){
+  .app{grid-template-columns:330px minmax(0,1fr) 480px}
+  .tipos .th{height:58px}
+}
+
+/* ===== celular (até 699 px): três painéis com barra embaixo ===== */
+@media (max-width:699px){
+  :root{--gut:12px}
+  body{padding-bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px))}
+  .top{padding-top:10px;padding-bottom:6px;gap:10px}
+  .mark{width:30px;height:30px}
+  .top h1{font-size:24px}
+  .top p{font-size:12px}
+  .tipobar{padding-right:0}
+  .tipos{padding-right:12px;gap:6px}
+  .tipos button{flex:0 0 96px;padding:5px 6px 6px}
+  .tipos .th{height:38px}
+  .tipos .nm{font-size:11.5px}
+  .app{padding-top:4px;gap:12px}
+  .painel{display:none !important}
+  .app[data-painel=dados] #painel-dados,.app[data-painel=desenho] #painel-desenho,.app[data-painel=verif] #painel-verif{display:flex !important}
+  .card{padding:12px 14px}
+  .head{gap:6px 10px}
+  .headT{flex:1 1 0}
+  .top p{display:none}
+  .head h2{font-size:22px}
+  .head p{font-size:12px}
+  .chip{min-height:44px;padding:4px 12px}
+  #statusChip .longo{display:none}
+  #statusChip .curto{display:inline}
+  .ts{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .tile{padding:6px 8px;border-radius:8px}
+  .tl{font-size:10px;letter-spacing:.06em}
+  .tv{font-size:15px}
+  .ts{font-size:11px}
+  .tabs{gap:3px}
+  .tabs button{flex:1 1 0;padding:8px 4px;font-size:14px}
+  .board{padding:8px;border-radius:0 0 10px 10px}
+  /* no celular o desenho vem antes das opções da vista */
+  .board>.legend{order:2}
+  .board>.bar3,.board>.barP{order:3;margin:12px 0 0}
+  .board>.actions{order:4}
+  /* o desenho cabe na largura da tela; para ver detalhes, o botão "Ampliar" abre em tela cheia com pinça */
+  .stage{overflow:hidden;padding:4px;min-height:0}
+  .stage svg{width:100%;height:auto;max-height:none}
+  .stage[data-view=explica]{overflow:visible}
+  .zoomBtn{top:4px;right:4px;min-height:40px}
+  .zbar .zdica{font-size:11px}
+  .board>.stageW{order:1}
+  .seg button,.barP .seg button{min-height:44px}
+  .barP{gap:8px 16px}
+  .barP .seg,.barP .segC{width:100%;min-width:0}
+  .barP .segC button{flex:1 1 30%}
+  .barP label{min-height:44px}
+  .bar3 label{min-height:44px;flex:1 1 100%}
+  .bar3 input{flex:1}
+  .btn{min-height:44px;flex:1 1 40%}
+  .inp{min-height:44px}
+  .auto{min-height:44px}
+  .actions{gap:6px}
+  .miniRes{display:flex;position:sticky;top:0;z-index:5;flex-wrap:wrap;align-items:center;gap:4px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+  .miniRes b{font-family:var(--mono);font-weight:600}
+  .miniRes .mr{flex:1 1 auto;min-width:0}
+  .miniRes .chip{min-height:32px;padding:2px 10px;font-size:12px}
+  .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+  .mnav button{flex:1;min-height:50px;border:0;border-radius:10px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
+  .mnav button svg{width:22px;height:22px}
+  .mnav button[aria-selected=true]{background:var(--ink);color:var(--paper)}
+  .mnav .badge{position:absolute;top:4px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;padding:0 5px;font:600 11px/18px var(--body);color:#fff;background:var(--bad)}
+  .mnav .badge.warn{background:var(--warn);color:#1a1008}
+  .toast{bottom:calc(var(--navh) + 16px)}
+  .avisoM{margin-left:var(--gut);margin-right:var(--gut)}
+  #temaTxt{display:none}
+  .ibtn{padding:0}
+}
+/* toque: alvos maiores em qualquer largura */
+@media (pointer:coarse){
+  .seg button,.barP .seg button,.tabs button,.btn,.auto,.barP label,.bar3 label{min-height:44px}
+}
 .stage[data-view=explica]{background:none;padding:0;overflow:visible;min-height:0}
 .ex{border:1px solid var(--line);border-radius:8px;background:var(--paper);margin:0 0 8px}
 .ex>summary{cursor:pointer;padding:12px 14px;font-weight:600;list-style:none}
@@ -195,13 +409,6 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .tab td{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tabq td:first-child{white-space:normal;font-family:var(--body)}
 .tabq td{vertical-align:top}
-
-.inp input.err,.stepper input.err,input.err{outline:2px solid #c0392b;outline-offset:-2px}
-.errbox{padding:22px;border:1px solid #c0392b;border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
-.errbox p{margin:8px 0 0}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.stage[data-view=erro]{background:none;min-height:0}
-
 /* ---- relatório para imprimir ou salvar em PDF ---- */
 .printArea{display:none}
 @media print{
@@ -226,6 +433,7 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
   .printArea .ptiles span{font-size:8pt;color:#555;text-transform:uppercase;letter-spacing:.06em}
   .printArea figure{margin:0 0 8pt;break-inside:avoid}
   .printArea figure svg{width:100%;height:auto;max-height:96mm}
+  .printArea figure.grande svg{max-height:150mm}
   .printArea figcaption{font-size:9pt;color:#444}
   .printArea .quebra{break-before:page}
   .printArea .checks li,.printArea .memo li{break-inside:avoid}
@@ -238,18 +446,26 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 </style>
 </head>
 <body>
+<a class="skip" href="#painel-desenho">Pular para o desenho</a>
 <header class="top">
   <svg class="mark" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="6" fill="var(--ink)"/><path d="M6 27h6v-5h6v-5h6v-5h4" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
-  <div><h1>Patamar</h1><p>Escadas calculadas e desenhadas: planta, corte e 3D</p></div>
+  <div class="brand"><h1>Patamar</h1><p>Escadas calculadas e desenhadas: planta, cortes e 3D</p></div>
+  <button type="button" class="ibtn" id="btnTema" aria-label="Tema: automático"><svg viewBox="0 0 24 24" aria-hidden="true" id="temaIco"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg><span id="temaTxt">Automático</span></button>
 </header>
-<main class="app">
-  <div class="ctrl" id="ctrl"></div>
-  <div class="out">
-    <div class="head"><h2 id="title"></h2><p id="desc"></p></div>
+<div class="avisoM" id="avisoMigra" role="status" hidden><p id="avisoMigraTxt"></p><button type="button" id="avisoMigraFechar" aria-label="Fechar aviso">×</button></div>
+<nav class="tipobar" aria-label="Tipo de escada"><div id="tipos" class="tipos" role="radiogroup" aria-label="Tipo de escada"></div></nav>
+<main class="app" id="app" data-painel="desenho">
+  <section class="ctrl painel" id="painel-dados" aria-label="Dados da escada" role="tabpanel">
+    <div class="miniRes" id="miniRes" aria-live="polite"><span class="mr" id="miniTxt"></span><button type="button" class="chip ok" id="miniBtn" data-p="verif"></button></div>
+    <div class="errDados" id="erroDados" role="alert" hidden></div>
+    <div class="ctrlIn" id="ctrl"></div>
+  </section>
+  <section class="out painel" id="painel-desenho" aria-label="Resultado e desenho" role="tabpanel" tabindex="-1">
+    <div class="head"><div class="headT"><h2 id="title"></h2><p id="desc"></p></div><button type="button" class="chip ok" id="statusChip" aria-controls="painel-verif"></button></div>
     <div class="tiles" id="tiles" aria-live="polite"></div>
     <div>
       <div class="tabs" id="tabs" role="tablist" aria-label="Tipo de desenho"></div>
-      <div class="board">
+      <div class="board" id="board" role="tabpanel" aria-labelledby="tab-planta">
         <div class="bar3" id="view3dBar" hidden>
           <label>Girar <input type="range" id="yaw" min="-180" max="180" value="-32"></label>
           <label>Inclinar <input type="range" id="pit" min="12" max="80" value="42"></label>
@@ -266,30 +482,40 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
           <label><input type="checkbox" id="showNums"> números</label>
           <label><input type="checkbox" id="showCortes"> cortes</label>
         </div>
-        <div class="stage" id="stage"></div>
+        <div class="stageW"><div class="stage" id="stage"></div><button type="button" class="zoomBtn" id="btnAmpliar" aria-label="Ampliar o desenho em tela cheia"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Ampliar</button></div>
         <div class="legend" id="legend"></div>
         <div class="actions">
           <button type="button" class="btn pri" id="btnImg">Gerar imagem</button>
           <button type="button" class="btn" id="btnSvg">Copiar SVG</button>
           <button type="button" class="btn" id="btnResumo">Copiar resumo</button>
           <button type="button" class="btn" id="btnPrint">Imprimir / PDF</button>
+          <label class="chkPrint"><input type="checkbox" id="printExp"> imprimir com a explicação completa</label>
         </div>
       </div>
     </div>
-    <div class="two">
-      <section class="card"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><ul class="checks" id="checks"></ul></section>
-      <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
-    </div>
+  </section>
+  <section class="side painel" id="painel-verif" aria-label="Verificações, memória de cálculo e quantitativos" role="tabpanel" tabindex="-1">
+    <section class="card wide" id="cardChecks"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><p class="notaN" id="notaNorma" hidden>Itens citados da NBR 9077:2001 vêm da edição cancelada em 2025 e servem como referência de estudo.</p><ul class="checks" id="checks"></ul></section>
+    <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
     <section class="card"><h2>Quantitativos (estimativa)</h2><div id="quant"></div></section>
-    <p class="note" id="aviso">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021), conferidos no texto da norma em 16/11/2026. O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001; a edição de 2025 da NBR 9077 não foi lida. Piso mínimo de 25 cm, largura de 80 cm e desnível de 3,20 m sem patamar, no perfil Estudo, não têm norma nacional que os sustente. Os perfis Escada secundária e Escada de serviço seguem a NBR 9077:2001, 4.7.5. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
-  </div>
+    <p class="note wide" id="aviso">O app calcula a geometria e confere só parte dos limites. A NBR 9077:2025 (terceira edição) cancelou a de 2001. O perfil Rota de fuga segue a edição de 2025, que manda dimensionar degraus, patamares e larguras pela NBR 9050 (9.1.10) e proíbe degraus em leque e escada em espiral nas rotas de saída (9.1.11). O perfil Mezanino ou área privativa segue o item 9.5.9.1 da edição de 2025. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021). O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001, cancelada, como referência de estudo. Nele, o piso mínimo de 25 cm não tem fonte nacional; a largura de 80 cm vem da NBR 9077:2025, 9.5.9.1 b (mezanino e área privativa), e o desnível de 3,20 m sem patamar, da NBR 9050:2020, 6.8.7 (rota acessível), usados aqui como referência. Bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
+  </section>
 </main>
+<nav class="mnav" id="mnav" role="tablist" aria-label="Painel">
+  <button type="button" role="tab" data-p="dados" id="mnav-dados" aria-controls="painel-dados" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Dados</button>
+  <button type="button" role="tab" data-p="desenho" id="mnav-desenho" aria-controls="painel-desenho" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h5v-5h5v-5h5V4"/><path d="M4 20V4h16"/></svg>Desenho</button>
+  <button type="button" role="tab" data-p="verif" id="mnav-verif" aria-controls="painel-verif" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L6.8 5M3.5 12l1.2 1.2 2.1-2.2"/><circle cx="5" cy="18" r="1.3"/></svg>Verificações<span class="badge" id="navBadge" hidden></span></button>
+</nav>
 <div hidden><canvas id="cv3" width="800" height="600" aria-label="Vista 3D da escada"></canvas></div>
 <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-label="Imagem gerada">
   <div class="box">
     <img id="modalImg" alt="Desenho gerado">
     <div class="row"><a class="btn pri" id="modalDl" download="patamar.png" style="text-decoration:none">Baixar PNG</a><button type="button" class="btn" id="modalClose">Fechar</button><span class="note">Se o download não abrir, segure (celular) ou clique com o botão direito (PC) na imagem e salve.</span></div>
   </div>
+</div>
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Desenho ampliado">
+  <div class="zbar"><span class="zdica">Arraste para mover. Pinça com dois dedos, Ctrl + roda do mouse ou os botões mudam o tamanho.</span><button type="button" class="btn" id="zMenos" aria-label="Diminuir">−</button><button type="button" class="btn" id="zMais" aria-label="Aumentar">+</button><button type="button" class="btn pri" id="btnAjustar">Ajustar</button></div>
+  <div class="zarea" id="zArea"></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <div id="printArea" class="printArea" aria-hidden="true"></div>

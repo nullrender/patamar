@@ -2,10 +2,12 @@
    Desenho ampliado de três degraus típicos (retos) em corte, para mostrar ao professor.
    Unidades em cm, eixo y para cima (sLine/sText já invertem). Só usa as cores do tema (C).
    Valores de norma conferidos no texto:
-   - borda do degrau (R.bocel: 'bocel', 'inclinado' ou 'sem'; avanço R.avanco): NBR 9077:2001, 4.7.3.1 e (mínimo 1,5)
-     e NBR 9050:2020, 6.7.1 (máximo 1,5);
-   - corrimão de seção circular com Ø de 38 a 65 mm: NBR 9077:2001, 4.8.2.3;
-   - corrimão afastado no mínimo 40 mm da parede: NBR 9077:2001, 4.8.2.4.
+   - borda do degrau (R.bocel: 'bocel', 'inclinado' ou 'sem'; avanço R.avanco): NBR 9077:2001, 4.7.3.1 e (mínimo 1,5),
+     edição cancelada pela de 2025 e mantida como referência, e NBR 9050:2020, 6.7.1 (máximo 1,5);
+   - corrimão: a NBR 9077:2025 define o corrimão conforme a NBR 9050 (3.10) e pede corrimãos conforme ela (9.1.5).
+     Nos perfis NBR 9050, Rota de fuga e Mezanino vale a NBR 9050:2020 (6.9.3.1 e 4.6.5: Ø de 30 a 45 mm, afastado
+     no mínimo 40 mm da parede). Nos perfis Estudo e Personalizada fica a referência da NBR 9077:2001, cancelada:
+     Ø de 38 a 65 mm (4.8.2.3) e afastamento de 40 mm (4.8.2.4).
    A altura do corrimão (92 cm, e 70 cm no perfil NBR 9050) é desenhada fora de escala, com a cota interrompida. */
 let DTL = 0;
 
@@ -162,9 +164,11 @@ function detalheSVG(R, o, C) {
 
   /* corrimão: altura medida na vertical a partir da linha dos bocéis; desenhada fora de escala (cota interrompida) */
   const Hd = h => h * 0.4;
-  /* diâmetro do corrimão: NBR 9077:2001 4.8.2.3 aceita 38 a 65 mm; a NBR 9050:2020 (6.9.3.1 remete a 4.6.5) pede 30 a 45 mm.
-     No perfil NBR 9050 vale a faixa dela (desenhado com 4 cm); nos outros, a da NBR 9077 (desenhado com 5 cm). */
-  const faixaD = R.nm.acess ? 'Ø 3,0 a 4,5' : 'Ø 3,8 a 6,5', rr = R.nm.acess ? 2 : 2.5;
+  /* diâmetro do corrimão: a NBR 9050:2020 (6.9.3.1 remete a 4.6.5) pede 30 a 45 mm; a NBR 9077:2001 (4.8.2.3), cancelada,
+     aceitava 38 a 65 mm. A NBR 9077:2025 manda seguir a NBR 9050 (3.10 e 9.1.5). Nos perfis NBR 9050, Rota de fuga e
+     Mezanino vale a faixa da NBR 9050 (desenhado com 4 cm); no Estudo e no Personalizado, a da edição de 2001 (5 cm). */
+  const c9050 = !!(R.nm.acess || R.nm.mez);
+  const faixaD = c9050 ? 'Ø 3,0 a 4,5' : 'Ø 3,8 a 6,5', rr = c9050 ? 2 : 2.5;
   const alturas = R.nm && R.nm.acess ? [92, 70] : [92];
   const xr0 = -0.55 * p, xr1 = 3 * p + b + fs * 2;
   alturas.forEach((h, i) => {
@@ -204,9 +208,10 @@ function detalheSVG(R, o, C) {
     'inclinação = arctg(e ÷ p) = ' + fmt(R.incl, 1) + '°',
     plc ? (modo === 'sem' ? 'borda: placas sem sobreposição' : 'borda: cada placa avança ' + fmt(b, 2) + ' cm sobre a de baixo')
       : (modo === 'sem' ? 'borda: espelho reto, sem saliência' : (modo === 'inclinado' ? 'borda: espelho inclinado, quina avança ' : 'borda: bocel de ') + fmt(b, 2) + ' cm'),
-    '  NBR 9077:2001, 4.7.3.1 e: mín. 1,5 cm; NBR 9050:2020, 6.7.1: máx. 1,5 cm',
-    R.nm.acess ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3)',
-    'afastamento da parede ≥ 4 cm (NBR 9077:2001, 4.8.2.4' + (R.nm.acess ? '; NBR 9050:2020, 4.6.5)' : ')'),
+    '  máx. 1,5 cm: NBR 9050:2020, 6.7.1',
+    '  mín. 1,5 cm: NBR 9077:2001, 4.7.3.1 e (edição cancelada)',
+    c9050 ? 'corrimão: Ø 3,0 a 4,5 cm (NBR 9050:2020, 6.9.3.1 e 4.6.5)' : 'corrimão: Ø 3,8 a 6,5 cm (NBR 9077:2001, 4.8.2.3, cancelada)',
+    'afastamento da parede ≥ 4 cm (' + (c9050 ? 'NBR 9050:2020, 4.6.5)' : 'NBR 9077:2001, 4.8.2.4, cancelada)'),
     'altura do corrimão (' + alturas.join(' e ') + ' cm) medida na vertical',
     '  a partir da linha dos bocéis'
   ];
