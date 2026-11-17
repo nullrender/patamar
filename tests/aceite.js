@@ -439,5 +439,41 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   let sem01=0; for(const t of ['reta-patamar','u-patamar','l-patamar','l-leque','helicoidal','c-patamar'])for(const no of ['res','fuga','mez','acess','custom'])for(const H of [100,300]){const X=calc({tipo:t,norma:no,L:120,H,D:240,leque:'conv'}); X.resolver(); X.checks.forEach(c=>[c.nota,c.regra,c.sol,c.nome].forEach(tx=>{ if(tx && /9077:2001/.test(tx) && !/cancelada/.test(tx)) sem01++; }));}
   ok(sem01===0,'toda nota que cita a NBR 9077:2001 diz que ela foi cancelada');
 }
+/* interface no celular, tablet e PC (revisão de 17/11/2026): conferências no código do ui.js e do template */
+{
+  const fs=require('fs'), path=require('path');
+  const ui=fs.readFileSync(path.join(__dirname,'..','src','ui.js'),'utf8');
+  const tpl=fs.readFileSync(path.join(__dirname,'..','src','template.html'),'utf8');
+  const fn=nome=>{const m=new RegExp('function '+nome+'\\([^)]*\\) \\{[\\s\\S]*?\\n\\}|function '+nome+'\\([^)]*\\) \\{[^\\n]*\\}').exec(ui); return m&&m[0];};
+  const cel=(/@media \(max-width:699px\)\{([\s\S]*?)\n\}/.exec(tpl)||[])[1]||'';
+  ok(!/min-width:\s*(520|600)px/.test(cel) && /\.stage svg\{width:100%;height:auto/.test(cel),'celular: o desenho cabe na largura (sem min-width de 520/600 px)');
+  ok(/id="btnAmpliar"/.test(tpl) && /id="zoom"/.test(tpl) && /id="btnAjustar"/.test(tpl) && /touchmove/.test(ui) && /ctrlKey/.test(ui),'botão Ampliar abre o desenho em tela cheia com pinça; Ajustar volta');
+  const rend=fn('render')||'';
+  ok(!/R\.resolver\(\)/.test(rend) && /agendarSol\(R/.test(rend) && /SOL_CACHE/.test(ui) && /requestIdleCallback/.test(ui),'"Como resolver" sai do render: roda depois de desenhar, numa pausa, e fica guardado por estado');
+  ok(/lembrarAbertas\(\)/.test(rend) && /reabrir\(\)/.test(rend),'Explicação: seções abertas continuam abertas quando um dado muda');
+  const ch=new Function(fn('chaveSecao')+'\nreturn chaveSecao;')();
+  const sm=t=>({querySelector:()=>({textContent:t})});
+  ok(ch(sm('Sobre o tipo escolhido: Em L com leques'),0)===ch(sm('Sobre o tipo escolhido: Reta'),0) && ch(sm('Roteiro para desenhar a elevação (vista frente)'),0)===ch(sm('Roteiro para desenhar a elevação (vista fundos)'),0),'chave da seção ignora o que muda com o tipo');
+  ok(/@media \(min-width:700px\) and \(max-height:850px\)/.test(tpl) && /\.tipos \.th\{display:none\}/.test(tpl),'pouca altura: faixa de tipos compacta e resumo numa linha');
+  ok(/@media \(min-width:700px\)\{\s*\.tipos button\{flex:1 1 0;min-width:96px/.test(tpl) && /maisDir/.test(tpl) && /marcarRolagemTipos/.test(ui),'faixa de tipos cabe em 1024 px e mostra degradê quando rola');
+  ok(/orientation:portrait\)\{\s*\.app\{grid-template-columns:clamp\(228px/.test(tpl),'tablet em pé: coluna de dados estreita');
+  const gi=fn('gerarImagem')||'';
+  ok(/temaClaro\(\)/.test(gi) && !/THEME/.test(gi) && /\$\('btnSvg'\)[^\n]*temaClaro\(\)/.test(ui),'Gerar imagem e Copiar SVG sempre no tema claro');
+  const lg=fn('legendaHTML')||'';
+  ok(/--t3/.test(lg) && /--w3/.test(lg) && /--p3/.test(lg) && /Cortado pelo plano/.test(lg) && /detalhe/.test(lg),'legenda por vista: 3D com as cores do modelo, cortes com hachura e traço fino, detalhe sem legenda');
+  ok(/id="printExp"/.test(tpl) && !/id="printExp" checked/.test(tpl) && /EX_CURTA/.test(ui),'impressão: "explicação completa" desmarcada por padrão');
+  ok(/elevacaoSVG\(R, \{\}, C, lado\)/.test(ui) && !/'direita'\)/.test(ui),'relatório: elevação com o mesmo lado da tela (frente por padrão)');
+  ok(/aria-controls="board"/.test(ui) && /b\.tabIndex = on \? 0 : -1/.test(ui) && /\$\('tabs'\)\.addEventListener\('keydown'/.test(ui),'abas e tipos com tabindex móvel e setas');
+  ok(/prenderFoco/.test(ui) && /abrirDialogo\('modal', 'modalDl'\)/.test(ui),'modal prende o foco e devolve ao fechar');
+  ok(/id="miniBtn"/.test(tpl) && !/\$\('miniRes'\)\.innerHTML/.test(ui),'resumo fixo do celular: botão montado uma vez (o primeiro toque não se perde)');
+  ok(/err\.campo/.test(ui) && /aria-invalid/.test(ui) && /id="erroDados"/.test(tpl),'erro de entrada: marca o campo (e.campo) e mostra a mensagem no painel Dados');
+  ok(/n\.rotulo \|\| n\.nome/.test(ui) && /id="normaHint"/.test(ui),'seletor de perfil com rótulo curto e nome completo na dica');
+  ok(/TEMA_ICO/.test(ui) && /id="temaIco"/.test(tpl),'botão de tema mostra o tema ativo pelo ícone');
+  const nt=new Function(fn('nomeTipoFrase')+'\nreturn nomeTipoFrase;')();
+  ok(nt({nome:'Em U com leques'})==='em U com leques' && nt({nome:'Em C (dois patamares)'})==='em C (dois patamares)','"Copiar resumo": letra da forma maiúscula');
+  ok(/' · perfil: '/.test(fn('resumo')||''),'"Copiar resumo" sem parênteses dentro de parênteses');
+  ok(/const metros = v => v\.toLocaleString\('pt-BR', \{ minimumFractionDigits: 2/.test(ui),'"Em planta" com duas casas fixas');
+  ok(/R\.nReto \? R\.nReto \+ ' retos' : ''/.test(ui),'bloco Pisos sem "0 retos"');
+}
 
 console.log(fail?fail+' falha(s)':'todos passaram');
