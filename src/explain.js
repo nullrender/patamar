@@ -206,11 +206,16 @@ function explicacao(R, S, C) {
     tab(['Nº', 'Nível', 'Tipo', 'Percurso'], linhas) +
     p('O piso superior fica em ' + nivel(R.H) + ', um espelho acima do último degrau (' + R.T + ').'), false);
 
-  /* 7. Roteiro para desenhar à mão */
-  const esc = 50, mm = v => f(v / esc * 10, 1) + ' mm';
+  /* 7. Roteiro para desenhar à mão: na escala que o professor pediu (S.escalaMao: 1:20, 1:25, 1:50 ou 1:100) */
+  const ESC_MAO = [20, 25, 50, 100];
+  const esc = ESC_MAO.indexOf(Number(S.escalaMao)) >= 0 ? Number(S.escalaMao) : 50, mm = v => f(v / esc * 10, 1) + ' mm';
+  const divEsc = f(esc / 10, 1);
+  const seletorEsc = '<div class="seg escMao" role="group" aria-label="Escala do desenho à mão">' + ESC_MAO.map(v => '<button type="button" data-esc-mao="' + v + '"' + (v === esc ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>1:' + v + '</button>').join('') + '</div>';
+  const regraEsc = 'Na escala 1:' + esc + ', cada 1 cm do desenho vale ' + esc + ' cm da obra, então divida as medidas reais por ' + divEsc + ' para ter milímetros no papel' + (esc === 25 ? ' (é o mesmo que multiplicar por 0,4)' : esc === 20 ? ' (é o mesmo que multiplicar por 0,5)' : '') + '.';
   const bw = R.bbox[2] - R.bbox[0], bh = R.bbox[3] - R.bbox[1];
-  h += sec('Roteiro para desenhar à mão (escala 1:50)',
-    p('Na escala 1:50, cada 1 cm do desenho vale 50 cm da obra, então divida as medidas reais por 5 para ter milímetros no papel. Com os seus números: espelho de ' + f(R.e, 2) + ' cm vira ' + mm(R.e) + ', piso de ' + f(R.p, 1) + ' cm vira ' + mm(R.p) + ', e a escada inteira cabe num retângulo de ' + mm(bw) + ' × ' + mm(bh) + '.') +
+  h += sec('Roteiro para desenhar à mão (escala 1:' + esc + ')',
+    p('<b>Escala do seu desenho</b> (use a que o professor pediu):') + seletorEsc +
+    p(regraEsc + ' Com os seus números: espelho de ' + f(R.e, 2) + ' cm vira ' + mm(R.e) + ', piso de ' + f(R.p, 1) + ' cm vira ' + mm(R.p) + ', e a escada inteira cabe num retângulo de ' + mm(bw) + ' × ' + mm(bh) + '.') +
     p('<b>Perfil</b>') + ol([
       'Trace duas linhas horizontais: o piso de baixo (' + nivel(0) + ') e o piso de cima (' + nivel(R.H) + '), afastadas ' + mm(R.H) + '.',
       'Divida essa altura em ' + R.N + ' partes iguais sem fazer conta de milímetro. Trace uma vertical do nível de baixo ao de cima, no lugar do primeiro espelho. Do pé dessa vertical, trace uma reta inclinada qualquer e marque nela ' + R.N + ' divisões iguais com a régua (por exemplo, de 1 em 1 cm). Ligue a última marca ao topo da vertical e puxe, pelas outras marcas, paralelas a essa ligação. Onde as paralelas cortam a vertical estão as alturas dos ' + R.N + ' espelhos (é a divisão de segmentos pelo teorema de Tales).',
@@ -255,7 +260,7 @@ function explicacao(R, S, C) {
         'Leve a posição horizontal de cada canto de degrau para a elevação. Com a elevação embaixo, puxe da planta uma linha de chamada vertical. Lado a lado, meça na planta e copie na elevação. A posição horizontal é a mesma da planta; só a altura muda.',
         R.placas ? 'Cada degrau é uma placa em balanço: um retângulo fino da menor à maior chamada dos cantos, do fundo (' + f(R.st.espDegrau) + ' cm abaixo do topo) até o topo. Entre uma placa e outra o espelho é aberto: não há linha ali.' : 'Desenhe cada lance como um contorno só: em cima, os dentes (o topo de cada degrau, na altura da tabela); embaixo, a face de baixo da laje, ligando o fundo no começo e no fim de cada degrau (duas colunas da tabela). Num lance visto de lado essa linha é inclinada; num patamar, é horizontal. Dentro da laje não há linha entre um degrau e o outro.',
         R.hel ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). O pilar fica entre as duas metades: os degraus de trás somem atrás dele, entre −' + f(R.helix.rc) + ' e +' + f(R.helix.rc) + ' cm.' : R.placas ? 'O que fica mais perto de quem olha cobre o que está atrás (coluna Distância: vale o menor). Como as placas são soltas, entre uma e outra você vê o que está atrás da escada.' : 'A última coluna diz o que se vê de cada degrau. <b>Espelhos</b>: o lance sobe para longe de você, então você vê os espelhos de frente; trace uma linha horizontal no topo de cada degrau. <b>Perfil</b>: o lance corre de lado; você vê o dente de cada degrau e a laje inclinada por baixo. <b>Fundo da laje</b>: o lance sobe na sua direção, então você vê só a face de baixo da laje; desenhe só o contorno, sem linhas de degrau. Onde dois lances se sobrepõem no desenho, vale o de menor distância.',
-        R.hel ? 'Termine com o corrimão, do lado de fora, 92 cm acima da borda de cada degrau, a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.' : 'Termine com o corrimão (a ' + (R.nm.acess ? '92 e 70 cm' : '92 cm') + ' acima dos bocéis), a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:50, divida as medidas por 5 para ter milímetros no papel.'
+        R.hel ? 'Termine com o corrimão, do lado de fora, 92 cm acima da borda de cada degrau, a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:' + esc + ', divida as medidas por ' + divEsc + ' para ter milímetros no papel.' : 'Termine com o corrimão (a ' + (R.nm.acess ? '92 e 70 cm' : '92 cm') + ' acima dos bocéis), a faixa da laje do piso de cima (da face de baixo dela até ' + nivel(R.H) + ') e os níveis. Na escala 1:' + esc + ', divida as medidas por ' + divEsc + ' para ter milímetros no papel.'
       ]) +
       p('<b>Números da vista ' + nomeE + '</b> (cm; a horizontal é medida a partir do ' + (R.hel ? 'eixo do pilar' : 'meio da escada') + ', negativo para a esquerda de quem olha):') +
       tab(['Degrau', 'Topo', 'Fundo no começo', 'Fundo no fim', 'Horizontal', 'Distância', 'Você vê'], linhas);
@@ -279,7 +284,7 @@ function explicacao(R, S, C) {
         ol([
           'Na planta, trace uma linha fina passando por ' + ref + ', ' + linhaRef + '. Ela aponta para quem olha. Na elevação, trace a linha do chão, os níveis dos degraus e uma linha em pé no lugar ' + (R.hel ? 'do eixo do pilar' : 'do meio da escada') + '.',
           'Escolha um canto na planta, por exemplo ' + ex + '. Meça com o escalímetro a distância dele até a linha de referência, reto (formando ângulo de 90° com a linha). Aqui dá <b>' + f(Math.abs(dP), 1) + ' cm</b>.',
-          'Na elevação, marque a mesma distância a partir da linha em pé, na altura do topo do degrau desse canto (' + f(zP, 1) + ' cm). ' + regra + ' Em 1:50, ' + f(Math.abs(dP), 1) + ' cm viram ' + f(Math.abs(dP) / 5, 1) + ' mm no papel.',
+          'Na elevação, marque a mesma distância a partir da linha em pé, na altura do topo do degrau desse canto (' + f(zP, 1) + ' cm). ' + regra + ' Em 1:' + esc + ', ' + f(Math.abs(dP), 1) + ' cm viram ' + f(Math.abs(dP) / esc * 10, 1) + ' mm no papel.',
           'Repita com os outros cantos do mesmo degrau, sempre na altura dele, e ligue as marcas. Depois faça o degrau seguinte. Não precisa medir na planta: a coluna Horizontal da tabela acima ' + (R.hel ? '(e as colunas Externa e No pilar, logo abaixo) ' : '') + 'já traz essas distâncias; negativo é à esquerda da linha em pé.'
         ]) +
         '<div class="passos">' + fig(1, 'Uma linha de referência em cada vista.') + fig(2, 'Meça o canto até a linha, na planta.') + fig(3, 'Copie a mesma medida na elevação, na altura do degrau.') + fig(4, 'Faça o mesmo com os cantos do degrau e ligue.') + '</div>';

@@ -116,6 +116,8 @@ function bind() {
   $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
   $('showCortes').addEventListener('change', e => { S.showCortes = e.target.checked; render(); });
   $('ladoE').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.ladoElev = b.dataset.v; render(); });
+  /* escala do desenho à mão (botões dentro da aba Explicação, que é refeita a cada render) */
+  document.addEventListener('click', e => { const b = e.target.closest('[data-esc-mao]'); if (!b) return; S.escalaMao = Number(b.dataset.escMao); render(); const nb = document.querySelector('[data-esc-mao="' + S.escalaMao + '"]'); if (nb) nb.focus(); });
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
@@ -675,7 +677,7 @@ function lerPrancha() {
     const j = JSON.parse(localStorage.getItem(PR_KEY) || 'null'); if (!j || typeof j !== 'object') return;
     Object.keys(PR_TXT).forEach(k => { if (typeof j[k] === 'string') PR[k] = j[k].slice(0, 60); });
     if (FOLHAS[j.formato]) PR.formato = j.formato;
-    if (['auto', '50', '75', '100'].indexOf(String(j.escala)) >= 0) PR.escala = String(j.escala);
+    if (['auto', '25', '50', '75', '100'].indexOf(String(j.escala)) >= 0) PR.escala = String(j.escala);
     if (j.folhas === 'varias' || j.folhas === 'uma') PR.folhas = j.folhas;
     if (Array.isArray(j.vistas)) PR.vistas = PR_VISTAS.filter(v => j.vistas.indexOf(v) >= 0);
     if (j.unid === 'm' || j.unid === 'cm') PR.unid = j.unid;

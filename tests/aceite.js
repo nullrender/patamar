@@ -758,4 +758,21 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   ok(/@media \(min-width:700px\) and \(max-width:1023px\)\{\.pcorpo\{[^}]*\} \.pdois\{grid-template-columns:1fr\}\}/.test(tpl),'tablet: Formato e Escala um embaixo do outro (sem "Automátic" cortado)');
 }
 
+
+/* escala 1:25: roteiros de desenho à mão na escala escolhida e prancha em 1:25 */
+{
+  const {calc,explicacao,montarPrancha}=require('./carregar.js');
+  const X=calc({tipo:'l-patamar'});
+  const e25=explicacao(X,Object.assign({},X.st,{escalaMao:25}),C), e50=explicacao(X,Object.assign({},X.st,{escalaMao:50}),C);
+  ok(/Roteiro para desenhar à mão \(escala 1:25\)/.test(e25) && /divida as medidas reais por 2,5/.test(e25) && /data-esc-mao="25" class="on"/.test(e25),'roteiro à mão em 1:25: divide por 2,5 e marca o botão');
+  ok(/espelho de 17,5 cm vira 7 mm/.test(e25) && /espelho de 17,5 cm vira 3,5 mm/.test(e50),'roteiro em 1:25: espelho de 17,5 cm vira 7 mm (em 1:50, 3,5 mm)');
+  ok(!/Em 1:50,/.test(e25.slice(e25.indexOf('Lado a lado'))) && /Em 1:25, [\d,]+ cm viram/.test(e25),'medir e copiar usa a escala escolhida');
+  ok(/Roteiro para desenhar à mão \(escala 1:50\)/.test(explicacao(X,Object.assign({},X.st,{escalaMao:33}),C)),'escala desconhecida volta a 1:50');
+  const html=require('fs').readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');
+  ok(/<option value="25">1:25<\/option>/.test(html),'prancha oferece a escala 1:25');
+  let fora=0; for(const t of ['reta','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal']){const m=montarPrancha(calc({tipo:t}),C,{formato:'A3',escala:25}); if(m.escala!==25||m.omitidas.length) fora++;}
+  ok(fora===0,'prancha A3 em 1:25 com todas as vistas em 8 dos 9 tipos (a reta com patamar pede A2)');
+  const rp=montarPrancha(calc({tipo:'reta-patamar'}),C,{formato:'A3',escala:25}); ok(rp.omitidas.length>0 && /A2/.test(rp.aviso) && montarPrancha(calc({tipo:'reta-patamar'}),C,{formato:'A2',escala:25}).omitidas.length===0,'reta com patamar em 1:25: na A3 avisa e sugere A2; na A2 cabe');
+}
+
 console.log(fail?fail+' falha(s)':'todos passaram');
