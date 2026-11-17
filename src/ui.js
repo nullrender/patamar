@@ -165,6 +165,7 @@ function bind() {
   $('btnSvg').addEventListener('click', () => { if (VIEW === '3d' || !CUR) return; const C = temaClaro(); copiar(VIEW === 'corte' ? svgCorte(CUR, { pxW: 1400 }, C) : planSVG(CUR, { pxW: 1400 }, C), 'SVG copiado'); });
   $('btnImg').addEventListener('click', gerarImagem);
   $('btnPrint').addEventListener('click', imprimir);
+  ligarPrancha();
   $('modalClose').addEventListener('click', () => fecharDialogo('modal'));
   $('modal').addEventListener('click', e => { if (e.target.id === 'modal') fecharDialogo('modal'); });
   $('btnAmpliar').addEventListener('click', abrirZoom);
@@ -173,7 +174,7 @@ function bind() {
   $('zMenos').addEventListener('click', () => zoomPor(1 / 1.4));
   ligarPinca();
   document.addEventListener('keydown', e => {
-    const aberto = ['zoom', 'modal'].find(id => !$(id).hidden); if (!aberto) return;
+    const aberto = ['zoom', 'prancha', 'modal'].find(id => !$(id).hidden); if (!aberto) return;
     if (e.key === 'Escape') { e.preventDefault(); fecharDialogo(aberto); return; }
     if (e.key === 'Tab') prenderFoco(e, $(aberto));
   });
@@ -267,7 +268,7 @@ function falha(msg, campo) {
   $('navBadge').hidden = false; $('navBadge').className = 'badge'; $('navBadge').textContent = '!';
   miniRes('<span class="mrErr">' + (el ? 'Medida que o app não aceita: a mensagem está embaixo do campo.' : esc(msg)) + '</span>', 'bad', el ? 'Ir ao campo' : '', el ? { campo: el.id } : null);
   $('notaNorma').hidden = true;
-  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = true; });
+  ['btnImg', 'btnSvg', 'btnPrancha', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = true; });
   $('btnAmpliar').hidden = true;
   $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true; $('viewCorteBar').hidden = true;
 }
@@ -308,7 +309,7 @@ function render(typing) {
   marcarCampo(null); $('erroDados').hidden = true;
   /* "Como resolver" testa saídas recalculando a escada (na helicoidal leva perto de 1 s): roda depois de desenhar, fora da digitação, e fica guardado por estado */
   if (!solDoCache(R)) agendarSol(R, typing);
-  ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = false; });
+  ['btnImg', 'btnSvg', 'btnPrancha', 'btnResumo', 'btnPrint', 'btnAmpliar'].forEach(id => { $(id).disabled = false; });
   /* controles */
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#lado button').forEach(b => b.classList.toggle('on', b.dataset.v === S.lado));
@@ -536,12 +537,14 @@ let FOCO_ANTES = null;
 function abrirDialogo(id, foco) {
   FOCO_ANTES = document.activeElement;
   $(id).hidden = false;
-  if (id === 'zoom') document.body.classList.add('travado');
+  if (id === 'zoom' || id === 'prancha') document.body.classList.add('travado');
   setTimeout(() => { const f = $(foco); if (f) f.focus(); }, 0);
 }
 function fecharDialogo(id) {
   $(id).hidden = true;
-  if (id === 'zoom') { document.body.classList.remove('travado'); $('zArea').innerHTML = ''; }
+  if (id === 'zoom' || id === 'prancha') document.body.classList.remove('travado');
+  if (id === 'zoom') $('zArea').innerHTML = '';
+  if (id === 'prancha') $('prFolha').innerHTML = '';
   if (FOCO_ANTES && document.contains(FOCO_ANTES)) FOCO_ANTES.focus();
   FOCO_ANTES = null;
 }
@@ -649,7 +652,107 @@ function gerarImagem() {
   img.src = url;
 }
 
-window.addEventListener('beforeprint', montarRelatorio);
+/* ---- prancha em escala e DXF ----
+   Os campos do carimbo, a folha, a escala, as vistas e a unidade do DXF ficam guardados neste aparelho (chave patamar-prancha).
+   A data não é guardada: começa com a de hoje. Tudo sai no tema claro, como no papel. */
+const PR_KEY = 'patamar-prancha';
+const PR_VISTAS = ['planta', 'plantaSup', 'corteA', 'corteB', 'elevacao', 'detalhe'];
+const PR_TXT = { titulo: 'prTit', aluno: 'prAluno', disciplina: 'prDisc', professor: 'prProf' };
+let PR = { titulo: '', aluno: '', disciplina: '', professor: '', formato: 'A3', escala: 'auto', vistas: VISTAS_PADRAO.slice(), unid: 'm' };
+let PR_INFO = null, PR_T = null, IMP_PRANCHA = false;
+function lerPrancha() {
+  try {
+    const j = JSON.parse(localStorage.getItem(PR_KEY) || 'null'); if (!j || typeof j !== 'object') return;
+    Object.keys(PR_TXT).forEach(k => { if (typeof j[k] === 'string') PR[k] = j[k].slice(0, 60); });
+    if (FOLHAS[j.formato]) PR.formato = j.formato;
+    if (['auto', '50', '75', '100'].indexOf(String(j.escala)) >= 0) PR.escala = String(j.escala);
+    if (Array.isArray(j.vistas)) PR.vistas = PR_VISTAS.filter(v => j.vistas.indexOf(v) >= 0);
+    if (j.unid === 'm' || j.unid === 'cm') PR.unid = j.unid;
+  } catch (e) { }
+}
+function salvarPrancha() { try { localStorage.setItem(PR_KEY, JSON.stringify(PR)); } catch (e) { } }
+const dxfPronto = () => typeof dxfDe === 'function' && typeof dxfBytes === 'function';
+function opPrancha() {
+  const d = $('prData').value.trim();
+  return { formato: PR.formato, escala: PR.escala === 'auto' ? 'auto' : Number(PR.escala), vistas: PR.vistas.slice(), titulo: PR.titulo, aluno: PR.aluno, disciplina: PR.disciplina, professor: PR.professor, data: d || hojeBR(), ladoElev: S.ladoElev || 'frente' };
+}
+function desenharPrancha() {
+  if (!CUR) return;
+  const P = PR_INFO = montarPrancha(CUR, temaClaro(), opPrancha());
+  $('prFolha').innerHTML = P.svg;
+  const av = $('prAviso'), nada = !PR.vistas.length;
+  const escs = 'Folha ' + P.formato + ' deitada · plantas e cortes em 1:' + P.escala + (P.escalaDetalhe ? ' · detalhe em 1:' + P.escalaDetalhe : '') + '.';
+  av.textContent = nada ? 'Marque pelo menos uma vista.' : P.aviso ? escs + ' ' + P.aviso : escs;
+  av.classList.toggle('alerta', nada || !!P.aviso);
+  ['prSvg', 'prImp'].forEach(id => { $(id).disabled = nada; });
+  $('prDxf').disabled = nada || !dxfPronto();
+  $('prDicaImp').textContent = 'Na janela de impressão, escolha o papel ' + P.formato + ', orientação paisagem, margens “nenhuma” e escala 100% (ou “Tamanho real”). Com “Ajustar à página” a prancha sai fora de escala. Depois de imprimir, confira a régua de 100 mm do carimbo.';
+}
+function agendarPrancha() { clearTimeout(PR_T); PR_T = setTimeout(desenharPrancha, 250); }
+function abrirPrancha() {
+  if (!CUR) return;
+  Object.keys(PR_TXT).forEach(k => { $(PR_TXT[k]).value = PR[k]; });
+  $('prTit').placeholder = 'ESCADA ' + (TIPOS.find(t => t.id === S.tipo) || { nome: '' }).nome.toUpperCase();
+  if (!$('prData').value) $('prData').value = hojeBR();
+  $('prFormato').value = PR.formato; $('prEscala').value = PR.escala; $('prUnid').value = PR.unid;
+  $('prElevNome').textContent = 'Elevação (' + LADO_NOME[S.ladoElev || 'frente'] + ', como na aba Cortes)';
+  document.querySelectorAll('#prVistas input[data-v]').forEach(c => { c.checked = PR.vistas.indexOf(c.dataset.v) >= 0; });
+  notaDxf();
+  desenharPrancha();
+  abrirDialogo('prancha', 'prFechar');
+}
+/* baixa um arquivo gerado no aparelho (no artefato do claude.ai o download pode não funcionar) */
+function baixar(blob, nome) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function imprimirPrancha() {
+  desenharPrancha(); const P = PR_INFO; if (!P || !PR.vistas.length) return;
+  IMP_PRANCHA = true;
+  const pa = $('printArea');
+  pa.innerHTML = P.svg; pa.classList.add('prancha'); pa.style.width = P.W + 'mm'; pa.style.height = P.H + 'mm';
+  document.documentElement.classList.add('imprPrancha');
+  $('pagePrancha').textContent = '@media print{@page{size:' + P.W + 'mm ' + P.H + 'mm;margin:0}}';
+  setTimeout(() => window.print(), 50);
+}
+function fimImpPrancha() {
+  if (!IMP_PRANCHA) return;
+  IMP_PRANCHA = false;
+  const pa = $('printArea'); pa.classList.remove('prancha'); pa.style.width = ''; pa.style.height = ''; pa.innerHTML = '';
+  document.documentElement.classList.remove('imprPrancha');
+  $('pagePrancha').textContent = '';
+}
+function ligarPrancha() {
+  lerPrancha();
+  $('btnPrancha').addEventListener('click', abrirPrancha);
+  $('prFechar').addEventListener('click', () => fecharDialogo('prancha'));
+  $('prForm').addEventListener('submit', e => e.preventDefault());
+  Object.keys(PR_TXT).forEach(k => $(PR_TXT[k]).addEventListener('input', e => { PR[k] = e.target.value.slice(0, 60); salvarPrancha(); agendarPrancha(); }));
+  $('prData').addEventListener('input', agendarPrancha);
+  $('prFormato').addEventListener('change', e => { PR.formato = e.target.value; salvarPrancha(); desenharPrancha(); });
+  $('prEscala').addEventListener('change', e => { PR.escala = e.target.value; salvarPrancha(); desenharPrancha(); });
+  $('prUnid').addEventListener('change', e => { PR.unid = e.target.value; salvarPrancha(); notaDxf(); });
+  $('prVistas').addEventListener('change', () => { PR.vistas = PR_VISTAS.filter(v => { const c = document.querySelector('#prVistas input[data-v="' + v + '"]'); return c && c.checked; }); salvarPrancha(); desenharPrancha(); });
+  $('prSvg').addEventListener('click', () => {
+    if (!PR_INFO) return;
+    baixar(new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + PR_INFO.svg], { type: 'image/svg+xml' }), 'patamar-' + S.tipo + '-prancha-' + PR_INFO.formato + '.svg');
+  });
+  $('prImp').addEventListener('click', imprimirPrancha);
+  $('prDxf').addEventListener('click', () => {
+    if (!CUR || !dxfPronto() || !PR.vistas.length) return;
+    try {
+      const str = dxfDe(CUR, temaClaro(), { unidade: PR.unid, vistas: PR.vistas.slice(), ladoElev: S.ladoElev || 'frente' });
+      baixar(new Blob([dxfBytes(str)], { type: 'application/dxf' }), 'patamar-' + S.tipo + '.dxf');
+    } catch (e) { toast('Não consegui gerar o DXF'); }
+  });
+  window.addEventListener('afterprint', fimImpPrancha);
+}
+function notaDxf() {
+  $('prDxfNota').textContent = dxfPronto() ? 'O DXF sai em tamanho real (1:1), com as medidas em ' + (PR.unid === 'm' ? 'metros' : 'centímetros') + ': no programa de CAD, confira a unidade antes de cotar.' : 'A exportação em DXF ainda não está disponível nesta versão do app.';
+}
+
+window.addEventListener('beforeprint', () => { if (!IMP_PRANCHA) montarRelatorio(); });
 window.addEventListener('DOMContentLoaded', () => {
   aplicarTema(lerTema());
   load(); mount(); bind(); renderTypes(); mostrarPainel(PAINEL); render();

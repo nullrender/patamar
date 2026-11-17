@@ -409,6 +409,40 @@ body.travado{overflow:hidden}
 .tab td{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tabq td:first-child{white-space:normal;font-family:var(--body)}
 .tabq td{vertical-align:top}
+/* prancha em escala e DXF: formulário à esquerda, folha à direita; no celular, tela cheia com a folha em cima */
+.pmodal .pbox{width:min(1360px,100%);height:100%;padding:0;gap:0;overflow:hidden}
+.phead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.phead h2{flex:1;margin:0;font:600 20px/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.pcorpo{flex:1;min-height:0;display:grid;grid-template-columns:330px minmax(0,1fr)}
+.pform{overflow:auto;padding:12px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.pform fieldset{border:1px solid var(--line);border-radius:8px;margin:0;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pform legend{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+.pf{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:500}
+.pf input,.pf select{width:100%;min-height:42px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);padding:8px 10px;font:inherit;font-weight:400;font-size:15px}
+.pf input:focus-visible,.pf select:focus-visible,.pc input:focus-visible{outline:2px solid var(--btn);outline-offset:1px}
+.pdois{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pc{display:flex;align-items:center;gap:8px;font-size:14px;min-height:36px;cursor:pointer}
+.pc input{accent-color:var(--btn);width:18px;height:18px;margin:0;flex:none}
+.pbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.pbtns .btn{flex:1 1 auto}
+.pun{flex:0 0 130px}
+.pprev{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px}
+.paviso{margin:0;font-size:13px;line-height:1.45;padding:6px 10px;border-left:3px solid var(--info);background:var(--panel);border-radius:0 6px 6px 0}
+.paviso.alerta{border-left-color:var(--warn)}
+.pfolha svg{display:block;width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+@media (min-width:700px) and (max-width:1023px){.pcorpo{grid-template-columns:290px minmax(0,1fr)}}
+@media (max-width:699px){
+  .modal.pmodal{padding:0}
+  .pmodal .pbox{border-radius:0;max-height:none;overflow:auto;display:block}
+  .phead{position:sticky;top:0;z-index:2;background:var(--panel);padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  .pcorpo{display:flex;flex-direction:column}
+  .pprev{order:-1;overflow:visible;padding:10px}
+  .pform{overflow:visible;border-right:0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  .pf input,.pf select{min-height:44px}
+  .pc{min-height:44px}
+  .phead h2{font-size:18px}
+  .phead .btn{flex:none}
+}
 /* ---- relatório para imprimir ou salvar em PDF ---- */
 .printArea{display:none}
 @media print{
@@ -442,8 +476,13 @@ body.travado{overflow:hidden}
   .printArea .ex>summary::after{content:none}
   .printArea .ex .exb{padding:4pt 0 0;font-size:10pt}
   .printArea .rodape{margin-top:12pt;font-size:8pt;color:#555;border-top:1px solid #bbb;padding-top:4pt}
+  /* prancha em escala: a folha inteira, sem margem (o @page com o tamanho dela vai em #pagePrancha, montado na hora) */
+  html.imprPrancha,html.imprPrancha body{margin:0;padding:0;background:#fff}
+  #printArea.prancha{overflow:hidden;break-inside:avoid}
+  #printArea.prancha svg{display:block;width:100%;height:100%}
 }
 </style>
+<style id="pagePrancha"></style>
 </head>
 <body>
 <a class="skip" href="#painel-desenho">Pular para o desenho</a>
@@ -487,6 +526,7 @@ body.travado{overflow:hidden}
         <div class="actions">
           <button type="button" class="btn pri" id="btnImg">Gerar imagem</button>
           <button type="button" class="btn" id="btnSvg">Copiar SVG</button>
+          <button type="button" class="btn" id="btnPrancha">Prancha e DXF</button>
           <button type="button" class="btn" id="btnResumo">Copiar resumo</button>
           <button type="button" class="btn" id="btnPrint">Imprimir / PDF</button>
           <label class="chkPrint"><input type="checkbox" id="printExp"> imprimir com a explicação completa</label>
@@ -516,6 +556,46 @@ body.travado{overflow:hidden}
 <div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Desenho ampliado">
   <div class="zbar"><span class="zdica">Arraste para mover. Pinça com dois dedos, Ctrl + roda do mouse ou os botões mudam o tamanho.</span><button type="button" class="btn" id="zMenos" aria-label="Diminuir">−</button><button type="button" class="btn" id="zMais" aria-label="Aumentar">+</button><button type="button" class="btn pri" id="btnAjustar">Ajustar</button></div>
   <div class="zarea" id="zArea"></div>
+</div>
+<div class="modal pmodal" id="prancha" hidden role="dialog" aria-modal="true" aria-labelledby="prTitulo">
+  <div class="box pbox">
+    <div class="phead"><h2 id="prTitulo">Prancha em escala e DXF</h2><button type="button" class="btn" id="prFechar">Fechar</button></div>
+    <div class="pcorpo">
+      <form class="pform" id="prForm" novalidate>
+        <fieldset><legend>Carimbo</legend>
+          <label class="pf">Título <input id="prTit" type="text" maxlength="60" autocomplete="off"></label>
+          <label class="pf">Nome da aluna ou aluno <input id="prAluno" type="text" maxlength="60" autocomplete="name"></label>
+          <label class="pf">Disciplina <input id="prDisc" type="text" maxlength="60" autocomplete="off"></label>
+          <label class="pf">Professor(a) <input id="prProf" type="text" maxlength="60" autocomplete="off"></label>
+          <label class="pf">Data <input id="prData" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off"></label>
+        </fieldset>
+        <fieldset><legend>Folha</legend>
+          <div class="pdois">
+            <label class="pf">Formato <select id="prFormato"><option value="A3">A3</option><option value="A2">A2 (maior)</option><option value="A4">A4 (menor)</option></select></label>
+            <label class="pf">Escala <select id="prEscala"><option value="auto">Automática</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option></select></label>
+          </div>
+          <p class="note">Automática: a maior escala que couber (1:50, depois 1:75, depois 1:100). O detalhe do degrau sai ampliado (1:5 ou 1:10; se não couber, 1:20 ou 1:25).</p>
+        </fieldset>
+        <fieldset id="prVistas"><legend>Vistas (valem para a prancha e para o DXF)</legend>
+          <label class="pc"><input type="checkbox" data-v="planta"> Planta do pavimento inferior</label>
+          <label class="pc"><input type="checkbox" data-v="plantaSup"> Planta do pavimento superior</label>
+          <label class="pc"><input type="checkbox" data-v="corteA"> Corte A-A</label>
+          <label class="pc"><input type="checkbox" data-v="corteB"> Corte B-B</label>
+          <label class="pc"><input type="checkbox" data-v="elevacao"> <span id="prElevNome">Elevação</span></label>
+          <label class="pc"><input type="checkbox" data-v="detalhe"> Detalhe do degrau</label>
+        </fieldset>
+        <fieldset><legend>Prancha</legend>
+          <div class="pbtns"><button type="button" class="btn pri" id="prSvg">Baixar SVG da prancha</button><button type="button" class="btn" id="prImp">Imprimir / PDF</button></div>
+          <p class="note" id="prDicaImp">Na janela de impressão, escolha o papel A3, orientação paisagem, margens “nenhuma” e escala 100% (ou “Tamanho real”). Com “Ajustar à página” a prancha sai fora de escala. Depois de imprimir, confira a régua de 100 mm do carimbo.</p>
+        </fieldset>
+        <fieldset><legend>DXF (para AutoCAD, LibreCAD e outros programas de CAD)</legend>
+          <div class="pbtns"><label class="pf pun">Unidade <select id="prUnid"><option value="m">metros</option><option value="cm">centímetros</option></select></label><button type="button" class="btn" id="prDxf">Baixar DXF</button></div>
+          <p class="note" id="prDxfNota"></p>
+        </fieldset>
+      </form>
+      <div class="pprev"><p class="paviso" id="prAviso" role="status" aria-live="polite"></p><div class="pfolha" id="prFolha"></div></div>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <div id="printArea" class="printArea" aria-hidden="true"></div>
