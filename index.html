@@ -464,7 +464,7 @@ const fmt = (n, d) => Number(n).toLocaleString('pt-BR', { minimumFractionDigits:
      4.7.3.1 b Blondel 63-64; 4.7.3.1 c leques balanceados, medidos na linha de percurso, ponta >= 15 cm;
      3.32 linha de percurso a 0,55 m (no eixo se a escada tem menos de 1,10 m: min(55, L/2) faz exatamente isso);
      4.7.3.2 lanço de 3 degraus no mínimo; 4.7.3.3 a) patamar reto = (2h + b)n + b; b) na mudança de direção, >= largura.
-     A NBR 9077 ganhou edição nova em 16/07/2025, que NÃO foi lida: os itens acima são da edição de 2001.
+     A NBR 9077:2025 (terceira edição) cancelou a de 2001: os itens acima são da edição cancelada e ficam como referência de estudo.
    Estudo: piso 25, largura 80 e desnível 3,20 m sem patamar são valores usuais, sem norma nacional que os sustente. */
 const NORMAS = {
   /* Estudo: números usuais de projeto. Blondel 63 a 64, ponta de leque 15, linha a 55 cm, lance de 3 espelhos e a fórmula do
@@ -1159,11 +1159,11 @@ function calc(inp) {
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));
   const lMin = Math.min.apply(null, lancos);
-  chk('lanco', 'Espelhos por lance', lancos.join(' + '), 'mín. ' + fmt(nm.lancoMin) + ' por lance', lMin < nm.lancoMin ? 'bad' : 'ok', lMin < nm.lancoMin ? 'Não atende: lance com ' + lMin + ' espelho(s). Até dois degraus seguidos formam um degrau isolado, que a NBR 9050:2020 (6.7.2) manda evitar; a NBR 9077:2001 (4.7.3.2) pede lance de três degraus no mínimo. ' + (rises.length > 2 && lancos[1] === lMin ? 'O lance curto é o do meio: aumente "Pisos no lance do meio".' : 'Mude a divisão dos lances em "Pisos no 1º lance"' + (rises.length > 2 ? ' ou "Pisos no lance do meio"' : '') + '.') : '');
+  chk('lanco', 'Espelhos por lance', lancos.join(' + '), 'mín. ' + fmt(nm.lancoMin) + ' por lance', lMin < nm.lancoMin ? 'bad' : 'ok', lMin < nm.lancoMin ? 'Não atende: lance com ' + lMin + ' espelho(s). Até dois degraus seguidos formam um degrau isolado, que a NBR 9050:2020 (6.7.2) manda evitar; a NBR 9077:2001 (4.7.3.2; edição cancelada) pede lance de três degraus no mínimo. ' + (rises.length > 2 && lancos[1] === lMin ? 'O lance curto é o do meio: aumente "Pisos no lance do meio".' : 'Mude a divisão dos lances em "Pisos no 1º lance"' + (rises.length > 2 ? ' ou "Pisos no lance do meio"' : '') + '.') : '');
   if (tipo === 'reta-patamar') {
     const bb2 = 2 * e + p, mn = patRetoMin, ruim = Lp < mn - 1e-6;
     chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn, 0) + ' cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: patamar curto. ' : '') + (nm.patReto ? 'NBR 9050:2020, 6.8.8: patamar entre lances com pelo menos 120 cm.' + (nm.fuga ? ' A NBR 9077:2025 (9.1.10) manda seguir a NBR 9050 nos patamares.' : '') : (nm.mez ? 'A 9.5.9.1 da NBR 9077:2025 não fixa patamar para lances retos; o app usa a referência de estudo. ' : '') + 'NBR 9077:2001, 4.7.3.3 a: (2e + p) × n + p, com n = 1 passo no patamar: 2 × ' + fmt(e, 2) + ' + 2 × ' + fmt(p, 1) + ' = ' + fmt(mn, 1) + ' cm.' + (nm.id === 'custom' ? ' O perfil personalizado não tem limite próprio de patamar.' : '')));
-    chk('patform', 'Fórmula do patamar (NBR 9077:2001, 4.7.3.3 a)', 'n = 1: ' + fmt(bb2 + p, 0) + ' · n = 2: ' + fmt(2 * bb2 + p, 0) + ' · n = 3: ' + fmt(3 * bb2 + p, 0) + ' cm', '(2e + p) × n + p', 'info', 'Comprimentos que dão n passos inteiros no patamar sem quebrar o ritmo da passada. Seu patamar tem ' + fmt(Lp) + ' cm.');
+    chk('patform', 'Fórmula do patamar (NBR 9077:2001 (cancelada), 4.7.3.3 a)', 'n = 1: ' + fmt(bb2 + p, 0) + ' · n = 2: ' + fmt(2 * bb2 + p, 0) + ' · n = 3: ' + fmt(3 * bb2 + p, 0) + ' cm', '(2e + p) × n + p', 'info', 'Comprimentos que dão n passos inteiros no patamar sem quebrar o ritmo da passada. Seu patamar tem ' + fmt(Lp) + ' cm.');
   }
   if (tipo === 'u-patamar') { const mnU = L, rU = Lp < mnU - 1e-6; chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', 'mín. = largura (' + fmt(L) + ' cm)', rU ? 'bad' : 'ok', (rU ? 'Não atende: patamar curto. ' : '') + (nm.fuga ? 'NBR 9077:2025, 9.1.12: na mudança de direção o patamar não pode ser mais estreito que os lances; NBR 9050:2020, 6.8.8.' : 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).')); }
   if (tipo === 'l-patamar' || tipo === 'c-patamar' || tipo === 'z-patamar') chk('patprof', tipo === 'l-patamar' ? 'Patamar de canto' : 'Patamares de canto', fmt(L) + ' × ' + fmt(L) + ' cm', 'lados = largura', 'ok', 'Quadrado com lado igual à largura, por construção (' + (nm.fuga ? 'NBR 9077:2025, 9.1.12; ' : 'NBR 9077:2001, 4.7.3.3 b; ') + 'NBR 9050:2020, 6.8.8).');
@@ -1180,7 +1180,7 @@ function calc(inp) {
     const lqs = polys.filter(q => q.kind === 'leque');
     const ponta = Math.min.apply(null, lqs.map(q => q.wIn));
     if (bal) {
-      chk('leque', 'Piso dos leques na linha de caminhamento', fmt(p, 1) + ' cm', 'igual ao dos degraus retos', 'ok', 'No balanceamento todos os degraus têm o mesmo piso na linha de caminhamento (NBR 9077:2001, 3.32 e 4.7.9.1 b), então o Blondel da curva é o mesmo dos trechos retos.');
+      chk('leque', 'Piso dos leques na linha de caminhamento', fmt(p, 1) + ' cm', 'igual ao dos degraus retos', 'ok', 'No balanceamento todos os degraus têm o mesmo piso na linha de caminhamento (NBR 9077:2001 (cancelada), 3.32 e 4.7.9.1 b), então o Blondel da curva é o mesmo dos trechos retos.');
       const pOk = ponta < nm.lqMin - TOL ? (nm.mez ? 'warn' : 'bad') : 'ok';
       const refLq = nm.id === 'custom' ? ' Limite digitado por você (a NBR 9077:2001, 4.7.3.1 c, usava 15 cm).' : nm.mez ? ' A 9.5.9.1 da NBR 9077:2025 permite leque em mezanino e área privativa sem fixar a ponta; os 15 cm são a referência da NBR 9077:2001 (4.7.3.1 c), cancelada. Por isso aparece como atenção.' : ' Referência: NBR 9077:2001, 4.7.3.1 c' + (nm.acess ? ', e NBR 9050:2020, 6.8.6 (Figura 75)' : '') + '.';
       chk('ponta', 'Parte mais estreita dos leques (borda interna)', fmt(ponta, 1) + ' cm', 'mín. ' + fmt(nm.lqMin) + ' cm', pOk, (pOk !== 'ok' ? (pOk === 'bad' ? 'Não atende: m' : 'Abaixo da referência: m') + 'esmo balanceando ' + lqs.length + ' degraus, a ponta não chega ao mínimo. Aumente a largura, ponha mais pisos retos ' + (tipo === 'u-leque' ? 'no meio ou ' : '') + 'nos lances, ou use patamar.' : 'Balanceamento em ' + lqs.length + ' degraus: a borda interna cresce aos poucos do canto para fora.') + refLq);
@@ -1189,7 +1189,7 @@ function calc(inp) {
       const pL = dw * rad(90 / kw), bL = 2 * e + pL;
       chk('leque', 'Piso do leque na linha de caminhamento', fmt(pL, 1) + ' cm', fmt(nm.pMin) + ' a ' + fmt(nm.pMax) + ' cm', fora(pL, nm.pMin, nm.pMax) ? 'bad' : 'ok', fora(pL, nm.pMin, nm.pMax) ? (pL < nm.pMin ? 'Não atende: leque apertado. Aumente a largura ou use menos leques.' : 'Não atende: leque longo. Use mais leques por curva.') : '');
       chk('blondel-leque', 'Blondel nos leques', fmt(bL, 1) + ' cm', fmt(nm.bMin) + ' a ' + fmt(nm.bMax) + ' cm', fora(bL, nm.bMin, nm.bMax) ? 'bad' : 'ok', fora(bL, nm.bMin, nm.bMax) ? 'Não atende: o passo na curva fica diferente do passo nos trechos retos (' + fmt(bl, 1) + ' cm).' : '');
-      chk('ponta', 'Parte mais estreita dos leques (borda interna)', '0 cm (convergentes)', 'mín. ' + fmt(nm.lqMin) + ' cm', nm.lqMin > TOL ? 'bad' : 'ok', 'Na forma convergente todos os leques saem do mesmo canto, com ponta zero. A NBR 9077:2001 (4.7.3.1 c) pede leques balanceados, com a parte mais estreita de pelo menos 15 cm. Escolha "Balanceados" em Detalhes do tipo para corrigir.');
+      chk('ponta', 'Parte mais estreita dos leques (borda interna)', '0 cm (convergentes)', 'mín. ' + fmt(nm.lqMin) + ' cm', nm.lqMin > TOL ? 'bad' : 'ok', 'Na forma convergente todos os leques saem do mesmo canto, com ponta zero. A NBR 9077:2001 (4.7.3.1 c; edição cancelada) pede leques balanceados, com a parte mais estreita de pelo menos 15 cm. Escolha "Balanceados" em Detalhes do tipo para corrigir.');
     }
   }
   if (hel) {
@@ -1200,7 +1200,7 @@ function calc(inp) {
     const refTxt = nm.id === 'custom' ? 'limite digitado: ≥ ' + fmt(ref) + ' cm (a NBR 9077:2001, 4.7.3.1 c, usava 15 cm)' : 'referência: ≥ ' + fmt(ref) + ' cm (NBR 9077:2001, 4.7.3.1 c)';
     chk('pilar', 'Piso junto ao pilar (parte mais estreita)', fmt(pPilar, 1) + ' cm', refTxt, atende ? 'ok' : 'warn', atende ? 'A ponta junto ao pilar atende a referência do perfil.' : 'Na borda do pilar o degrau é bem mais curto que na linha de caminhamento. ' + (nm.id === 'custom' ? 'O limite é o que você digitou no perfil personalizado.' : 'A NBR 9077:2001 (4.7.3.1 c) pedia pelo menos 15 cm em lanço curvo. A edição de 2025, que a cancelou, não fixa esse valor: proíbe a espiral nas rotas de saída (9.1.11) e a permite em mezanino e área privativa (9.5.9.1).') + ' O app mostra como atenção porque a referência não é exigência da norma em vigor (a caracol de casa costuma seguir o código de obras do município).');
   }
-  if (dw < nm.dw - 1e-9) chk('dw', 'Linha de caminhamento', fmt(dw) + ' cm do lado interno', fmt(nm.dw) + ' cm no perfil', 'info', 'A escada é estreita: a linha passa no eixo (meio da largura). É a regra da NBR 9077:2001 (3.32, nota) para escadas com menos de 1,10 m.');
+  if (dw < nm.dw - 1e-9) chk('dw', 'Linha de caminhamento', fmt(dw) + ' cm do lado interno', fmt(nm.dw) + ' cm no perfil', 'info', 'A escada é estreita: a linha passa no eixo (meio da largura). É a regra da NBR 9077:2001 (3.32, nota; edição cancelada) para escadas com menos de 1,10 m.');
   if (opening && !hel) chk('laje', 'Vão mínimo na laje superior', fmt(opening.w, 0) + ' × ' + fmt(opening.h, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Cobre os degraus ' + kc + ' a ' + T + ' (a partir do degrau ' + kc + ' o teto ficaria baixo).');
   if (opening && hel) chk('laje', 'Furo mínimo na laje superior', 'Ø ' + fmt(helix.R * 2, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Furo circular na laje, com a chegada no degrau ' + T + '.');
   if (!opening) chk('laje', 'Vão na laje superior', 'não precisa', '', 'info', 'A altura livre fica atendida sem abrir a laje.');
@@ -1214,7 +1214,7 @@ function calc(inp) {
     const passa = (X, ids) => X && ids.every(id => { const c = X.checks.find(q => q.id === id); return !c || c.status === 'ok' || c.status === 'info'; });
     const nVal = []; for (let n = 2; n <= NMAX; n++) { const ee = H / n; if (ee >= nm.eMin - TOL && ee <= nm.eMax + TOL) nVal.push(n); }
     const perto = arr => arr.slice().sort((x, y) => Math.abs(x - N) - Math.abs(y - N));
-    const semN = 'Com ' + fmt(H) + ' cm de desnível, nenhum número inteiro de espelhos dá espelho entre ' + fmt(nm.eMin) + ' e ' + fmt(nm.eMax) + ' cm. Mude o desnível (contrapiso, laje) ou use rampa: a NBR 9077:2001 (4.6.1 d) pede rampa quando a altura não permite degraus equilibrados.';
+    const semN = 'Com ' + fmt(H) + ' cm de desnível, nenhum número inteiro de espelhos dá espelho entre ' + fmt(nm.eMin) + ' e ' + fmt(nm.eMax) + ' cm. Mude o desnível (contrapiso, laje) ou use rampa: a NBR 9077:2001 (4.6.1 d; edição cancelada) pede rampa quando a altura não permite degraus equilibrados.';
     const nLances = rises.length;
     const sol = {
       e: () => {
