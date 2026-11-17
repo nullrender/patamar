@@ -61,6 +61,7 @@ sw.js            service worker (offline); manifest.webmanifest e icon-* do PWA
 - `R.zBot(pl, [x, y])` dá a cota da face inferior da laje em qualquer ponto da planta (espessura `tLaje` na perpendicular à linha dos cantos internos; patamar horizontal). Cortes, 3D e quantitativos usam essa função.
 - Tipos: reta, reta-patamar, l-patamar, l-leque, u-patamar, u-leque, c-patamar, z-patamar (três lances, dois patamares) e helicoidal (com "Degraus por volta" automático ou escolhido).
 - **Prancha e DXF**: os desenhos aceitam `o.fs` (tamanho do texto em cm) e `o.semTitulo` (sem bloco de título; a prancha e o DXF põem o seu). Na prancha, `width_mm = viewBox_cm × 10 / escala` garante a escala; o padrão é várias folhas mantendo 1:50 (`folhas: 'varias'`), com a opção de uma folha só reduzindo a escala. O DXF é R12 (AC1009), em windows-1252, em verdadeira grandeza (o corrimão do detalhe é fora de escala e o título diz isso). Nenhum texto pode sair do viewBox: há teste nos 9 tipos.
+- **Escala do desenho à mão** (`escalaMao`: 20, 25, 50 ou 100; padrão 50): escolhida por botões no roteiro da Explicação; os roteiros (à mão, elevação, medir e copiar) convertem as medidas por ela. A prancha aceita 1:25 (escolhida; a automática continua tentando 1:50, 1:75, 1:100).
 - O artefato do claude.ai não permite download; o "Baixar PNG" só funciona no Pages ou no arquivo local.
 
 ## Pendências conhecidas

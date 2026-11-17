@@ -10,10 +10,11 @@
 const FOLHAS = { A4: [297, 210], A3: [420, 297], A2: [594, 420] };
 const FOLHA_MAIOR = { A4: 'A3', A3: 'A2', A2: null };
 const ESCALAS_AUTO = [50, 75, 100];
+const ESCALAS_OK = [20, 25, 50, 75, 100];
 const ESCALAS_DET = [5, 10, 20, 25]; /* o detalhe tenta 1:5 e 1:10; se não couber, 1:20 ou 1:25 */
 const MARGEM_ESQ = 25, MARGEM = 10; /* mm: uso comum (a da esquerda é maior, para encadernar) */
 const FOLGA = 6;    /* mm entre vistas, e entre vistas e carimbo */
-const RECUO = 5;    /* mm entre a moldura e as vistas */
+const RECUO = 3;    /* mm entre a moldura e as vistas */
 const TXT_MM = 2.5; /* altura de texto desejada no papel, em mm */
 const NOME_VISTA = { planta: 'PLANTA DO PAVIMENTO INFERIOR', plantaSup: 'PLANTA DO PAVIMENTO SUPERIOR', corteA: 'CORTE A-A', corteB: 'CORTE B-B', elevacao: 'ELEVAÇÃO', detalhe: 'DETALHE DO DEGRAU' };
 const VISTAS_PADRAO = ['planta', 'plantaSup', 'corteA', 'corteB', 'detalhe'];

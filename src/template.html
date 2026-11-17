@@ -123,6 +123,8 @@ details.card[open]>summary::after{content:"−"}
 select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(--paper);padding:9px 10px;font-size:15px;min-height:44px}
 .hint{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
 .seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--paper)}
+.seg.escMao{max-width:360px;margin:4px 0 12px}
+.seg.escMao button{flex:1;min-height:44px}
 .seg button{flex:1;border:0;background:transparent;padding:8px;cursor:pointer;font-size:14px;min-height:40px;color:var(--ink);line-height:1.2}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button:hover:not(.on){background:var(--line)}
@@ -585,7 +587,7 @@ body.travado{overflow:hidden}
         <fieldset><legend>Folha</legend>
           <div class="pdois">
             <label class="pf">Formato <select id="prFormato"><option value="A3">A3</option><option value="A2">A2 (maior)</option><option value="A4">A4 (menor)</option></select></label>
-            <label class="pf">Escala <select id="prEscala"><option value="auto">Automática</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option></select></label>
+            <label class="pf">Escala <select id="prEscala"><option value="auto">Automática</option><option value="25">1:25</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option></select></label>
           </div>
           <div class="pfs" role="radiogroup" aria-labelledby="prFolhasNome" id="prFolhas"><span id="prFolhasNome">Folhas</span>
             <label class="pc"><input type="radio" name="prFolhas" value="varias"> Várias, mantendo a escala (recomendado)</label>
