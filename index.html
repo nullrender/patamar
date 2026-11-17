@@ -2149,7 +2149,7 @@ const PROBLEMAS = [
   { tema: 'Geometria do degrau', itens: [
     { t: 'Espelho alto (19 a 20 cm) em casa apertada', ids: ['e'],
       pq: 'O desnível é fixo e a projeção em planta é pequena; com menos espelhos, cada um fica mais alto e a escada fica mais curta.',
-      regra: 'Saída de emergência: espelho de 16 a 18 cm (NBR 9077:2001, 4.7.3.1 a). Rota acessível: 16 a 18 cm, sem exceção (NBR 9050:2020, 6.8.2). Só nas escadas secundárias "exclusivamente de serviço" a NBR 9077:2001 (4.7.5.2) aceita até 20 cm (19 cm no grupo de ocupação H, 23 cm em I e J), sempre com Blondel. O PR (' + PROB_PR + ', 5.7.5.1 e 5.7.5.2) aceita os mesmos 20 cm em mezanino e área privativa, que inclui a residência unifamiliar, com população abaixo de 10 pessoas e escada de até 3,7 m. GO (' + PROB_GO + ', 5.7.5.1 e 5.7.5.2) aceita em escada de uso restrito, com população abaixo de 20 e um só pavimento atendido. O limite do código de obras municipal não foi encontrado.',
+      regra: 'Saída de emergência: espelho de 16 a 18 cm (NBR 9077:2001, 4.7.3.1 a). Rota acessível: 16 a 18 cm, sem exceção (NBR 9050:2020, 6.8.2). Só nas escadas secundárias "exclusivamente de serviço" a NBR 9077:2001 (4.7.5.2) aceita até 20 cm (19 cm no grupo de ocupação H, 23 cm em I e J), sempre com Blondel. O PR (' + PROB_PR + ', 5.7.5.1 e 5.7.5.2) aceita os mesmos 20 cm em mezanino e área privativa, que inclui a residência unifamiliar, com população abaixo de 10 pessoas e escada de até 3,7 m. GO (' + PROB_GO + ', 5.7.5.1 e 5.7.5.2) aceita em escada de uso restrito, exclusivamente de serviço, com população abaixo de 20, escada de até 3,7 m e um só pavimento atendido. O limite do código de obras municipal não foi encontrado.',
       sol: [
         ['Enquadrar como escada privativa ou de serviço, onde o código local ou os Bombeiros do estado admitirem, com espelho de até 19 ou 20 cm e mantendo Blondel', 'só fora de rota de fuga e de rota acessível; com espelho de 20 cm, Blondel pede piso de 23 a 24 cm (cerca de 40°); exige corrimão e guarda', 'NBR 9077:2001, 4.7.5.2; ' + PROB_PR + ', 5.7.5.2; ' + PROB_GO + ', 5.7.5.2'],
         ['Trocar o tipo de escada para ganhar desenvolvimento na mesma área: L ou U com leque, ou helicoidal', 'os leques precisam de balanceamento, com ponta de 15 cm (7 cm em escada secundária)', PROB_SF],
@@ -2161,12 +2161,12 @@ const PROBLEMAS = [
       regra: 'A fórmula de Blondel soma dois espelhos e um piso (2e + p), que é o tamanho do passo. NBR 9077:2001, 4.7.3.1 b: 63 a 64 cm, também nas escadas secundárias (4.7.5.1 d e 4.7.5.2). NBR 9050:2020, 6.8.2: 63 a 65 cm, com piso de 28 a 32 cm, em rota acessível. Só em GO (' + PROB_GO + ', nota da 5.7.5.2) o Blondel é dispensado, e apenas no acesso a barrilete, casa de máquinas e mezanino técnico. Piso mínimo de 25 cm para casa: sem fonte nacional.',
       sol: [
         ['Mudar o número de espelhos (um a mais ou a menos) e tirar o piso da faixa de Blondel, em vez de fixar o piso pelo comprimento', 'cada espelho a mais acrescenta um piso ao comprimento', 'NBR 9077:2001, 4.7.3.1 b'],
-        ['Usar bocel (a saliência da borda do degrau) ou espelho inclinado para ganhar área de pisada sem aumentar a projeção', 'ganho de cerca de 1,5 cm; se o "b" de Blondel inclui o bocel não foi conferido; bocel grande prender o pé é ' + PROB_SF, 'NBR 9077:2001, 4.7.3.1 e; NBR 9050:2020, 6.7.1'],
+        ['Usar bocel (a saliência da borda do degrau) ou espelho inclinado para ganhar área de pisada sem aumentar a projeção', 'ganho de cerca de 1,5 cm; não foi conferido se o "b" de Blondel inclui o bocel; o risco de um bocel grande prender o pé é ' + PROB_SF, 'NBR 9077:2001, 4.7.3.1 e; NBR 9050:2020, 6.7.1'],
         ['Mudar a forma da escada (L, U, leque) para ganhar desenvolvimento', 'leques pedem balanceamento (NBR 9077:2001, 4.7.3.1 c)', PROB_SF]
       ] },
     { t: 'Desnível que não divide certinho, e primeiro ou último degrau diferente na obra', ids: [],
       pq: 'O projeto usa a cota da laje bruta e a obra a cota acabada (ou o contrário), e a diferença do revestimento vai parar no primeiro ou no último espelho (' + PROB_SF + ').',
-      regra: 'NBR 9077:2001, 4.7.3.1 d: num mesmo lance todas as alturas são iguais; entre lances seguidos, diferença de no máximo 5 mm. NBR 9050:2020, 6.8.2: pisos e espelhos constantes em toda a escada. No PR, o mesmo para escadas secundárias (' + PROB_PR + ', 5.7.5.3 g). Nenhuma das normas lidas aceita primeiro ou último degrau diferente. Programas como o TQS jogam a diferença no último degrau, mas isso é convenção de programa, não regra.',
+      regra: 'NBR 9077:2001, 4.7.3.1 d: num mesmo lance todas as alturas são iguais; entre lances seguidos, diferença de no máximo 5 mm. NBR 9050:2020, 6.8.2: pisos e espelhos constantes em toda a escada. No PR, o mesmo para escadas secundárias (' + PROB_PR + ', 5.7.5.3 g). Nenhuma das normas lidas aceita primeiro ou último degrau diferente. Programas como o TQS jogam a diferença no último degrau (ajuda do TQS, lido só o resumo), mas isso é convenção de programa, não regra.',
       sol: [
         ['Calcular o número de espelhos entre pisos ACABADOS e desenhar o degrau em osso (só o concreto) descontando o revestimento, com as duas cotas no detalhe', 'exige definir os acabamentos antes de concretar', PROB_SF],
         ['Escolher um número inteiro de espelhos e fazer todos iguais (desnível ÷ número), arredondado ao milímetro', 'um espelho a mais acrescenta um piso ao comprimento', 'NBR 9077:2001, 4.7.3.1 a e d; NBR 9050:2020, 6.8.2'],
@@ -2183,9 +2183,9 @@ const PROBLEMAS = [
       ] },
     { t: 'Acesso muito íngreme a sótão, mezanino ou caixa d\'água (escada de marinheiro, "de navio" ou de passo alternado)', ids: [],
       pq: 'Sótão ou mezanino com pouca área de piso para uma escada que atenda Blondel.',
-      regra: 'A NBR 9077:2001 e a NBR 9050:2020 não falam de escada de marinheiro (a escada vertical, de degraus de barra) nem de passo alternado. Em GO (' + PROB_GO + ', nota da 5.7.5.2), barrilete, casa de máquinas e piso ou mezanino técnico de manutenção eventual podem ter marinheiro, espiral ou leque sem largura mínima e sem Blondel. No PR, mezanino e área privativa seguem Blondel (' + PROB_PR + ', 5.7.5.1 f), o que não combina com marinheiro em mezanino ocupado. A NR-35 (Anexo III) trata de escadas de uso individual no trabalho. Passo alternado: nenhuma regra brasileira encontrada.',
+      regra: 'A NBR 9077:2001 e a NBR 9050:2020 não falam de escada de marinheiro (a escada vertical, de degraus de barra) nem de passo alternado. Em GO (' + PROB_GO + ', nota da 5.7.5.2), barrilete, casa de máquinas e piso ou mezanino técnico de manutenção eventual podem ter marinheiro, espiral ou leque sem largura mínima e sem Blondel. No PR, mezanino e área privativa seguem Blondel (' + PROB_PR + ', 5.7.5.1 f), o que não combina com marinheiro em mezanino ocupado. A NR-35 (Anexo III) trata de escadas de uso individual no trabalho (lido só o resumo). Passo alternado: nenhuma regra brasileira encontrada.',
       sol: [
-        ['Separar o uso: espaço técnico com escada de marinheiro, onde os Bombeiros admitirem, tratado como trabalho em altura; ambiente de permanência com escada que atenda Blondel', 'a escada de permanência ocupa bem mais área; a de marinheiro não serve para carregar coisas nem para fuga (' + PROB_SF + ')', PROB_GO + ', nota da 5.7.5.2; NR-35, Anexo III'],
+        ['Separar o uso: espaço técnico com escada de marinheiro, onde os Bombeiros admitirem, tratado como trabalho em altura; ambiente de permanência com escada que atenda Blondel', 'a escada de permanência ocupa bem mais área; a de marinheiro não serve para carregar coisas nem para fuga (' + PROB_SF + ')', PROB_GO + ', nota da 5.7.5.2; NR-35, Anexo III, lido só o resumo'],
         ['Helicoidal ou leque privativo, com espelho de até 20 cm onde for admitido e ponta mínima de 7 cm em escada secundária', 'pede corrimão e guarda; difícil de passar móveis (' + PROB_SF + ')', 'NBR 9077:2001, 4.7.5.1 d e 4.7.5.2; ' + PROB_GO + ', 5.7.5.1 g'],
         ['Passo alternado: consultar a prefeitura e os Bombeiros antes de usar', 'risco na descida para crianças e idosos (' + PROB_SF + ')', 'sem regra brasileira encontrada; só há referência dos EUA']
       ] },
@@ -2220,15 +2220,16 @@ const PROBLEMAS = [
       sol: [
         ['Usar o caracol só onde a regra permite (uso restrito, mezanino, residência) e conferir a ponta: 7 cm em GO e na secundária da NBR 9077:2001, 15 cm no PR, aumentando o pilar ou criando um vão central', 'diâmetro total e furo na laje maiores', 'NBR 9077:2001, 4.7.5.1 d; ' + PROB_GO + ', 5.7.5.1 g; ' + PROB_PR + ', 5.7.3.1 c'],
         ['Diminuir os degraus por volta (ângulo maior por degrau) para aumentar a ponta, conferindo Blondel e altura livre', 'piso na linha maior ou espelho maior; a altura livre sob a volta de cima diminui', PROB_SF + '; a conta é geometria'],
-        ['Em GO, barrilete, casa de máquinas e piso técnico de manutenção eventual podem ter espiral sem largura mínima e sem Blondel', 'só em GO e só nesses locais técnicos', PROB_GO + ', nota da 5.7.5.2']
+        ['Em GO, barrilete, casa de máquinas e piso técnico de manutenção eventual podem ter espiral sem largura mínima e sem Blondel', 'só em GO e só nesses locais técnicos', PROB_GO + ', nota da 5.7.5.2'],
+        ['Só como comparação: o código residencial dos EUA aceita caracol com 66 cm de largura livre, espelho de até 24 cm e piso de 19 cm medido a 30 cm da borda estreita. Por isso caracóis importados costumam não fechar com Blondel', 'não é norma brasileira e o app não usa como limite', 'código residencial dos EUA (IRC), em sites de consulta, lido só o resumo']
       ] },
     { t: 'Escada em leque ou curva usada como saída de emergência do prédio', ids: [],
       pq: 'A escada curva é peça de destaque no hall e acaba sendo a única do pavimento (' + PROB_SF + ').',
-      regra: 'NBR 9077:2001, 4.7.8.1: lance curvo só é de emergência em certas ocupações, com degraus iguais convergindo para um vão central de 0,97 a 1,375 m e largura de 1,10 a 1,65 m. 4.7.8.2 e 4.7.9.2: proibido em escada à prova de fumaça; o leque também nos grupos F e H. A capacidade cai 10% em lance curvo (nota da tabela). 4.7.7: prédio pequeno (grupos A, B, D, G, I ou J, menos de 50 pessoas, até 6 m de altura) ou escada só de segunda saída aceita 90 cm e degraus em leque. Em GO (' + PROB_GO + ', 5.7.1 k), leque e espiral não são escada de segurança, salvo em mezanino e área privativa.',
+      regra: 'NBR 9077:2001, 4.7.8.1: lance curvo só é de emergência no grupo A (residencial) ou em escada não enclausurada (menos na divisão F-3), com degraus iguais convergindo para um vão central de 0,97 a 1,375 m e largura de 1,10 a 1,65 m. 4.7.8.2 e 4.7.9.2: proibido em escada à prova de fumaça; o leque também nos grupos F e H. A capacidade cai 10% em lance curvo (nota da tabela). 4.7.7: nos grupos A, B, D, G, I ou J, em prédio com menos de 50 pessoas e até 6 m de altura, ou quando a escada é só a segunda saída (com outra escada para toda a população, de no máximo 50 pessoas, nos mesmos grupos), aceitam-se 90 cm e degraus em leque. Em GO (' + PROB_GO + ', 5.7.1 k), leque e espiral não são escada de segurança, salvo em mezanino e área privativa.',
       sol: [
         ['Separar funções: a escada curva fica como escada social (secundária) e uma escada reta com patamares faz a rota de fuga', 'duas escadas: mais área e custo', 'NBR 9077:2001, 4.7.5.1; ' + PROB_GO + ', 5.7.1 k'],
-        ['Manter a curva como emergência, onde a regra do estado permitir: vão central de 0,97 a 1,375 m, largura de 1,10 a 1,65 m, degraus iguais', 'escada grande; proibida em F, H e à prova de fumaça', 'NBR 9077:2001, 4.7.8.1'],
-        ['Prédio pequeno ou escada só de segunda saída: degraus em leque com 90 cm de largura', 'só nesses casos; o estado pode ter regra própria', 'NBR 9077:2001, 4.7.7']
+        ['Manter a curva como emergência, onde a regra do estado permitir: vão central de 0,97 a 1,375 m, largura de 1,10 a 1,65 m, degraus iguais', 'escada grande; a curva é proibida em escada à prova de fumaça, e o leque também nos grupos F e H', 'NBR 9077:2001, 4.7.8.1, 4.7.8.2 e 4.7.9.2'],
+        ['Prédio pequeno (grupos A, B, D, G, I ou J, menos de 50 pessoas, até 6 m) ou escada só de segunda saída nessas condições: degraus em leque com 90 cm de largura', 'só nesses casos; o estado pode ter regra própria', 'NBR 9077:2001, 4.7.7']
       ] },
     { t: 'Leque ou curva numa rota acessível', ids: ['mudanca'],
       pq: 'O leque faz a mudança de direção com degraus, sem o patamar que a NBR 9050 pede.',
@@ -2250,29 +2251,29 @@ const PROBLEMAS = [
       pq: 'A abertura da laje é desenhada com o comprimento que a estrutura deixa, sem medir a folga na vertical sobre cada degrau (' + PROB_SF + ').',
       regra: 'NBR 9077:2001, 4.5.1.1 d: os ACESSOS das saídas de emergência pedem pé-direito de 2,50 m e 2,00 m livres sob vigas; a seção de escadas não traz valor próprio. No PR (' + PROB_PR + ', 5.7.1.1 k e 5.7.5.1 g) e em GO (' + PROB_GO + ', 5.7.1 l): escadas com 2,5 m e 2,10 m sob vigas. As normas não dizem como medir na escada; medir na vertical a partir do bocel é ' + PROB_SF + '.',
       sol: [
-        ['Aumentar a abertura da laje no sentido do lance, com projeto estrutural da nova borda', 'reforço e responsável técnico; perde área no pavimento de cima', 'fórum de Portugal, lido só o resumo'],
+        ['Aumentar a abertura da laje no sentido do lance, com projeto estrutural da nova borda', 'reforço e responsável técnico (' + PROB_SF + '); perde área no pavimento de cima', 'fórum de Portugal, lido só o resumo'],
         ['Deslocar o começo do lance para a parte alta ficar sob a abertura', 'ocupa mais área no pavimento de baixo', PROB_SF],
         ['Trocar o tipo de escada (L, U, com patamar) para encurtar a abertura', 'mais área em planta; o patamar precisa de apoio', PROB_SF],
         ['Viga invertida (para cima da laje) ou laje sem viga aparente sobre a escada', 'a viga invertida aparece no piso de cima', PROB_SF]
       ] },
     { t: 'A abertura da laje não cabe na estrutura: corta viga ou fica junto de pilar', ids: [],
       pq: 'A escada é lançada depois da estrutura, ou uma reforma abre escada numa laje existente (' + PROB_SF + ').',
-      regra: 'Não está nas normas lidas. O assunto é da NBR 6118 (concreto), que não foi lida; uma apostila da PUCRS remete a ela para aberturas.',
+      regra: 'Não está nas normas lidas. O assunto é da NBR 6118 (concreto), que não foi lida; uma apostila da PUCRS remete a ela para aberturas (lido só o resumo).',
       sol: [
         ['Prever no anteprojeto a caixa da escada com vigas de borda em volta da abertura', 'decidir cedo; depois sai caro', PROB_SF],
-        ['Em reforma: abertura só com projeto e acompanhamento de engenheiro de estruturas', 'custo, escoramento e reforço', 'fórum de Portugal, lido só o resumo'],
+        ['Em reforma: abertura só com projeto e acompanhamento de engenheiro de estruturas', 'custo, escoramento e reforço (' + PROB_SF + ')', 'fórum de Portugal, lido só o resumo'],
         ['Girar o lance ou trocar a reta por L ou U para alinhar a abertura com o vão entre vigas', 'muda a circulação nos dois pavimentos', PROB_SF]
       ] },
     { t: 'Usar o vão sob a escada (lavabo, depósito, armário) com altura insuficiente', ids: [],
       pq: 'A face de baixo da laje da escada desce em rampa até o começo do lance.',
-      regra: 'Não há regra específica. NBR 9077:2001, 4.7.4.2 e 4.7.4.3: a caixa de escada de emergência não pode ser depósito nem ter quadros ou medidores (com exceção para edificações L e M). No PR (' + PROB_PR + ', 5.7.1.1 j): escada de emergência livre de móveis. NBR 9050:2020, 4.3.3 trata de móveis na rota acessível (risco entre 0,60 e 2,10 m de altura) e serve só como comparação. Pé-direito de lavabo: é do código municipal, não encontrado.',
+      regra: 'Não há regra específica. NBR 9077:2001, 4.7.4.2 e 4.7.4.3: a caixa de escada de emergência não pode ser depósito nem ter quadros ou medidores (com exceção para escadas não enclausuradas de edificações L e M). No PR (' + PROB_PR + ', 5.7.1.1 j): escada de emergência livre de móveis. NBR 9050:2020, 4.3.3 trata de móveis na rota acessível (risco entre 0,60 e 2,10 m de altura) e serve só como comparação. Pé-direito de lavabo: é do código municipal, não encontrado.',
       sol: [
         ['Fechar a parte baixa com armário ou mureta e deixar passagem só onde a altura basta', 'perde um pouco de área útil', 'comparação com NBR 9050:2020, 4.3.3; em casa, ' + PROB_SF],
         ['Em caixa de escada de emergência, não usar o vão como depósito nem instalar quadros ou medidores', 'nenhum', 'NBR 9077:2001, 4.7.4.2 e 4.7.4.3']
       ] },
     { t: 'Largura mínima que não cabe em casa estreita', ids: ['L'],
       pq: 'Lote estreito, ou regra de prédio coletivo aplicada a uma casa, ou o contrário (' + PROB_SF + ').',
-      regra: 'NBR 9077:2001, 4.4.2: 1,10 m (duas "unidades de passagem" de 55 cm); 4.7.7: 90 cm em prédio pequeno e baixo, com menos de 50 pessoas. A largura é medida no ponto mais estreito, e o corrimão pode avançar 10 cm de cada lado sem descontar (4.7.2 b). NBR 9050:2020, 6.8.3: 1,20 m em rota acessível. No PR (' + PROB_PR + ', 5.7.5.1 a e b): 0,80 m em área privativa, inclusive casa, com população abaixo de 10 e escada de até 3,7 m. Uma revista da UNESP cita 0,80 m no Código de Obras de São Paulo, sem dizer a edição: confira a lei vigente.',
+      regra: 'NBR 9077:2001, 4.4.2: 1,10 m (duas "unidades de passagem" de 55 cm); 4.7.7: 90 cm nos grupos A, B, D, G, I ou J, em prédio com menos de 50 pessoas e até 6 m de altura (ou escada só de segunda saída nessas condições). A largura é medida no ponto mais estreito, e o corrimão pode avançar 10 cm de cada lado sem descontar (4.7.2 b). NBR 9050:2020, 6.8.3: 1,20 m em rota acessível. No PR (' + PROB_PR + ', 5.7.5.1 a e b): 0,80 m em área privativa, inclusive casa, com população abaixo de 10 e escada de até 3,7 m. Uma revista da UNESP cita 0,80 m no Código de Obras de São Paulo, sem dizer a edição: confira a lei vigente.',
       sol: [
         ['Enquadrar corretamente: em casa ou área privativa, usar o limite de escada privativa', 'vale só no PR e nessas condições; confira os Bombeiros e o município locais', PROB_PR + ', 5.7.5.1 e 5.7.5.1.1'],
         ['Corrimão que avança até 10 cm de cada lado sem reduzir a largura de cálculo', 'não vale para guarda ou balaústre', 'NBR 9077:2001, 4.7.2 b'],
@@ -2287,7 +2288,7 @@ const PROBLEMAS = [
       ] },
     { t: 'Patamar curto (menor que o passo, ou que a largura na mudança de direção)', ids: ['patprof'],
       pq: 'O patamar é encaixado no espaço que sobra, sem pensar no ritmo do passo (' + PROB_SF + ').',
-      regra: 'NBR 9077:2001, 4.7.3.3 a: na escada reta, patamar = (2e + p) × n + p, com n = 1, 2 ou 3 passos; 4.7.3.3 b: na mudança de direção, no mínimo a largura da escada. Escada secundária: 80 cm, sem a fórmula (4.7.5.1 d); no PR, mezanino e área privativa também 0,80 m (' + PROB_PR + ', 5.7.5.1 f). NBR 9050:2020, 6.8.8: 1,20 m entre lances; na mudança de direção, igual à largura.',
+      regra: 'NBR 9077:2001, 4.7.3.3 a: na escada reta, patamar = (2e + p) × n + p, com n = 1, 2 ou 3 passos; 4.7.3.3 b: na mudança de direção sem degraus em leque, no mínimo a largura da escada. Escada secundária: 80 cm, sem a fórmula (4.7.5.1 d); no PR, mezanino e área privativa também 0,80 m (' + PROB_PR + ', 5.7.5.1 f). NBR 9050:2020, 6.8.8: 1,20 m entre lances; na mudança de direção, igual à largura.',
       sol: [
         ['Usar n = 2 quando a regra pede 1,20 m, mantendo o ritmo do passo', 'mais comprimento', 'NBR 9077:2001, 4.7.3.3 a; NBR 9050:2020, 6.8.8'],
         ['Fora de rota de fuga e de rota acessível, enquadrar como secundária ou privativa (patamar de 80 cm)', 'só fora dessas rotas', 'NBR 9077:2001, 4.7.5.1 d; ' + PROB_PR + ', 5.7.5.1 f'],
@@ -2320,7 +2321,7 @@ const PROBLEMAS = [
       ] },
     { t: 'Guarda-corpo baixo no lado aberto da escada, do patamar ou do mezanino', ids: [],
       pq: 'A guarda é medida a partir do degrau e não da linha dos bocéis, ou os 92 cm do lance são repetidos no patamar.',
-      regra: 'NBR 9077:2001, 4.8.1.1: saída de emergência protegida por parede ou guarda quando o desnível passa de 19 cm; 4.8.1.2: guarda de 1,05 m em patamar e mezanino, que pode ser 92 cm no lance de escada interna, medida na vertical a partir da linha dos bocéis. No PR (' + PROB_PR + ', 5.8.1.2): 1,05 m também ao longo das escadas; 0,92 m só em escada interna com vão central de até 15 cm. A NBR 9050:2020 (6.9.2) manda seguir a NBR 9077 e a NBR 14718, que não foi lida; pelo resumo de uma busca, ela pede 1,10 m.',
+      regra: 'NBR 9077:2001, 4.8.1.1: saída de emergência protegida por parede ou guarda quando o desnível passa de 19 cm; 4.8.1.2: guarda de 1,05 m em patamar e mezanino, que pode ser 92 cm no lance de escada interna, medida na vertical a partir da linha dos bocéis. No PR (' + PROB_PR + ', 5.8.1.2): 1,05 m também ao longo das escadas; 0,92 m só em escada interna com vão central de até 15 cm. A NBR 9050:2020 (6.9.2) manda seguir a NBR 9077 e a NBR 14718, que não foi lida; pelo resumo de uma busca, a edição de 2001 da NBR 14718 pede 1,10 m a partir do piso acabado (a revisão de 2019 não foi conferida).',
       sol: [
         ['Duas alturas: 92 cm ou mais sobre a linha dos bocéis no lance interno, 1,05 m ou mais no patamar e no mezanino (no PR, 1,05 m também no lance, salvo a exceção); conferir se a NBR 14718 ou o código local pedem 1,10 m', 'na chegada ao patamar a altura muda e pede um detalhe de concordância', 'NBR 9077:2001, 4.8.1.2; ' + PROB_PR + ', 5.8.1.2'],
         ['Completar a mureta baixa com tubo ou vidro até a altura exigida', 'o vidro tem de ser laminado ou aramado (NBR 9077:2001, 4.8.1.4 c)', PROB_SF],
@@ -2389,7 +2390,7 @@ function problemasHTML(R) {
       if (it.conta && R.hel && R.helix) {
         const hx = R.helix, th = hx.th * Math.PI / 180, ponta = hx.rc * th, ang = 2 * Math.PI / hx.nPer;
         const D = t => 2 * t / ang;
-        h += '<p><b>A conta nesta escada:</b> ponta = raio do pilar × ângulo do degrau em radianos = ' + f(hx.rc, 1) + ' × ' + f(th, 3) + ' = ' + f(ponta, 1) + ' cm. Com ' + hx.nPer + ' degraus por volta, o diâmetro mínimo do centro (pilar ou vão central) seria Dmin = 2 × ponta ÷ (2π ÷ ' + hx.nPer + '): ' + f(D(15), 0) + ' cm para ponta de 15 cm e ' + f(D(7), 0) + ' cm para ponta de 7 cm. O pilar atual tem ' + f(2 * hx.rc, 1) + ' cm de diâmetro.</p>';
+        h += '<p><b>A conta nesta escada:</b> ponta = raio do pilar × ângulo do degrau em radianos = ' + f(hx.rc, 1) + ' × ' + f(th, 3) + ' = ' + f(ponta, 1) + ' cm. Com ' + hx.nPer + ' degraus por volta, o diâmetro mínimo do centro (pilar ou vão central) seria Dmin = 2 × ponta desejada ÷ (2π ÷ ' + hx.nPer + '): ' + f(Math.ceil(D(15) * 10 - 1e-9) / 10, 1) + ' cm para ponta de 15 cm e ' + f(Math.ceil(D(7) * 10 - 1e-9) / 10, 1) + ' cm para ponta de 7 cm (arredondado para cima: é um mínimo). O pilar atual tem ' + f(2 * hx.rc, 1) + ' cm de diâmetro.</p>';
       }
       h += '<p><b>Como resolvem na prática:</b></p><ul>';
       it.sol.forEach(s => { h += '<li>' + s[0] + '. Efeito: ' + s[1] + '. (' + s[2] + ')</li>'; });
