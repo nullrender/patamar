@@ -40,134 +40,281 @@
   --t3:#3f7396; --w3:#c0703f; --p3:#3f8f78; --f3:#3a4d5c; --ground:#1a2e3f;
   color-scheme:dark;
 }
+/* tokens da interface (botões, sombra, seleção); as cores do desenho continuam nos tokens acima */
+:root{--btn:#b8440f; --btn-ink:#ffffff; --sel:#fff4ed; --shadow:0 1px 2px rgba(19,36,47,.05),0 6px 18px rgba(19,36,47,.06); --navh:64px; --gut:16px}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--btn:#ff8a4c; --btn-ink:#1a1008; --sel:#2b2118; --shadow:0 1px 2px rgba(0,0,0,.25)} }
+:root[data-theme="dark"]{--btn:#ff8a4c; --btn-ink:#1a1008; --sel:#2b2118; --shadow:0 1px 2px rgba(0,0,0,.25)}
+
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%}
+html{scroll-padding-top:12px}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);-webkit-text-size-adjust:100%;overflow-x:hidden}
 h1,h2,h3{margin:0;text-wrap:balance}
 button,input,select{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--btn);outline-offset:2px;border-radius:4px}
 [hidden]{display:none !important}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;z-index:30;background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:6px;text-decoration:none}
+.skip:focus{top:8px}
 
-
-.top{max-width:1280px;margin:0 auto;padding:18px 16px 4px;display:flex;align-items:center;gap:12px}
+/* ---- topo ---- */
+.top{display:flex;align-items:center;gap:12px;padding:12px var(--gut) 8px}
 .mark{width:34px;height:34px;flex:none}
-.top h1{font:600 30px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
-.top p{margin:0;color:var(--muted);font-size:13px}
-.app{max-width:1280px;margin:0 auto;padding:12px 16px 32px;display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;align-items:start}
-@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
-.ctrl{display:flex;flex-direction:column;gap:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
-.card h2,.sec h2{font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
-summary{cursor:pointer;font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.brand{min-width:0;flex:1}
+.top h1{font:600 28px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.top p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.3}
+.ibtn{flex:none;min-width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:0 12px;cursor:pointer;font-size:13px;color:var(--ink)}
+.ibtn:hover{border-color:var(--muted)}
+.ibtn svg{width:18px;height:18px}
 
-.tipos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.tipos button{display:flex;flex-direction:column;gap:6px;align-items:stretch;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px;cursor:pointer;text-align:left}
+/* aviso de perfil migrado */
+.avisoM{margin:0 var(--gut) 8px;display:flex;gap:10px;align-items:flex-start;background:var(--infobg);border:1px solid var(--line);border-left:4px solid var(--info);border-radius:8px;padding:10px 6px 10px 12px;font-size:14px}
+.avisoM p{margin:0;flex:1;padding-top:2px}
+.avisoM button{flex:none;width:36px;height:36px;border:0;background:transparent;border-radius:6px;cursor:pointer;font-size:22px;line-height:1;color:var(--muted)}
+.avisoM button:hover{background:var(--panel);color:var(--ink)}
+
+/* ---- faixa de tipos de escada (rola na horizontal quando não cabe) ---- */
+.tipobar{padding:0 var(--gut) 4px}
+.tipos{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding:2px 2px 8px;scrollbar-width:thin}
+.tipos button{flex:1 0 108px;max-width:190px;scroll-snap-align:start;display:flex;flex-direction:column;gap:4px;align-items:stretch;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px 7px;cursor:pointer;text-align:left;min-height:44px;color:var(--ink)}
 .tipos button:hover{border-color:var(--muted)}
-.tipos button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--panel)}
-.tipos .th{display:block;height:84px;overflow:hidden}
+.tipos button.on{border-color:var(--btn);box-shadow:inset 0 0 0 1px var(--btn);background:var(--sel)}
+.tipos .th{display:block;height:50px;overflow:hidden}
 .tipos .th svg{width:100%;height:100%;display:block}
-.tipos .nm{font-size:13px;font-weight:600;line-height:1.2}
+.tipos .nm{font-size:12px;font-weight:600;line-height:1.2}
 
+/* ---- três painéis: dados | desenho | verificações ---- */
+.app{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;padding:8px var(--gut) 28px;align-items:start}
+.painel{min-width:0}
+.ctrl{display:flex;flex-direction:column;gap:12px}
+.ctrlIn{display:flex;flex-direction:column;gap:12px}
+.out{display:flex;flex-direction:column;gap:12px;container-type:inline-size}
+.side{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.card h2,.sec h2{font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+details.card>summary{cursor:pointer;font:600 15px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:24px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"+";font:500 20px/1 var(--body);color:var(--muted)}
+details.card[open]>summary::after{content:"−"}
+
+/* resumo que acompanha os dados no celular */
+.miniRes{display:none}
+
+/* ---- campos ---- */
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .field{display:flex;flex-direction:column;gap:5px;margin-top:12px}
 .grid2 .field{margin-top:0}
 .field>label,.lab,.labrow label:first-child{font-size:13px;font-weight:500}
-.labrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.auto{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center;cursor:pointer;white-space:nowrap}
-.auto input{accent-color:var(--accent);margin:0}
-.inp{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
-.inp:focus-within,.stepper:focus-within{border-color:var(--accent)}
-.inp input,.stepper input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:9px 10px;font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;outline:none}
+.labrow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.auto{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap;min-height:28px}
+.auto input{accent-color:var(--btn);margin:0;width:16px;height:16px}
+.inp{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:7px;background:var(--paper);overflow:hidden;min-height:42px}
+.inp:focus-within,.stepper:focus-within{border-color:var(--btn);box-shadow:0 0 0 2px color-mix(in srgb,var(--btn) 25%,transparent)}
+.inp input,.stepper input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:9px 10px;font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;outline:none}
 .un{padding:0 10px;display:flex;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
-.stepper{display:flex;border:1px solid var(--line);border-radius:6px;background:var(--paper);overflow:hidden}
-.stepper button{width:44px;border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--ink)}
+.stepper{display:flex;border:1px solid var(--line);border-radius:7px;background:var(--paper);overflow:hidden;min-height:44px}
+.stepper button{width:48px;border:0;background:transparent;font-size:22px;cursor:pointer;color:var(--ink)}
 .stepper button:hover{background:var(--line)}
 .stepper input{text-align:center}
-select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:9px 10px;font-size:14px}
-.hint{margin:0;font-size:12px;color:var(--muted)}
-.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.seg button{flex:1;border:0;background:var(--paper);padding:9px;cursor:pointer;font-size:14px}
+select{width:100%;border:1px solid var(--line);border-radius:7px;background:var(--paper);padding:9px 10px;font-size:15px;min-height:44px}
+.hint{margin:0;font-size:12px;color:var(--muted);line-height:1.45}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--paper)}
+.seg button{flex:1;border:0;background:transparent;padding:8px;cursor:pointer;font-size:14px;min-height:40px;color:var(--ink);line-height:1.2}
 .seg button+button{border-left:1px solid var(--line)}
+.seg button:hover:not(.on){background:var(--line)}
 .seg button.on{background:var(--ink);color:var(--paper);font-weight:600}
-#bocel button{font-size:13px;padding:9px 4px}
+#bocel button{font-size:13px;padding:8px 4px}
 
-.out{display:flex;flex-direction:column;gap:12px;min-width:0}
-.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+/* ---- resultado ---- */
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.headT{flex:1 1 260px;min-width:0}
 .head h2{font:600 28px/1.1 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0}
-.head p{margin:0;color:var(--muted);font-size:13px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
-.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.head p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:36px;border-radius:99px;padding:4px 14px;font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.chip.ok{background:var(--okbg);color:var(--ok)} .chip.warn{background:var(--warnbg);color:var(--warn)} .chip.bad{background:var(--badbg);color:var(--bad)}
+.chip:hover{border-color:currentColor}
+.chip .curto{display:none}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:1px;min-width:0;box-shadow:var(--shadow)}
 .tl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.tv{font:500 18px/1.2 var(--mono);font-variant-numeric:tabular-nums}
-.ts{font-size:12px;color:var(--muted)}
-.tabs{display:flex;gap:4px}
-.tabs button{border:1px solid var(--line);background:var(--panel);padding:8px 18px;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;border-bottom:0}
+.tv{font:500 18px/1.25 var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ts{font-size:12px;color:var(--muted);line-height:1.35}
+/* resumo em 6 colunas só quando a coluna do desenho é larga */
+@container (min-width:760px){ .tiles{grid-template-columns:repeat(6,minmax(0,1fr))} }
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);padding:8px 20px;min-height:44px;border-radius:8px 8px 0 0;cursor:pointer;font-weight:500;border-bottom:0;color:var(--ink)}
+.tabs button:hover:not(.on){background:var(--paper)}
 .tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.board{background:var(--panel);border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:12px;margin-top:-13px}
-.stage{min-height:260px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;border-radius:4px;padding:6px;overflow:hidden}
-.stage svg{max-height:70vh}
+.board{background:var(--panel);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:12px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.stage{min-height:260px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px;border-radius:6px;padding:6px;overflow:hidden}
+.stage svg{max-height:min(72vh,900px)}
 .stage canvas{display:block;touch-action:none;cursor:grab;border-radius:4px}
 .cap{margin:8px 4px 2px;font-size:12px;color:var(--muted)}
 .bar3{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0 0 10px}
-.bar3 label{display:flex;align-items:center;gap:8px;font-size:13px}
-.bar3 input{accent-color:var(--accent)}
+.bar3 label{display:flex;align-items:center;gap:8px;font-size:13px;min-height:36px}
+.bar3 input{accent-color:var(--btn)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
 .lg{display:flex;align-items:center;gap:6px}
-.sw{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block}
-.ln{width:22px;height:0;border-top:2.5px solid var(--accent);display:inline-block}
+.sw{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block;flex:none}
+.ln{width:22px;height:0;border-top:2.5px solid var(--accent);display:inline-block;flex:none}
 .ln.dash{border-top:2px dashed var(--info)}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.btn{border:1px solid var(--ink);background:transparent;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500;font-size:14px}
+.btn{border:1px solid var(--ink);background:transparent;border-radius:7px;padding:8px 14px;min-height:40px;cursor:pointer;font-weight:500;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
 .btn:hover{background:var(--ink);color:var(--paper)}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.pri:hover{filter:brightness(1.08);background:var(--accent);color:var(--accent-ink)}
+.btn.pri{background:var(--btn);border-color:var(--btn);color:var(--btn-ink)}
+.btn.pri:hover{filter:brightness(1.08);background:var(--btn);color:var(--btn-ink)}
+.barP{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin:0 0 10px;font-size:13px}
+.barP .seg{min-width:240px}
+.barP .segC{min-width:0;flex-wrap:wrap}
+.barP .segC button{white-space:nowrap}
+.barP .seg button{padding:7px 12px;font-size:13px;min-height:38px}
+.barP label{display:flex;align-items:center;gap:7px;min-height:38px}
+.barP input[type=checkbox]{accent-color:var(--btn);width:16px;height:16px;margin:0}
+.barP input.mini{width:68px;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit;font-family:var(--mono)}
 
-.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-@media (max-width:1100px){.two{grid-template-columns:minmax(0,1fr)}}
-.cs{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;margin-bottom:10px}
+/* ---- verificações e memória ---- */
+.cs{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;margin-bottom:10px}
 .cs.ok{background:var(--okbg);color:var(--ok)} .cs.warn{background:var(--warnbg);color:var(--warn)} .cs.bad{background:var(--badbg);color:var(--bad)}
-.checks,.memo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.notaN{margin:0 0 12px;font-size:12px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 10px}
+.checks,.memo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .ck{display:flex;gap:10px;align-items:flex-start;border-left:3px solid var(--line);padding:2px 0 2px 10px}
 .ck.ok{border-color:var(--ok)} .ck.warn{border-color:var(--warn)} .ck.bad{border-color:var(--bad)} .ck.info{border-color:var(--info)}
+.cb{min-width:0}
 .pill{flex:none;width:62px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:2px 0;margin-top:2px}
 .ck.ok .pill{background:var(--okbg);color:var(--ok)} .ck.warn .pill{background:var(--warnbg);color:var(--warn)} .ck.bad .pill{background:var(--badbg);color:var(--bad)} .ck.info .pill{background:var(--infobg);color:var(--info)}
 .cn{font-size:14px;font-weight:500}
 .cv{font-size:13px;color:var(--muted)} .cv b{font-family:var(--mono);color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
 .cnote{font-size:13px;margin-top:2px}
-.csol{font-size:13px;margin-top:4px;padding:4px 8px;border-left:2px solid var(--accent);background:var(--paper)}
-.agora{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 5px;margin-left:6px}
+.csol{font-size:13px;margin-top:4px;padding:4px 8px;border-left:2px solid var(--btn);background:var(--paper)}
+.agora{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--btn);border:1px solid var(--btn);border-radius:4px;padding:0 5px;margin-left:6px}
 .memo{counter-reset:m;font-size:14px}
-.memo li{counter-increment:m;padding-left:30px;position:relative}
+.memo li{counter-increment:m;padding-left:30px;position:relative;overflow-wrap:anywhere}
 .memo li::before{content:counter(m);position:absolute;left:0;top:1px;font:500 12px/1.6 var(--mono);color:var(--muted);width:22px;text-align:right}
 .note{font-size:12px;color:var(--muted);margin:0}
+#quant{overflow-x:auto}
 
-.modal{position:fixed;inset:0;background:rgba(8,16,24,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal{position:fixed;inset:0;background:rgba(8,16,24,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
 .modal .box{background:var(--panel);border-radius:10px;padding:14px;max-width:min(1100px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
 .modal img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff}
 .modal .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:6px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
 .toast.on{opacity:1;transform:translateX(-50%)}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
-@media (max-width:900px){
-  .app{display:flex;flex-direction:column;align-items:stretch}
-  .ctrl{display:contents}
-  .ctrl>*{order:4}
-  .ctrl>.o1{order:1} .ctrl>.o2{order:2} .out{order:3}
+
+.inp input.err,.stepper input.err,input.err{outline:2px solid var(--bad);outline-offset:-2px}
+.errbox{padding:22px;border:1px solid var(--bad);border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
+.errbox p{margin:8px 0 0}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.stage[data-view=erro]{background:none;min-height:0}
+
+/* barra de painéis: só no celular */
+.mnav{display:none}
+
+/* ===== tablet e PC pequeno (700 a 1279 px): dados à esquerda, desenho e verificações à direita ===== */
+@media (min-width:700px){
+  .app{grid-template-columns:clamp(272px,34vw,330px) minmax(0,1fr);grid-template-areas:"dados desenho" "dados verif"}
+  #painel-dados{grid-area:dados;position:sticky;top:10px;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 4px 4px 0;margin-right:-4px}
+  #painel-desenho{grid-area:desenho}
+  #painel-verif{grid-area:verif}
 }
-@media (max-width:640px){
-  .stage{overflow-x:auto}
-  .stage[data-view=corte] svg{min-width:640px}
-  .stage[data-view=planta] svg{min-width:560px}
+@media (min-width:700px) and (max-width:1023px){
+  .top p{display:none}
+  .head h2{font-size:24px}
+  .ctrl .grid2{grid-template-columns:minmax(0,1fr)}
+  .ctrl .grid2 .field+.field{margin-top:0}
 }
-.barP{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:0 0 10px;font-size:13px}
-.barP .seg{min-width:250px}
-.barP .segC{min-width:0;flex-wrap:wrap}
-.barP .segC button{white-space:nowrap}
-@media (max-width:640px){.barP .segC{width:100%}.barP .segC button{flex:1 1 40%}}
-.barP .seg button{padding:7px 12px;font-size:13px}
-.barP label{display:flex;align-items:center;gap:7px}
-.barP input[type=checkbox]{accent-color:var(--accent)}
-.barP input.mini{width:64px;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink);font:inherit}
+@media (min-width:1024px){
+  .side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .side>.wide{grid-column:1 / -1}
+}
+/* ===== PC (1280 px ou mais): dados | desenho | verificações e memória ===== */
+@media (min-width:1280px){
+  :root{--gut:24px}
+  .app{grid-template-columns:290px minmax(0,1fr) clamp(330px,24vw,460px);grid-template-areas:"dados desenho verif";gap:20px}
+  #painel-verif{position:sticky;top:10px;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 4px 4px 0;margin-right:-4px;display:flex}
+  .side>.wide{grid-column:auto}
+  .tipos button{flex:1 1 0;min-width:110px;max-width:none}
+}
+@media (min-width:1680px){
+  .app{grid-template-columns:330px minmax(0,1fr) 480px}
+  .tipos .th{height:58px}
+}
+
+/* ===== celular (até 699 px): três painéis com barra embaixo ===== */
+@media (max-width:699px){
+  :root{--gut:12px}
+  body{padding-bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px))}
+  .top{padding-top:10px;padding-bottom:6px;gap:10px}
+  .mark{width:30px;height:30px}
+  .top h1{font-size:24px}
+  .top p{font-size:12px}
+  .tipobar{padding-right:0}
+  .tipos{padding-right:12px;gap:6px}
+  .tipos button{flex:0 0 96px;padding:5px 6px 6px}
+  .tipos .th{height:38px}
+  .tipos .nm{font-size:11.5px}
+  .app{padding-top:4px;gap:12px}
+  .painel{display:none !important}
+  .app[data-painel=dados] #painel-dados,.app[data-painel=desenho] #painel-desenho,.app[data-painel=verif] #painel-verif{display:flex !important}
+  .card{padding:12px 14px}
+  .head{gap:6px 10px}
+  .headT{flex:1 1 0}
+  .top p{display:none}
+  .head h2{font-size:22px}
+  .head p{font-size:12px}
+  .chip{min-height:44px;padding:4px 12px}
+  #statusChip .longo{display:none}
+  #statusChip .curto{display:inline}
+  .ts{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .tile{padding:6px 8px;border-radius:8px}
+  .tl{font-size:10px;letter-spacing:.06em}
+  .tv{font-size:15px}
+  .ts{font-size:11px}
+  .tabs{gap:3px}
+  .tabs button{flex:1 1 0;padding:8px 4px;font-size:14px}
+  .board{padding:8px;border-radius:0 0 10px 10px}
+  /* no celular o desenho vem antes das opções da vista */
+  .board>.stage{order:1}
+  .board>.legend{order:2}
+  .board>.bar3,.board>.barP{order:3;margin:12px 0 0}
+  .board>.actions{order:4}
+  .stage{overflow-x:auto;padding:4px}
+  .stage[data-view=corte] svg{min-width:600px}
+  .stage[data-view=planta] svg{min-width:520px}
+  .stage[data-view=explica]{overflow:visible}
+  .seg button,.barP .seg button{min-height:44px}
+  .barP{gap:8px 16px}
+  .barP .seg,.barP .segC{width:100%;min-width:0}
+  .barP .segC button{flex:1 1 30%}
+  .barP label{min-height:44px}
+  .bar3 label{min-height:44px;flex:1 1 100%}
+  .bar3 input{flex:1}
+  .btn{min-height:44px;flex:1 1 40%}
+  .inp{min-height:44px}
+  .auto{min-height:44px}
+  .actions{gap:6px}
+  .miniRes{display:flex;position:sticky;top:0;z-index:5;flex-wrap:wrap;align-items:center;gap:4px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+  .miniRes b{font-family:var(--mono);font-weight:600}
+  .miniRes .mr{flex:1 1 auto}
+  .miniRes .chip{min-height:32px;padding:2px 10px;font-size:12px}
+  .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+  .mnav button{flex:1;min-height:50px;border:0;border-radius:10px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
+  .mnav button svg{width:22px;height:22px}
+  .mnav button[aria-selected=true]{background:var(--ink);color:var(--paper)}
+  .mnav .badge{position:absolute;top:4px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;padding:0 5px;font:600 11px/18px var(--body);color:#fff;background:var(--bad)}
+  .mnav .badge.warn{background:var(--warn);color:#1a1008}
+  .toast{bottom:calc(var(--navh) + 16px)}
+  .avisoM{margin-left:var(--gut);margin-right:var(--gut)}
+  #temaTxt{display:none}
+  .ibtn{padding:0}
+}
+/* toque: alvos maiores em qualquer largura */
+@media (pointer:coarse){
+  .seg button,.barP .seg button,.tabs button,.btn,.auto,.barP label,.bar3 label{min-height:44px}
+}
 .stage[data-view=explica]{background:none;padding:0;overflow:visible;min-height:0}
 .ex{border:1px solid var(--line);border-radius:8px;background:var(--paper);margin:0 0 8px}
 .ex>summary{cursor:pointer;padding:12px 14px;font-weight:600;list-style:none}
@@ -195,13 +342,6 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 .tab td{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tabq td:first-child{white-space:normal;font-family:var(--body)}
 .tabq td{vertical-align:top}
-
-.inp input.err,.stepper input.err,input.err{outline:2px solid #c0392b;outline-offset:-2px}
-.errbox{padding:22px;border:1px solid #c0392b;border-radius:8px;background:var(--paper);font-size:14px;line-height:1.55}
-.errbox p{margin:8px 0 0}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.stage[data-view=erro]{background:none;min-height:0}
-
 /* ---- relatório para imprimir ou salvar em PDF ---- */
 .printArea{display:none}
 @media print{
@@ -238,18 +378,25 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
 </style>
 </head>
 <body>
+<a class="skip" href="#painel-desenho">Pular para o desenho</a>
 <header class="top">
   <svg class="mark" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="6" fill="var(--ink)"/><path d="M6 27h6v-5h6v-5h6v-5h4" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
-  <div><h1>Patamar</h1><p>Escadas calculadas e desenhadas: planta, corte e 3D</p></div>
+  <div class="brand"><h1>Patamar</h1><p>Escadas calculadas e desenhadas: planta, cortes e 3D</p></div>
+  <button type="button" class="ibtn" id="btnTema" aria-label="Tema: automático"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg><span id="temaTxt">Automático</span></button>
 </header>
-<main class="app">
-  <div class="ctrl" id="ctrl"></div>
-  <div class="out">
-    <div class="head"><h2 id="title"></h2><p id="desc"></p></div>
+<div class="avisoM" id="avisoMigra" role="status" hidden><p id="avisoMigraTxt"></p><button type="button" id="avisoMigraFechar" aria-label="Fechar aviso">×</button></div>
+<nav class="tipobar" aria-label="Tipo de escada"><div id="tipos" class="tipos" role="radiogroup" aria-label="Tipo de escada"></div></nav>
+<main class="app" id="app" data-painel="desenho">
+  <section class="ctrl painel" id="painel-dados" aria-label="Dados da escada" role="tabpanel">
+    <div class="miniRes" id="miniRes" aria-live="polite"></div>
+    <div class="ctrlIn" id="ctrl"></div>
+  </section>
+  <section class="out painel" id="painel-desenho" aria-label="Resultado e desenho" role="tabpanel" tabindex="-1">
+    <div class="head"><div class="headT"><h2 id="title"></h2><p id="desc"></p></div><button type="button" class="chip ok" id="statusChip" aria-controls="painel-verif"></button></div>
     <div class="tiles" id="tiles" aria-live="polite"></div>
     <div>
       <div class="tabs" id="tabs" role="tablist" aria-label="Tipo de desenho"></div>
-      <div class="board">
+      <div class="board" role="tabpanel" aria-label="Desenho">
         <div class="bar3" id="view3dBar" hidden>
           <label>Girar <input type="range" id="yaw" min="-180" max="180" value="-32"></label>
           <label>Inclinar <input type="range" id="pit" min="12" max="80" value="42"></label>
@@ -276,14 +423,19 @@ select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(
         </div>
       </div>
     </div>
-    <div class="two">
-      <section class="card"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><ul class="checks" id="checks"></ul></section>
-      <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
-    </div>
+  </section>
+  <section class="side painel" id="painel-verif" aria-label="Verificações, memória de cálculo e quantitativos" role="tabpanel" tabindex="-1">
+    <section class="card wide" id="cardChecks"><h2>Verificações</h2><div id="checkSum" class="cs ok"></div><p class="notaN" id="notaNorma" hidden>Itens citados da NBR 9077:2001 vêm da edição cancelada em 2025 e servem como referência de estudo.</p><ul class="checks" id="checks"></ul></section>
+    <section class="card"><h2>Memória de cálculo</h2><ol class="memo" id="memo"></ol></section>
     <section class="card"><h2>Quantitativos (estimativa)</h2><div id="quant"></div></section>
-    <p class="note" id="aviso">O app calcula a geometria e confere só parte dos limites. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021), conferidos no texto da norma em 16/11/2026. O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001; a edição de 2025 da NBR 9077 não foi lida. Piso mínimo de 25 cm, largura de 80 cm e desnível de 3,20 m sem patamar, no perfil Estudo, não têm norma nacional que os sustente. Os perfis Escada secundária e Escada de serviço seguem a NBR 9077:2001, 4.7.5. Escada de emergência, bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
-  </div>
+    <p class="note wide" id="aviso">O app calcula a geometria e confere só parte dos limites. A NBR 9077:2025 (terceira edição) cancelou a de 2001. O perfil Rota de fuga segue a edição de 2025, que manda dimensionar degraus, patamares e larguras pela NBR 9050 (9.1.10) e proíbe degraus em leque e escada em espiral nas rotas de saída (9.1.11). O perfil Mezanino ou área privativa segue o item 9.5.9.1 da edição de 2025. O perfil NBR 9050 usa os itens 6.8 e 6.9 da NBR 9050:2020 (versão corrigida de 2021). O perfil Estudo usa a fórmula de Blondel e as regras de leque da NBR 9077:2001, cancelada, como referência de estudo; piso mínimo de 25 cm, largura de 80 cm e desnível de 3,20 m sem patamar, nesse perfil, não têm norma nacional que os sustente. Bombeiros e código de obras variam por estado e município: confira antes de projetar.</p>
+  </section>
 </main>
+<nav class="mnav" id="mnav" role="tablist" aria-label="Painel">
+  <button type="button" role="tab" data-p="dados" id="mnav-dados" aria-controls="painel-dados" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Dados</button>
+  <button type="button" role="tab" data-p="desenho" id="mnav-desenho" aria-controls="painel-desenho" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h5v-5h5v-5h5V4"/><path d="M4 20V4h16"/></svg>Desenho</button>
+  <button type="button" role="tab" data-p="verif" id="mnav-verif" aria-controls="painel-verif" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L6.8 5M3.5 12l1.2 1.2 2.1-2.2"/><circle cx="5" cy="18" r="1.3"/></svg>Verificações<span class="badge" id="navBadge" hidden></span></button>
+</nav>
 <div hidden><canvas id="cv3" width="800" height="600" aria-label="Vista 3D da escada"></canvas></div>
 <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-label="Imagem gerada">
   <div class="box">
@@ -2899,6 +3051,9 @@ const $ = id => document.getElementById(id);
 const LS_KEY = 'patamar-v1';
 let S = Object.assign({}, DEFAULTS);
 let VIEW = 'planta', YAW = -32, PIT = 42, CUR = null, THEME = null, CV3 = null;
+/* painel visível no celular (Dados, Desenho ou Verificações); em telas maiores os três aparecem juntos */
+let PAINEL = 'desenho';
+const TEMA_KEY = 'patamar-tema';
 
 function getTheme() {
   const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
@@ -2909,8 +3064,18 @@ const plain = v => String(Math.round(v * 100) / 100).replace('.', ',');
 const parseNum = s => { const t = String(s).trim(); if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(t) || /^[+-]?\d{1,3}\.\d{3}$/.test(t)) return NaN; /* "1.000" é ambíguo (milhar?), então é recusado */ const v = Number(t.replace(',', '.')); return isFinite(v) ? v : NaN; };
 const BAD = {};
 
+/* Perfis que deixaram de existir: 'sec' (escada secundária) e 'serv' (escada de serviço) vinham da NBR 9077:2001, 4.7.5,
+   cancelada pela edição de 2025. Quem tinha um deles salvo passa para 'mez' (NBR 9077:2025, 9.5.9.1) e vê um aviso.
+   Devolve true quando trocou. */
+function migrarNorma(s) {
+  if (s && (s.norma === 'sec' || s.norma === 'serv')) { s.norma = 'mez'; return true; }
+  return false;
+}
+const AVISO_MIGRA = 'O perfil que você usava vinha da NBR 9077:2001, cancelada pela edição de 2025. Agora usamos \u201cMezanino ou área privativa (NBR 9077:2025, 9.5.9.1)\u201d.';
+
 function load() {
   try { const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (j && j.S) S = Object.assign(S, j.S); } catch (e) { }
+  if (migrarNorma(S)) { const a = $('avisoMigra'); if (a) { $('avisoMigraTxt').textContent = AVISO_MIGRA; a.hidden = false; } }
   const h = (location.hash || '').slice(1);
   const m = h.match(/^(.*?)(?:-(planta|corte|3d|explica))?$/);
   if (m && TIPOS.some(t => t.id === m[1])) { S.tipo = m[1]; VIEW = m[2] || 'planta'; }
@@ -2936,8 +3101,7 @@ const FIELDS = [
 function mount() {
   const norm = Object.keys(NORMAS).map(k => '<option value="' + k + '">' + NORMAS[k].nome + '</option>').join('') + '<option value="custom">Personalizada (digite os limites)</option>';
   $('ctrl').innerHTML =
-    '<section class="card o1"><h2>Tipo de escada</h2><div id="tipos" class="tipos" role="radiogroup" aria-label="Tipo de escada"></div></section>' +
-    '<section class="card o2"><h2>Medidas</h2><div class="grid2">' +
+    '<section class="card"><h2>Medidas</h2><div class="grid2">' +
     fieldNum('H', 'Desnível piso a piso', 'cm', 'Do piso de baixo ao piso de cima, acabados.') + fieldNum('L', 'Largura útil', 'cm', 'Espaço livre para passar, entre paredes ou guardas.') + '</div>' +
     '<div class="field"><label for="norma">Referência de limites</label><select id="norma">' + norm + '</select></div>' +
     '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + fieldNum('cLq', 'Ponta mínima do leque', 'cm') + '</div></div>' +
@@ -3007,6 +3171,17 @@ function bind() {
   $('nPerPlus').addEventListener('click', () => { limpaNPer(); S.nPerAuto = false; S.nPer = Math.min(72, nPerAtual() + 1); render(); });
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; render(); });
   $('tipos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tipo = b.dataset.v; render(); });
+  /* setas do teclado andam entre os tipos (grupo de opções) */
+  $('tipos').addEventListener('keydown', e => {
+    const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!d) return;
+    e.preventDefault(); const i = TIPOS.findIndex(t => t.id === S.tipo), t = TIPOS[(i + d + TIPOS.length) % TIPOS.length];
+    S.tipo = t.id; render(); const b = document.querySelector('#tipos button[data-v="' + t.id + '"]'); if (b) b.focus();
+  });
+  $('mnav').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) mostrarPainel(b.dataset.p); });
+  $('miniRes').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) mostrarPainel(b.dataset.p); });
+  $('statusChip').addEventListener('click', () => { if (ehCelular()) mostrarPainel('verif'); else $('cardChecks').scrollIntoView({ block: 'start', behavior: rolagem() }); });
+  $('btnTema').addEventListener('click', () => { const ordem = ['auto', 'light', 'dark'], t = ordem[(ordem.indexOf(lerTema()) + 1) % 3]; try { localStorage.setItem(TEMA_KEY, t); } catch (e) { } aplicarTema(t); toast('Tema: ' + TEMA_NOME[t]); });
+  $('avisoMigraFechar').addEventListener('click', () => { $('avisoMigra').hidden = true; });
   $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
   $('pit').addEventListener('input', e => { PIT = +e.target.value; draw3d(false); });
   $('btnResumo').addEventListener('click', () => copiar(resumo(), 'Resumo copiado'));
@@ -3025,6 +3200,26 @@ function bind() {
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
   if (mq.addEventListener) mq.addEventListener('change', () => { THEME = null; renderTypes(); render(); });
   new MutationObserver(() => { THEME = null; renderTypes(); render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+const ehCelular = () => window.matchMedia('(max-width: 699px)').matches;
+const rolagem = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+/* celular: mostra um painel por vez (Dados, Desenho ou Verificações), escolhido na barra de baixo */
+function mostrarPainel(p) {
+  PAINEL = p; $('app').dataset.painel = p;
+  document.querySelectorAll('#mnav button').forEach(b => b.setAttribute('aria-selected', b.dataset.p === p));
+  if (ehCelular()) window.scrollTo({ top: 0 });
+  if (p === 'desenho') draw3d(true);
+}
+/* tema: automático (segue o aparelho), claro ou escuro; guardado só neste navegador */
+const TEMA_NOME = { auto: 'automático (segue o aparelho)', light: 'claro', dark: 'escuro' };
+function lerTema() { try { const t = localStorage.getItem(TEMA_KEY); return t === 'light' || t === 'dark' ? t : 'auto'; } catch (e) { return 'auto'; } }
+function aplicarTema(t) {
+  const root = document.documentElement;
+  if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+  const txt = $('temaTxt'), b = $('btnTema');
+  if (txt) txt.textContent = { auto: 'Automático', light: 'Claro', dark: 'Escuro' }[t];
+  if (b) { b.setAttribute('aria-label', 'Tema: ' + TEMA_NOME[t] + '. Toque para trocar.'); b.title = 'Tema: ' + TEMA_NOME[t]; }
 }
 
 function renderTypes() {
@@ -3046,6 +3241,10 @@ function falha(msg) {
   $('stage').dataset.view = 'erro';
   $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
   $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Entrada ou configuração inválida';
+  $('statusChip').className = 'chip bad'; $('statusChip').textContent = 'Medidas inválidas'; $('statusChip').setAttribute('aria-label', 'Medidas inválidas: veja a mensagem no desenho.');
+  $('navBadge').hidden = false; $('navBadge').className = 'badge'; $('navBadge').textContent = '!';
+  $('miniRes').innerHTML = '<span class="mr">Não dá para calcular com essas medidas.</span><button type="button" class="chip bad" data-p="desenho">Ver o motivo</button>';
+  $('notaNorma').hidden = true;
   ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = true; });
   $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true; $('viewCorteBar').hidden = true;
 }
@@ -3073,7 +3272,7 @@ function render(typing) {
   document.querySelector('#bocel button[data-v="inclinado"]').hidden = (helB || S.tipo === 'helicoidal') && bocM !== 'inclinado';
   document.querySelector('#bocel button[data-v="bocel"]').textContent = helB ? 'Placas sobrepostas' : 'Bocel';
   document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
-  $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1), no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
+  $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e), cancelada pela edição de 2025, pedia pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -3098,7 +3297,7 @@ function render(typing) {
   document.querySelectorAll('#modoP button').forEach(b => b.classList.toggle('on', b.dataset.v === S.modoPlanta));
   $('zcWrap').hidden = S.modoPlanta === 'sup';
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (R.bal ? 'bal' : 'conv')));
-  $('lqHint').textContent = R.bal ? 'Piso igual na linha de caminhamento, ponta larga na borda interna. É o que a NBR 9077 pede.' : 'Todos saem do canto interno, com ponta zero. Serve para comparar com os balanceados.';
+  $('lqHint').textContent = R.bal ? 'Piso igual na linha de caminhamento, ponta larga na borda interna. A NBR 9077:2001, cancelada pela edição de 2025, recomendava balancear os leques.' : 'Todos saem do canto interno, com ponta zero. Serve para comparar com os balanceados.';
   opcoesK(R.bal, R.kwMin, R.kw);
   $('kLeque').value = String(R.kw);
   $('kLab').textContent = R.bal ? 'Degraus no trecho de cada curva' : 'Leques em cada curva';
@@ -3131,6 +3330,13 @@ function render(typing) {
   const sev = cnt.bad ? 'bad' : cnt.warn ? 'warn' : 'ok';
   $('checkSum').className = 'cs ' + sev;
   $('checkSum').textContent = cnt.bad ? cnt.bad + ' fora da referência' + (cnt.warn ? ' e ' + cnt.warn + ' em atenção' : '') : cnt.warn ? cnt.warn + ' em atenção' : 'Tudo dentro da referência';
+  const curto = cnt.bad ? cnt.bad + ' fora' : cnt.warn ? cnt.warn + ' em atenção' : 'Tudo ok';
+  $('statusChip').className = 'chip ' + sev; $('statusChip').innerHTML = '<span class="longo">' + $('checkSum').textContent + '</span><span class="curto">' + curto + '</span>';
+  $('statusChip').setAttribute('aria-label', 'Verificações: ' + $('checkSum').textContent + '. Ver a lista.');
+  const nb = $('navBadge'); nb.hidden = !(cnt.bad + cnt.warn); nb.className = 'badge' + (cnt.bad ? '' : ' warn'); nb.textContent = cnt.bad || cnt.warn;
+  $('miniRes').innerHTML = '<span class="mr"><b>' + R.N + '</b> × <b>' + fmt(R.e, 2) + '</b> cm · piso <b>' + fmt(R.p, 1) + '</b> · Blondel <b>' + fmt(R.bl, 1) + '</b></span><button type="button" class="chip ' + sev + '" data-p="verif">' + curto + '</button>';
+  /* perfis que ainda usam números da NBR 9077:2001 como referência */
+  $('notaNorma').hidden = !(R.nm.id === 'res' || R.nm.id === 'mez');
   const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
   $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
   $('memo').innerHTML = R.memo.map(t => '<li>' + t + '</li>').join('');
@@ -3156,6 +3362,7 @@ function render(typing) {
   $('btnSvg').hidden = VIEW === '3d' || VIEW === 'explica';
   $('btnImg').hidden = VIEW === 'explica';
   $('legend').hidden = VIEW === 'explica';
+  mostrarTipo();
   /* palco */
   $('stage').dataset.view = VIEW;
   if (VIEW === 'planta') { $('stage').innerHTML = planSVG(R, {}, THEME); }
@@ -3165,6 +3372,12 @@ function render(typing) {
   save();
 }
 
+/* deixa o tipo escolhido à vista na faixa de tipos, que rola na horizontal */
+function mostrarTipo() {
+  const c = $('tipos'), b = c.querySelector('button.on'); if (!b || c.scrollWidth <= c.clientWidth) return;
+  const l = b.offsetLeft - c.offsetLeft;
+  if (l < c.scrollLeft || l + b.offsetWidth > c.scrollLeft + c.clientWidth) c.scrollLeft = Math.max(0, l - 12);
+}
 /* quantitativos: estimativas da geometria, para orçamento preliminar e para conferir ordem de grandeza */
 function quantHTML(R) {
   const q = R.quant, m2 = v => fmt(v / 10000, 2) + ' m²';
@@ -3265,7 +3478,8 @@ function gerarImagem() {
 
 window.addEventListener('beforeprint', montarRelatorio);
 window.addEventListener('DOMContentLoaded', () => {
-  load(); mount(); bind(); renderTypes(); render();
+  aplicarTema(lerTema());
+  load(); mount(); bind(); renderTypes(); mostrarPainel(PAINEL); render();
   let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => draw3d(true), 120); });
   window.addEventListener('hashchange', () => { const before = S.tipo + VIEW; load(); if (S.tipo + VIEW !== before) render(); });
 });

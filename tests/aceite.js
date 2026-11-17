@@ -2,6 +2,35 @@ const {calc,NORMAS,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,
 const C={paper:'#fff',ink:'#000',muted:'#666',line:'#ccc',accent:'#f60',info:'#06f',tread:'#ddd',winder:'#fdc',patamar:'#cfc',piso:'#eee',t3:'#ddd',w3:'#fdc',p3:'#cfc',f3:'#eee',ground:'#ccc'};
 let fail=0; const ok=(c,m)=>{console.log((c?'PASSA ':'FALHA ')+m); if(!c)fail++;};
 const st=(R,id)=>(R.checks.find(c=>c.id===id)||{}).status;
+/* interface: todo id que o ui.js procura existe no index.html gerado (no HTML do template ou nos trechos que o mount() escreve) */
+{
+  const fs=require('fs'), path=require('path');
+  const ui=fs.readFileSync(path.join(__dirname,'..','src','ui.js'),'utf8');
+  const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  ok(html.includes(ui.trim().slice(0,200)),'index.html gerado com o ui.js atual (rode node build.js)');
+  const existe=new Set([...html.matchAll(/id="([A-Za-z][\w-]*)"/g)].map(m=>m[1]));
+  /* campos montados por fieldNum('id', ...) e os da lista FIELDS (id e caixinha "auto") */
+  for(const m of ui.matchAll(/fieldNum\('([\w-]+)'/g)) existe.add(m[1]);
+  const usados=new Set([...ui.matchAll(/\$\('([\w-]+)'\)/g)].map(m=>m[1]));
+  for(const m of ui.matchAll(/querySelector(?:All)?\('#([\w-]+)/g)) usados.add(m[1]);
+  const campos=[...ui.matchAll(/\{ id: '([\w-]+)', key: '[\w-]+', kind: '\w+'(?:, auto: '([\w-]+)')? \}/g)];
+  campos.forEach(m=>{usados.add(m[1]); if(m[2]) usados.add(m[2]);});
+  const faltam=[...usados].filter(id=>!existe.has(id));
+  ok(usados.size>60 && campos.length>20 && faltam.length===0,'ui.js: '+usados.size+' ids usados, todos existem no index.html'+(faltam.length?' (faltam: '+faltam.join(', ')+')':''));
+  ok(['painel-dados','painel-desenho','painel-verif','mnav','tipos','tabs','stage','printArea','notaNorma','avisoMigra'].every(id=>existe.has(id)),'template: três painéis, barra do celular, faixa de tipos, impressão e avisos');
+  /* migração dos perfis removidos: 'sec' e 'serv' (NBR 9077:2001, 4.7.5) viram 'mez' (NBR 9077:2025, 9.5.9.1) */
+  const fn=/function migrarNorma\(s\) \{[\s\S]*?\n\}/.exec(ui);
+  const migrarNorma=fn&&new Function(fn[0]+'\nreturn migrarNorma;')();
+  const a={norma:'sec',H:300}, b={norma:'serv'}, c={norma:'acess'}, d={norma:'custom'};
+  ok(migrarNorma && migrarNorma(a)===true && a.norma==='mez' && a.H===300 && migrarNorma(b)===true && b.norma==='mez','estado salvo com perfil "sec" ou "serv" passa para "mez"');
+  ok(migrarNorma && migrarNorma(c)===false && c.norma==='acess' && migrarNorma(d)===false && d.norma==='custom' && migrarNorma(null)===false,'migração não mexe nos outros perfis');
+  ok(NORMAS.mez && !NORMAS.sec && !NORMAS.serv,'perfil de destino da migração existe e os antigos não');
+  ok(/NBR 9077:2001, cancelada pela edição de 2025/.test(ui) && /Mezanino ou área privativa \(NBR 9077:2025, 9\.5\.9\.1\)/.test(ui),'aviso da migração explica a troca de perfil');
+  const aviso=(/<p class="note[^"]*" id="aviso">([^<]+)</.exec(html)||[])[1]||'';
+  ok(/NBR 9077:2025/.test(aviso) && !/secundária|de serviço|não foi lida/.test(aviso),'aviso do rodapé atualizado para a NBR 9077:2025');
+  /* toda citação da NBR 9077 nos textos da interface diz a edição */
+  ok(!/NBR 9077(?!:20(01|25))/.test(ui) && !/NBR 9077(?!:20(01|25))/.test(fs.readFileSync(path.join(__dirname,'..','src','template.html'),'utf8')),'interface: toda NBR 9077 citada com a edição');
+}
 ok(st(calc({H:288.64,nAuto:false,N:16}),'e')==='bad','e = 18,04 cm dá "não atende"');
 ok(st(calc({tipo:'helicoidal',D:160,Dc:20}),'L')==='bad','helicoidal D 160 / pilar 20: largura "não atende"');
 const h=calc({tipo:'helicoidal'}); ok(!/soma/.test(h.memo.join(' ')),'memória da helicoidal sem "soma"');
