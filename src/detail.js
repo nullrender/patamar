@@ -22,7 +22,7 @@ function detalheSVG(R, o, C) {
   const tl = plc ? 0 : Math.max(0, st.tLaje);
   const tD = plc ? st.espDegrau : 0;
   const span = Math.max(3.6 * p + 30, 4 * e + 50);
-  const fs = clamp(span / 42, 2, 4.5);
+  const fs = fsDe(o, clamp(span / 42, 2, 4.5));
   const id = 'dtl' + (++DTL);
   const halo = t => t.replace('<text ', '<text stroke="' + C.paper + '" stroke-width="' + r2(fs * 0.28) + '" stroke-linejoin="round" paint-order="stroke" ');
   /* caixa envolvente: cada elemento informa os pontos que ocupa */
@@ -57,7 +57,7 @@ function detalheSVG(R, o, C) {
     const tx = x + side * fs * 0.95, tz = brk ? z0 + (z1 - z0) * brk * 0.5 : (z0 + z1) / 2; /* com interrupção, o texto fica no trecho de baixo */
     d += halo(sText(tx, tz, label, fs * 0.9, C.ink, 'middle', -90, 500));
     B(tx - fs, tz); B(tx + fs, tz); B(x, z0); B(x, z1);
-    return d;
+    return cam('COTAS', d);
   };
   /* cota horizontal própria */
   const hDim = (x0, x1, z, label, za0, za1, txtSide) => {
@@ -71,7 +71,7 @@ function detalheSVG(R, o, C) {
     else if (txtSide === 'left') { d += halo(sText(x0 - fs * 0.6, z, label, fs * 0.85, C.ink, 'end', 0, 500)); B(x0 - fs * 0.6 - tW(label, fs * 0.85), z); }
     else { d += halo(sText((x0 + x1) / 2, z + fs * 0.9, label, fs * 0.9, C.ink, 'middle', 0, 500)); B((x0 + x1) / 2 - tW(label, fs * 0.9) / 2, z + fs * 1.4); B((x0 + x1) / 2 + tW(label, fs * 0.9) / 2, z); }
     B(x0, z); B(x1, z);
-    return d;
+    return cam('COTAS', d);
   };
 
   /* ---------- degraus ---------- */
@@ -151,16 +151,15 @@ function detalheSVG(R, o, C) {
 
   /* linha dos bocéis */
   const xa = -0.85 * p, xb = 3 * p + b + fs;
-  s += sLine([xa, zn(xa)], [xb, zn(xb)], C.info, 1.2, '7 4');
-  { const xl = 2 * p + fs * 1.6, dl = fs * 0.9 / ca; s += halo(sText(xl, zn(xl) - dl, 'linha dos bocéis', fs * 0.75, C.info, 'start', -R.incl, 500)); }
+  { const xl = 2 * p + fs * 1.6, dl = fs * 0.9 / ca; s += cam('LINHA_BOCEIS', sLine([xa, zn(xa)], [xb, zn(xb)], C.info, 1.2, '7 4') + halo(sText(xl, zn(xl) - dl, 'linha dos bocéis', fs * 0.75, C.info, 'start', -R.incl, 500))); }
   B(xa, zn(xa)); B(xb, zn(xb));
 
   /* ângulo de inclinação, no bocel do degrau 2 */
   const rA = p * 0.55, V = [p, 2 * e];
   const A0 = [V[0] + rA, V[1]], A1 = [V[0] + rA * ca, V[1] + rA * sa];
-  s += '<path d="M' + r2(A0[0]) + ',' + r2(-A0[1]) + ' A' + r2(rA) + ',' + r2(rA) + ' 0 0 0 ' + r2(A1[0]) + ',' + r2(-A1[1]) + '" fill="none" stroke="' + C.accent + '" stroke-width="1.3" ' + NS + '/>';
+  s += cam('COTAS', '<path d="M' + r2(A0[0]) + ',' + r2(-A0[1]) + ' A' + r2(rA) + ',' + r2(rA) + ' 0 0 0 ' + r2(A1[0]) + ',' + r2(-A1[1]) + '" fill="none" stroke="' + C.accent + '" stroke-width="1.3" ' + NS + '/>');
   const am = a / 2, rT = rA + fs * 1.6;
-  s += halo(sText(V[0] + rT * Math.cos(am), V[1] + rT * Math.sin(am), fmt(R.incl, 1) + '°', fs * 0.9, C.accent, 'middle', 0, 600));
+  s += cam('COTAS', halo(sText(V[0] + rT * Math.cos(am), V[1] + rT * Math.sin(am), fmt(R.incl, 1) + '°', fs * 0.9, C.accent, 'middle', 0, 600)));
 
   /* corrimão: altura medida na vertical a partir da linha dos bocéis; desenhada fora de escala (cota interrompida) */
   const Hd = h => h * 0.4;
@@ -174,7 +173,7 @@ function detalheSVG(R, o, C) {
   alturas.forEach((h, i) => {
     const L0 = [xr0, zn(xr0) + Hd(h)], L1 = [xr1, zn(xr1) + Hd(h)];
     const band = [add(L0, n, rr), add(L1, n, rr), add(L1, n, -rr), add(L0, n, -rr)];
-    s += sPoly(band, C.piso, C.ink, 1.3);
+    s += cam('CORRIMAO', sPoly(band, C.piso, C.ink, 1.3));
     band.forEach(q => B(q[0], q[1]));
     const xd = 3 * p - (alturas.length - 1 - i) * Math.max(p * 0.42, fs * 3.2);
     s += sCircle(xd, zn(xd), fs * 0.18, C.ink);
@@ -189,7 +188,7 @@ function detalheSVG(R, o, C) {
   const zi = Math.min(zTopLim - fs * 2.2 - 8, -2);
   s += '<rect x="' + r2(xw - 3) + '" y="' + r2(-(zi + 8)) + '" width="3" height="16" fill="url(#' + id + ')" stroke="' + C.ink + '" stroke-width="1.3" ' + NS + '/>';
   const cx = xw + 4 + rr;
-  s += sCircle(cx, zi, rr, C.piso, C.ink, 1.4);
+  s += cam('CORRIMAO', sCircle(cx, zi, rr, C.piso, C.ink, 1.4));
   s += sLine([cx - rr - 1, zi], [cx + rr + 1, zi], C.muted, 0.7, '2 2') + sLine([cx, zi - rr - 1], [cx, zi + rr + 1], C.muted, 0.7, '2 2');
   s += hDim(xw, xw + 4, zi - rr - fs * 1.4, '', zi - 8, zi - rr * 0.2);
   s += halo(sText(xw + 2, zi - rr - fs * 2.6, '≥ 4', fs * 0.85, C.ink, 'middle', 0, 500));
@@ -231,14 +230,15 @@ function detalheSVG(R, o, C) {
   const zN0 = bb[1] - fs * 2;
   notas.forEach((t, i) => { s += sText(vx + fs * 1.2, zN0 - i * lh, t, fN, C.ink, 'start', 0, i === 0 ? 600 : 400); });
   const yT = zN0 - notas.length * lh - fs * 0.6;
-  s += sLine([vx + fs * 0.5, yT], [vx + vw - fs * 0.5, yT], C.ink, 1.2);
-  s += sText(vx + fs * 1.2, yT - fs * 1.5, tb1, fs * 0.95, C.ink, 'start', 0, 600);
-  s += sText(vx + fs * 1.2, yT - fs * 3.0, tb2, fs * 0.8, C.muted, 'start', 0, 400);
+  let tt = sLine([vx + fs * 0.5, yT], [vx + vw - fs * 0.5, yT], C.ink, 1.2);
+  tt += sText(vx + fs * 1.2, yT - fs * 1.5, tb1, fs * 0.95, C.ink, 'start', 0, 600);
+  tt += sText(vx + fs * 1.2, yT - fs * 3.0, tb2, fs * 0.8, C.muted, 'start', 0, 400);
   /* escala gráfica 0-10-20 cm em tamanho real do desenho */
   const x0 = vx + fs * 1.2, y0 = yT - fs * 5.0, hh = fs * 0.5;
-  [0, 1].forEach(i => { s += '<rect x="' + r2(x0 + i * 10) + '" y="' + r2(-y0 - hh) + '" width="10" height="' + r2(hh) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
-  [0, 10, 20].forEach(v => { s += sText(x0 + v, y0 - fs * 0.85, String(v), fs * 0.7, C.muted, 'middle'); });
-  s += sText(x0 + 22, y0 + hh / 2, 'cm', fs * 0.7, C.muted, 'start');
+  [0, 1].forEach(i => { tt += '<rect x="' + r2(x0 + i * 10) + '" y="' + r2(-y0 - hh) + '" width="10" height="' + r2(hh) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
+  [0, 10, 20].forEach(v => { tt += sText(x0 + v, y0 - fs * 0.85, String(v), fs * 0.7, C.muted, 'middle'); });
+  tt += sText(x0 + 22, y0 + hh / 2, 'cm', fs * 0.7, C.muted, 'start');
+  s += cam('TITULO', tt);
   const ymin = y0 - fs * 2.2, ymax = bb[3] + m;
   const bg = '<rect x="' + r2(vx) + '" y="' + r2(-ymax) + '" width="' + r2(vw) + '" height="' + r2(ymax - ymin) + '" fill="' + C.paper + '"/>';
   return svgWrap(vx, -ymax, vw, ymax - ymin, bg + s, o, defs);

@@ -486,4 +486,75 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   ok(/'limite: '/.test(ui2) && !/<span>referência ' \+ c\.regra/.test(ui2),'lista de verificações: "limite:" nas exigências e "referência:" só em atenção/informação');
 }
 
+/* exportação DXF (R12) e opção o.fs dos desenhos */
+{
+  const {dxfDe,dxfBytes,TIPOS}=require('./carregar.js');
+  const todas=['planta','plantaSup','corteA','corteB','elevacao','detalhe'];
+  /* lê o DXF em pares código/valor e separa as entidades (POLYLINE junta os VERTEX) */
+  const ler=s=>{
+    const l=s.split('\r\n'); const fimOk=l.pop()==='';
+    const p=[]; for(let i=0;i+1<l.length;i+=2) p.push([l[i].trim(),l[i+1]]);
+    const ents=[], camTab=new Set(); let sec=null, tab=null, e=null;
+    p.forEach(([c,v],i)=>{
+      if(c==='2'&&i&&p[i-1][1]==='SECTION'){sec=v;return;}
+      if(c==='2'&&i&&p[i-1][1]==='TABLE'){tab=v;return;}
+      if(sec==='TABLES'&&tab==='LAYER'&&c==='2'&&p[i-1][1]==='LAYER') camTab.add(v);
+      if(sec!=='ENTITIES') return;
+      if(c==='0'){ if(v==='VERTEX'&&e&&e.t==='POLYLINE'){e.v=[0,0];return;} if(v==='SEQEND'){return;} e={t:v,cam:null,pts:[],n:{}}; if(v!=='ENDSEC'&&v!=='EOF') ents.push(e); return; }
+      if(!e) return;
+      if(c==='8'&&!e.cam) e.cam=v;
+      if(c==='10'||c==='11'){ if(e.t==='POLYLINE'&&!e.v) return; e.x=+v; }
+      else if(c==='20'||c==='21'){ if(e.t==='POLYLINE'&&!e.v) return; e.pts.push([e.x,+v]); }
+      else e.n[c]=v;
+    });
+    return {p,ents,camTab,fimOk,impar:l.length%2};
+  };
+  const segs=en=>{const o=[]; en.forEach(e=>{ if(e.t==='LINE') o.push([e.pts[0],e.pts[1]]); if(e.t==='POLYLINE') for(let i=0;i+1<e.pts.length;i++) o.push([e.pts[i],e.pts[i+1]]); }); return o;};
+  const bboxDe=pts=>pts.reduce((b,q)=>[Math.min(b[0],q[0]),Math.min(b[1],q[1]),Math.max(b[2],q[0]),Math.max(b[3],q[1])],[Infinity,Infinity,-Infinity,-Infinity]);
+  TIPOS.forEach(t=>{
+    const R=calc({tipo:t.id}), s=dxfDe(R,C,{vistas:todas}), d=ler(s);
+    const sec=d.p.filter(([c,v])=>c==='0'&&v==='SECTION').length, fim=d.p.filter(([c,v])=>c==='0'&&v==='ENDSEC').length, ult=d.p[d.p.length-1];
+    ok(d.fimOk && !d.impar && d.p.every(([c])=>/^\d+$/.test(c)) && sec===3 && fim===3 && ult[0]==='0' && ult[1]==='EOF','DXF '+t.id+': pares código/valor, 3 seções fechadas e EOF');
+    ok(!/NaN|undefined|Infinity|null/.test(s) && /\r\n\$ACADVER\r\n1\r\nAC1009\r\n/.test(s) && /\$DWGCODEPAGE\r\n3\r\nANSI_1252/.test(s),'DXF '+t.id+': sem NaN, versão R12 (AC1009) e página de código 1252');
+    const n={}; d.ents.forEach(e=>n[e.t]=(n[e.t]||0)+1);
+    ok(['LINE','POLYLINE','TEXT','CIRCLE','ARC','SOLID'].every(k=>n[k]>0) && (s.match(/\r\n0\r\nVERTEX\r\n/g)||[]).length>=3*n.POLYLINE-1 && (s.match(/\r\n0\r\nSEQEND\r\n/g)||[]).length===n.POLYLINE,'DXF '+t.id+': entidades de todos os tipos ('+Object.keys(n).map(k=>k+' '+n[k]).join(', ')+')');
+    const usadas=new Set(d.ents.map(e=>e.cam));
+    const precisa=['CONTORNO','VISTA','COTAS','TEXTO','TITULO','HACHURA','LINHA_CAMINHAMENTO','LINHA_CORTE','VAO_LAJE','CORRIMAO'].concat(R.hel?['PILAR']:[]).concat(R.nReto?['DEGRAUS']:[]).concat(R.nPat?['PATAMAR']:[]).concat(R.nLeque&&!R.hel?['LEQUE']:[]);
+    ok(precisa.every(c=>usadas.has(c)) && [...usadas].every(c=>d.camTab.has(c)),'DXF '+t.id+': camadas presentes e todas declaradas na tabela LAYER'+(precisa.filter(c=>!usadas.has(c)).length?' (faltam '+precisa.filter(c=>!usadas.has(c))+')':''));
+    /* metros = centímetros / 100, nas coordenadas, raios e alturas de texto */
+    const em=ler(dxfDe(R,C,{vistas:todas,unidade:'m'})).ents, ec=ler(dxfDe(R,C,{vistas:todas,unidade:'cm'})).ents;
+    let igual=em.length===ec.length;
+    if(igual) em.forEach((e,i)=>{ const f=ec[i]; if(e.t!==f.t||e.pts.length!==f.pts.length) igual=false; else { e.pts.forEach((q,j)=>{ if(Math.abs(q[0]-f.pts[j][0]/100)>2e-6||Math.abs(q[1]-f.pts[j][1]/100)>2e-6) igual=false; }); if(e.n['40']!==undefined && Math.abs(+e.n['40']-f.n['40']/100)>2e-6) igual=false; if(e.n['50']!==f.n['50']) igual=false; } });
+    ok(igual,'DXF '+t.id+': em metros é o mesmo desenho em centímetros dividido por 100');
+    /* a planta sozinha fica na origem do app e tem o tamanho de R.bbox */
+    const pl=ler(dxfDe(R,C,{vistas:['planta']})).ents.filter(e=>['DEGRAUS','PATAMAR','LEQUE','PROJECAO'].includes(e.cam)&&(e.t==='POLYLINE'||e.t==='LINE'));
+    const bb=bboxDe([].concat(...pl.map(e=>e.pts)));
+    ok(bb.every((v,i)=>Math.abs(v-R.bbox[i]/100)<=1e-4+1e-9),'DXF '+t.id+': planta na origem do app, do tamanho de R.bbox ('+bb.map(v=>v.toFixed(3)).join(' ')+')');
+  });
+  /* padrão: planta, corte A e corte B, em metros, com a unidade escrita no desenho */
+  const R0=calc({}), s0=dxfDe(R0,C);
+  ok(/PLANTA DO PAVIMENTO INFERIOR/.test(s0) && /CORTE A-A/.test(s0) && /CORTE B-B/.test(s0) && !/DETALHE DO DEGRAU/.test(s0) && /Unidade: metros/.test(s0) && /Unidade: centímetros/.test(dxfDe(R0,C,{unidade:'cm'})),'DXF: vistas padrão (planta, cortes A e B) e "Unidade: metros" escrito no desenho');
+  ok(/ELEVAÇÃO · LADO DIREITO/.test(dxfDe(R0,C,{vistas:['elevacao'],ladoElev:'direita'})),'DXF: elevação do lado pedido');
+  let erro=null; try{dxfDe(R0,C,{vistas:['nada']});}catch(e){erro=e;} ok(erro instanceof RangeError,'DXF: sem vista válida dá erro (não sai arquivo vazio)');
+  /* tracejado vira tipo de linha; hachura vira linhas na camada HACHURA */
+  const dl=ler(s0).ents;
+  ok(dl.some(e=>e.n['6']==='DASHED') && dl.some(e=>e.n['6']==='DASHDOT'&&e.cam==='LINHA_CORTE') && dl.filter(e=>e.cam==='HACHURA'&&e.t==='LINE').length>20 && /\r\n2\r\nDASHED\r\n70\r\n0\r\n3\r\n/.test(s0),'DXF: tracejado e traço-ponto com tipo de linha, hachura em linhas');
+  /* linhas escondidas: no corte da helicoidal, nada do que está em vista atravessa o pilar cortado */
+  const H=calc({tipo:'helicoidal'}), hc=ler(dxfDe(H,C,{vistas:['corteA'],unidade:'cm'})).ents, r=H.pole.r, zU=H.H-H.st.espLaje;
+  const atravessa=segs(hc.filter(e=>e.cam==='VISTA')).some(([a,b])=>{ for(let i=1;i<20;i++){const x=a[0]+(b[0]-a[0])*i/20, y=a[1]+(b[1]-a[1])*i/20; if(Math.abs(x)<r-0.05&&y>0.05&&y<zU-0.05) return true;} return false; });
+  ok(!atravessa && hc.some(e=>e.cam==='PILAR'),'DXF: no corte da helicoidal o pilar cortado esconde os degraus em vista atrás dele');
+  /* acentos: windows-1252; o que não existe nele (≥) vira ">=" */
+  const b=dxfBytes('ção±Ø°×–€'); ok(b instanceof Uint8Array && [...b].join(',')===[0xE7,0xE3,0x6F,0xB1,0xD8,0xB0,0xD7,0x96,0x80].join(','),'dxfBytes: acentos e símbolos em windows-1252');
+  const sd=dxfDe(R0,C,{vistas:['detalhe']});
+  ok(/>= 4/.test(sd) && !/≥/.test(sd) && [...sd].every(ch=>{const c=ch.codePointAt(0); return c<0x80||(c>=0xA0&&c<=0xFF)||'€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ'.includes(ch);}) && /PISO SUPERIOR/.test(s0) && /±0,00/.test(s0),'DXF: só caracteres do windows-1252 (≥ vira >=), com "PISO SUPERIOR" e "±0,00"');
+  /* o.fs: troca o tamanho do texto; sem ele (ou 0) o desenho é o mesmo de sempre */
+  const semId=s=>s.replace(/(hch|hcc|dtl)\d+/g,'ID');
+  const fonte=s=>[...s.matchAll(/font-size="([\d.]+)"/g)].map(m=>+m[1]);
+  ok(fonte(planSVG(R0,{fs:10},C)).includes(9.5) && fonte(planSVG(R0,{fs:20},C)).includes(19) && fonte(corteSVG(R0,{fs:10},C,'A')).includes(9.5) && fonte(detalheSVG(R0,{fs:3},C)).includes(2.7) && fonte(elevacaoSVG(R0,{fs:4},C,'frente')).includes(3.8),'o.fs muda o tamanho base do texto (planta, corte, elevação e detalhe)');
+  ok(planSVG(R0,{},C)===planSVG(R0,{fs:undefined},C) && planSVG(R0,{},C)===planSVG(R0,{fs:0},C) && semId(corteSVG(R0,{},C,'B'))===semId(corteSVG(R0,{fs:null},C,'B')) && semId(detalheSVG(R0,{},C))===semId(detalheSVG(R0,{fs:undefined},C)),'sem o.fs o desenho não muda');
+  ok(/<g data-camada="COTAS">/.test(planSVG(R0,{},C)) && /<g data-camada="CORRIMAO">/.test(corteSVG(R0,{},C,'A')) && /<g data-camada="LINHA_BOCEIS">/.test(detalheSVG(R0,{},C)) && /data-camada="NUMEROS"/.test(planSVG(R0,{},C)),'desenhos marcados com data-camada');
+  const fs10=dxfDe(R0,C,{vistas:['planta'],fs:10,unidade:'cm'}), fsN=dxfDe(R0,C,{vistas:['planta'],unidade:'cm'});
+  ok(fs10!==fsN && /\r\n40\r\n6\.65\r\n/.test(fs10),'DXF: op.fs chega aos desenhos (altura do texto = 0,7 × corpo)');
+}
+
 console.log(fail?fail+' falha(s)':'todos passaram');

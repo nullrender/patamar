@@ -4,6 +4,11 @@ const escXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const NS = 'vector-effect="non-scaling-stroke"';
 let HCH = 0;
 const FONT = "'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace";
+/* camada: marca um trecho do desenho com o nome da camada que ele recebe na exportação DXF (data-camada).
+   Um <g> sem estilo não muda nada na tela. */
+function cam(nome, s) { return s ? '<g data-camada="' + nome + '">' + s + '</g>' : ''; }
+/* tamanho base do texto (cm no desenho): o.fs, quando a prancha em escala pede um tamanho fixo; senão, o automático */
+const fsDe = (o, auto) => (o && o.fs > 0 ? o.fs : auto);
 
 function sLine(a, b, col, w, dash) {
   return '<line x1="' + r2(a[0]) + '" y1="' + r2(-a[1]) + '" x2="' + r2(b[0]) + '" y2="' + r2(-b[1]) + '" stroke="' + col + '" stroke-width="' + w + '" ' + NS + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
@@ -38,7 +43,7 @@ function dimLine(a, b, ux, uy, dist, label, fs, C) {
   let ang = deg(Math.atan2(-dy, dx)); if (ang > 90) ang -= 180; if (ang <= -90) ang += 180;
   const mxp = (A[0] + B[0]) / 2 + ux * fs * 0.95, myp = (A[1] + B[1]) / 2 + uy * fs * 0.95;
   s += sText(mxp, myp, label, fs * 0.95, C.ink, 'middle', ang, 500);
-  return s;
+  return cam('COTAS', s);
 }
 
 function treadFill(kind, C) { return kind === 'leque' ? C.winder : kind === 'patamar' ? C.patamar : C.tread; }
@@ -69,7 +74,7 @@ function titleBlock(vx, ymin, vw, fs, l1, l2, C) {
   [0, 1].forEach(i => { s += '<rect x="' + r2(x0 + i * 50) + '" y="' + r2(-y0 - h) + '" width="50" height="' + r2(h) + '" fill="' + (i ? C.paper : C.ink) + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>'; });
   [0, 50, 100].forEach(v => { s += sText(x0 + v, y0 - fs * 0.9, String(v), fs * 0.7, C.muted, 'middle'); });
   s += sText(x0 + 108, y0 - fs * 0.15, 'cm', fs * 0.7, C.muted, 'start');
-  return s;
+  return cam('TITULO', s);
 }
 
 function planSVG(R, o, C) {
@@ -79,7 +84,7 @@ function planSVG(R, o, C) {
   const sup = modo === 'sup';
   let bbA = thumb ? R.bbox : R.bboxAll; const bb = R.bbox;
   const span0 = Math.max(bbA[2] - bbA[0], bbA[3] - bbA[1]);
-  const fs = thumb ? span0 / 14 : clamp(span0 / 40, 5, 14);
+  const fs = thumb ? span0 / 14 : fsDe(o, clamp(span0 / 40, 5, 14));
   /* as chamadas de corte deslocadas podem cair fora da escada: o desenho cresce para mostrá-las */
   const comCortes = !thumb && modoInf(o, R) && (o.cortes === true || (o.cortes !== false && R.st.showCortes !== false));
   const bbEsc = bbA;
@@ -96,10 +101,10 @@ function planSVG(R, o, C) {
   let s = '';
   if (!thumb) {
     const arr = R.arrival, ac = centroid(arr.pts);
-    s += sSolidArrival(arr.pts, sup, C);
+    s += cam('PISO_SUPERIOR', sSolidArrival(arr.pts, sup, C));
     if (!sup) {
-      s += sText(ac[0], ac[1] + fs * 0.6, R.hel ? 'PISO SUP.' : 'PISO SUPERIOR', fs * 0.72, C.muted, 'middle', 0, 500);
-      s += sText(ac[0], ac[1] - fs * 0.7, nivel(R.H), fs * 0.8, C.ink, 'middle', 0, 600);
+      s += cam('TEXTO', sText(ac[0], ac[1] + fs * 0.6, R.hel ? 'PISO SUP.' : 'PISO SUPERIOR', fs * 0.72, C.muted, 'middle', 0, 500) +
+        sText(ac[0], ac[1] - fs * 0.7, nivel(R.H), fs * 0.8, C.ink, 'middle', 0, 600));
     }
   }
   let clipId = null;
@@ -108,15 +113,15 @@ function planSVG(R, o, C) {
     const cid = clipId = 'cl' + Math.random().toString(36).slice(2, 8);
     const shape = op.circle ? '<circle cx="0" cy="0" r="' + r2(op.circle) + '"/>' : '<rect x="' + r2(op.bbox[0]) + '" y="' + r2(-op.bbox[3]) + '" width="' + r2(op.bbox[2] - op.bbox[0]) + '" height="' + r2(op.bbox[3] - op.bbox[1]) + '"/>';
     s += '<defs><clipPath id="' + cid + '">' + shape + '</clipPath></defs><g clip-path="url(#' + cid + ')">';
-    R.polys.forEach(pl => { s += sPoly(pl.pts, treadFill(pl.kind, C), C.ink, 1.5); });
+    R.polys.forEach(pl => { s += cam(camadaDegrau(pl), sPoly(pl.pts, treadFill(pl.kind, C), C.ink, 1.5)); });
     s += '</g>';
   } else {
     /* pavimento inferior: primeiro o que está abaixo do corte (traço cheio), depois a projeção do que está acima (tracejado, por cima) */
     const on = pl => !useCut ? true : visible(pl);
-    R.polys.forEach(pl => { if (on(pl)) s += sPoly(pl.pts, treadFill(pl.kind, C), C.ink, thumb ? 1 : 1.5); });
-    R.polys.forEach(pl => { if (!on(pl)) s += sPoly(pl.pts, treadFill(pl.kind, C), C.muted, 1.1, '6 4', R.hel ? 0 : 0.28); });
+    R.polys.forEach(pl => { if (on(pl)) s += cam(camadaDegrau(pl), sPoly(pl.pts, treadFill(pl.kind, C), C.ink, thumb ? 1 : 1.5)); });
+    R.polys.forEach(pl => { if (!on(pl)) s += cam('PROJECAO', sPoly(pl.pts, treadFill(pl.kind, C), C.muted, 1.1, '6 4', R.hel ? 0 : 0.28)); });
   }
-  if (R.hel) s += sCircle(0, 0, R.helix.rc, C.ink, C.ink, 1);
+  if (R.hel) s += cam('PILAR', sCircle(0, 0, R.helix.rc, C.ink, C.ink, 1));
   if (!thumb && !sup && useCut && kCut >= 1 && kCut < T) {
     const nx = R.polys[kCut];
     if (nx && nx.entry) s += breakLine(nx.entry[0], nx.entry[1], fs, C);
@@ -124,28 +129,30 @@ function planSVG(R, o, C) {
   /* vão na laje */
   if (!thumb && o.opening !== false && op) {
     const dash = sup ? null : '7 5', col = sup ? C.ink : C.info, wd = sup ? 2.8 : 1.8;
-    if (op.circle) s += '<circle cx="0" cy="0" r="' + r2(op.circle) + '" fill="none" stroke="' + col + '" stroke-width="' + wd + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' ' + NS + '/>';
-    else { const q = op.bbox; s += sPoly([[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]], 'none', col, wd, dash); }
+    if (op.circle) s += cam('VAO_LAJE', '<circle cx="0" cy="0" r="' + r2(op.circle) + '" fill="none" stroke="' + col + '" stroke-width="' + wd + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' ' + NS + '/>');
+    else { const q = op.bbox; s += cam('VAO_LAJE', sPoly([[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]], 'none', col, wd, dash)); }
   }
   /* linha de caminhamento + seta (na planta superior, recortadas pela abertura junto com os números) */
   let rotulos = '';
   if (clipId) s += '<g clip-path="url(#' + clipId + ')">';
   if (o.walk !== false && R.walk.length) {
-    R.walk.forEach(wl => { s += sPolyline(wl, C.accent, thumb ? 1.6 : 2.3); });
+    let wk = '';
+    R.walk.forEach(wl => { wk += sPolyline(wl, C.accent, thumb ? 1.6 : 2.3); });
     const all = [].concat.apply([], R.walk);
     const first = all[0], f2 = all.find(q => Math.hypot(q[0] - first[0], q[1] - first[1]) > 1) || first;
     const end = all[all.length - 1], pre = all.slice().reverse().find(q => Math.hypot(q[0] - end[0], q[1] - end[1]) > 1) || end;
     const head = sup ? first : end, hpre = sup ? f2 : pre, tail = sup ? end : first, tnext = sup ? pre : f2;
     let ux = head[0] - hpre[0], uy = head[1] - hpre[1]; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
     const hs = fs * (thumb ? 1.3 : 1.2), base = [head[0] - ux * hs, head[1] - uy * hs];
-    s += sPoly([[head[0] + ux * hs * 0.2, head[1] + uy * hs * 0.2], [base[0] - uy * hs * 0.5, base[1] + ux * hs * 0.5], [base[0] + uy * hs * 0.5, base[1] - ux * hs * 0.5]], C.accent, C.accent, 1);
-    s += sCircle(tail[0], tail[1], fs * 0.5, C.accent);
+    wk += sPoly([[head[0] + ux * hs * 0.2, head[1] + uy * hs * 0.2], [base[0] - uy * hs * 0.5, base[1] + ux * hs * 0.5], [base[0] + uy * hs * 0.5, base[1] - ux * hs * 0.5]], C.accent, C.accent, 1);
+    wk += sCircle(tail[0], tail[1], fs * 0.5, C.accent);
+    s += cam('LINHA_CAMINHAMENTO', wk);
     if (!thumb) {
       let fx = tail[0] - tnext[0], fy = tail[1] - tnext[1]; const fl = Math.hypot(fx, fy) || 1; fx /= fl; fy /= fl;
       let d1 = fs * 2.6, d2 = fs * 4.4;
       if (R.hel) { const tl = Math.hypot(tail[0], tail[1]) || 1; fx = tail[0] / tl; fy = tail[1] / tl; d1 += R.dw; d2 += R.dw; }
-      rotulos += sText(tail[0] + fx * d1, tail[1] + fy * d1, sup ? 'DESCE' : 'SOBE', fs * 0.95, C.accent, 'middle', 0, 600);
-      rotulos += sText(tail[0] + fx * d2, tail[1] + fy * d2, sup ? nivel(R.H) : nivel(0), fs * 0.85, C.ink, 'middle', 0, 600);
+      rotulos += cam('TEXTO', sText(tail[0] + fx * d1, tail[1] + fy * d1, sup ? 'DESCE' : 'SOBE', fs * 0.95, C.accent, 'middle', 0, 600) +
+        sText(tail[0] + fx * d2, tail[1] + fy * d2, sup ? nivel(R.H) : nivel(0), fs * 0.85, C.ink, 'middle', 0, 600));
     }
   }
   /* numeração dos degraus */
@@ -157,13 +164,13 @@ function planSVG(R, o, C) {
       if (R.hel) { const mid = pl.arc.outer.length >> 1; const ph = Math.atan2(pl.arc.outer[mid][1], pl.arc.outer[mid][0]); cx = R.helix.rw * Math.cos(ph); cy = R.helix.rw * Math.sin(ph); }
       else { const c = centroid(pl.pts); cx = c[0]; cy = c[1]; }
       const on = !useCut && !sup ? true : visible(pl);
-      s += '<g stroke="' + treadFill(pl.kind, C) + '" stroke-width="' + r2(fs * 0.45) + '" stroke-linejoin="round" paint-order="stroke">' + sText(cx, cy, String(pl.k), fs * 0.85, on ? C.ink : C.muted, 'middle', 0, 500) + '</g>';
+      s += '<g data-camada="NUMEROS" stroke="' + treadFill(pl.kind, C) + '" stroke-width="' + r2(fs * 0.45) + '" stroke-linejoin="round" paint-order="stroke">' + sText(cx, cy, String(pl.k), fs * 0.85, on ? C.ink : C.muted, 'middle', 0, 500) + '</g>';
     });
   }
   if (clipId) s += '</g>';
   s += rotulos;
   /* chamadas dos cortes A-A e B-B (só na planta do pavimento inferior) */
-  if (comCortes) s += chamadaCorte(R, 'A', fs, C, bbEsc) + chamadaCorte(R, 'B', fs, C, bbEsc);
+  if (comCortes) s += cam('LINHA_CORTE', chamadaCorte(R, 'A', fs, C, bbEsc) + chamadaCorte(R, 'B', fs, C, bbEsc));
   /* ponta mais estreita dos degraus balanceados: marca no canto interno */
   if (showDims && !sup && R.bal && R.nLeque) {
     const lqs = R.polys.filter(pl => pl.kind === 'leque');
@@ -171,14 +178,14 @@ function planSVG(R, o, C) {
     const I = pm.entry[1], c = centroid(pm.pts);
     let dx = I[0] - c[0], dy = I[1] - c[1]; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
     const T2 = [I[0] + dx * fs * 2.2, I[1] + dy * fs * 2.2];
-    s += sLine(I, T2, C.accent, 0.9) + sText(T2[0] + dx * fs * 1.6, T2[1] + dy * fs * 0.9, 'ponta ' + fmt(pm.wIn, 1), fs * 0.75, C.accent, 'middle', 0, 600);
+    s += cam('COTAS', sLine(I, T2, C.accent, 0.9) + sText(T2[0] + dx * fs * 1.6, T2[1] + dy * fs * 0.9, 'ponta ' + fmt(pm.wIn, 1), fs * 0.75, C.accent, 'middle', 0, 600));
   }
   /* cotas */
   if (showDims) {
     const topGap = (bbEsc[3] - bb[3]) + fs * 5.4, rightGap = (bbEsc[2] - bb[2]) + fs * 5.4;
     if (R.hel) {
       s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, 'Ø ' + fmt(R.helix.R * 2, 0), fs, C);
-      s += sText(0, -R.helix.R - fs * 7.2, 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau', fs * 0.85, C.muted, 'middle');
+      s += cam('COTAS', sText(0, -R.helix.R - fs * 7.2, 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau', fs * 0.85, C.muted, 'middle'));
     } else {
       s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, fmt(bb[2] - bb[0], 0), fs, C);
       s += dimLine([bb[2], bb[1]], [bb[2], bb[3]], 1, 0, rightGap, fmt(bb[3] - bb[1], 0), fs, C);
@@ -205,6 +212,8 @@ function planSVG(R, o, C) {
   }
   return svgWrap(vx, vy, vw, vh, s, o);
 }
+/* camada do degrau na planta, pelo tipo de superfície */
+function camadaDegrau(pl) { return pl.kind === 'patamar' ? 'PATAMAR' : pl.kind === 'leque' ? 'LEQUE' : 'DEGRAUS'; }
 function sSolidArrival(pts, sup, C) {
   return sup ? sPoly(pts, C.piso, C.ink, 1.6) : sPoly(pts, C.piso, C.muted, 1, '5 4');
 }
@@ -214,7 +223,7 @@ function sectionSVG(R, o, C) {
   const H = R.H, e = R.e, X = R.Wtot, st = R.st;
   const left = -70, slabR = 110, right = X + slabR;
   const span = Math.max(right - left, H + 90);
-  const fs = clamp(span / 46, 5, 13);
+  const fs = fsDe(o, clamp(span / 46, 5, 13));
   const xmin = left - fs * 4, xmax = right + fs * 8;
   const ymin = -fs * 15.5, ymax = H + 92 + fs * 3;
   const vx = xmin, vy = -ymax, vw = xmax - xmin, vh = ymax - ymin;
@@ -262,7 +271,7 @@ function sectionSVG(R, o, C) {
     alturas.forEach(hR => {
       const pl = nos.concat([[X, H]]).map(q => [q[0], q[1] + hR]);
       if (ext) { pl.unshift([pl[0][0] - ext, pl[0][1]]); pl.push([pl[pl.length - 1][0] + ext, pl[pl.length - 1][1]]); }
-      s += sPolyline(pl, C.ink, 1.1);
+      s += cam('CORRIMAO', sPolyline(pl, C.ink, 1.1));
     });
     if (ext) s += sText(X + ext / 2, H + 92 + fs * 1.1, '+30', fs * 0.7, C.muted, 'middle');
     s += sLine([nos[0][0], nos[0][1] + 92], [nos[0][0], nos[0][1]], C.muted, 0.8, '3 3');
@@ -276,7 +285,7 @@ function sectionSVG(R, o, C) {
     if (z1 > zU && last[1] < zU) { const t = (zU - last[1]) / (z1 - last[1]); hp.push([last[0] + (kcPoly.x0 - last[0]) * t, zU]); }
   }
   if (hp.length > 1) {
-    s += sPolyline(hp, C.accent, 1.7, '6 4');
+    s += cam('ALTURA_LIVRE', sPolyline(hp, C.accent, 1.7, '6 4'));
     const lp = hp[Math.max(0, hp.length - 2)];
     s += sText(lp[0] + fs * 0.8, lp[1] - fs * 1.6, 'altura livre ' + fmt(st.hLivre, 0), fs * 0.85, C.accent, 'start', 0, 500);
   }
@@ -373,7 +382,7 @@ function corteSVG(R, o, C, qual, lado) {
   const todos = []; R.polys.forEach(pl => pl.pts.forEach(q => todos.push(S(q)))); R.arrival.pts.forEach(q => todos.push(S(q)));
   if (R.hel) todos.push(-R.helix.R, R.helix.R);
   const s0 = Math.min.apply(null, todos) - 70, s1 = Math.max.apply(null, todos) + 70;
-  const span = Math.max(s1 - s0, H + 60), fs = clamp(span / 46, 5, 13);
+  const span = Math.max(s1 - s0, H + 60), fs = fsDe(o, clamp(span / 46, 5, 13));
   const hid = 'hch' + (++HCH), hid2 = 'hcc' + HCH;
   const defs = '<defs><pattern id="' + hid + '" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="' + C.muted + '" stroke-width="1"/></pattern>' +
     '<pattern id="' + hid2 + '" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="' + C.tread + '"/><line x1="0" y1="0" x2="0" y2="9" stroke="' + C.ink + '" stroke-width="0.9"/></pattern></defs>';
@@ -412,7 +421,7 @@ function corteSVG(R, o, C, qual, lado) {
   const fundoEm = (it, sx) => { const f = it.fundo; if (sx <= f[0][0]) return f[0][1]; for (let i = 1; i < f.length; i++) if (sx <= f[i][0]) { const a = f[i - 1], b = f[i], t = (sx - a[0]) / ((b[0] - a[0]) || 1); return a[1] + (b[1] - a[1]) * t; } return f[f.length - 1][1]; };
   grupos2.forEach(g => {
     const prof = Math.min.apply(null, g.map(it => it.prof));
-    if (g.length === 1) { const it = g[0]; vistas.push({ prof, svg: sPoly([[it.ta, it.top], [it.tb, it.top]].concat(it.fundo.slice().reverse()), treadFill(it.kind, C), C.ink, 0.9) }); return; }
+    if (g.length === 1) { const it = g[0]; vistas.push({ prof, svg: cam('VISTA', sPoly([[it.ta, it.top], [it.tb, it.top]].concat(it.fundo.slice().reverse()), treadFill(it.kind, C), C.ink, 0.9)) }); return; }
     /* contorno da união: em cada trecho entre bordas, topo = o mais alto e fundo = o mais baixo dos degraus que cobrem o trecho */
     const bps = []; g.forEach(it => { bps.push(it.ta, it.tb); it.fundo.forEach(q => bps.push(q[0])); });
     bps.sort((a, b) => a - b);
@@ -428,22 +437,22 @@ function corteSVG(R, o, C, qual, lado) {
     let svg = sPoly(topo.concat(baixo.reverse()), treadFill(g[0].kind, C), C.ink, 0.9);
     /* de frente: as linhas dos bocéis (topo de cada degrau) aparecem; de lado e por baixo, não */
     if (g[0].cls === 'frente') g.forEach(it => { svg += sLine([it.ta, it.top], [it.tb, it.top], C.ink, 0.7); });
-    vistas.push({ prof, svg });
+    vistas.push({ prof, svg: cam('VISTA', svg) });
   });
   /* dente da chegada (espelho do último degrau sob a laje de cima) em vista */
   if (R.dente) {
     const lado = ladoDeLa(R.dente.pts, P0, n);
-    if (lado.length >= 3) { const ss = lado.map(S), ta = Math.min.apply(null, ss), tb = Math.max.apply(null, ss); if (tb - ta > 1e-6) vistas.push({ prof: Math.min.apply(null, lado.map(Dp)), svg: sPoly([[ta, R.dente.z1], [tb, R.dente.z1], [tb, R.dente.z0], [ta, R.dente.z0]], C.tread, C.ink, 0.9) }); }
+    if (lado.length >= 3) { const ss = lado.map(S), ta = Math.min.apply(null, ss), tb = Math.max.apply(null, ss); if (tb - ta > 1e-6) vistas.push({ prof: Math.min.apply(null, lado.map(Dp)), svg: cam('VISTA', sPoly([[ta, R.dente.z1], [tb, R.dente.z1], [tb, R.dente.z0], [ta, R.dente.z0]], C.tread, C.ink, 0.9)) }); }
   }
   /* pilar da helicoidal em vista, quando fica além do plano: entra na ordem de profundidade como os degraus */
   const zU0 = H - st.espLaje;
-  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (d > R.pole.r) vistas.push({ prof: d - R.pole.r, svg: '<rect x="' + r2(c - R.pole.r) + '" y="' + r2(-zU0) + '" width="' + r2(2 * R.pole.r) + '" height="' + r2(zU0) + '" fill="' + C.paper + '" stroke="' + C.ink + '" stroke-width="0.9" ' + NS + '/>' }); }
+  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (d > R.pole.r) vistas.push({ prof: d - R.pole.r, svg: cam('PILAR', '<rect x="' + r2(c - R.pole.r) + '" y="' + r2(-zU0) + '" width="' + r2(2 * R.pole.r) + '" height="' + r2(zU0) + '" fill="' + C.paper + '" stroke="' + C.ink + '" stroke-width="0.9" ' + NS + '/>') }); }
   vistas.sort((a, b) => b.prof - a.prof);
   vistas.forEach(v => { s += v.svg; });
   if (elev) {
     /* na elevação nada é cortado: a laje do piso de cima aparece em vista, como a faixa da borda dela (traço fino, sem hachura).
        Ela passa na frente do que fica atrás dela nessa altura; por isso é desenhada depois das vistas da escada, mas antes dos corrimãos, que ficam visíveis. */
-    s += '<rect x="' + r2(s0) + '" y="' + r2(-H) + '" width="' + r2(s1 - s0) + '" height="' + r2(st.espLaje) + '" fill="' + C.piso + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>';
+    s += cam('VISTA', '<rect x="' + r2(s0) + '" y="' + r2(-H) + '" width="' + r2(s1 - s0) + '" height="' + r2(st.espLaje) + '" fill="' + C.piso + '" stroke="' + C.ink + '" stroke-width="1" ' + NS + '/>');
     s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior: laje de ' + fmt(st.espLaje) + ' cm, em vista', fs * 0.72, C.muted, 'start', 0, 500);
   }
   /* corrimãos em vista: os dois lados, pelo mesmo caminho do 3D (railLado: contorna os patamares na horizontal),
@@ -452,7 +461,7 @@ function corteSVG(R, o, C, qual, lado) {
     const listas = R.hel ? [railHel(R, 4).pts] : [].concat.apply([], (R.nm.acess ? [92, 70] : [92]).map(hR => [0, 1].map(lado => railLado(R, lado, hR))));
     listas.forEach(pts => {
       let tr = [];
-      const fecha = () => { if (tr.length > 1) s += sPolyline(tr, C.ink, 1.2); tr = []; };
+      const fecha = () => { if (tr.length > 1) s += cam('CORRIMAO', sPolyline(tr, C.ink, 1.2)); tr = []; };
       for (let i = 0; i < pts.length; i++) {
         const A = pts[i], dA = Dp(A);
         if (dA > 0) tr.push([S(A), A[2]]);
@@ -503,11 +512,11 @@ function corteSVG(R, o, C, qual, lado) {
     s += sPoly(poly, 'url(#' + hid2 + ')', C.ink, 2);
   });
   /* pilar da helicoidal cortado */
-  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (Math.abs(d) < R.pole.r) { const hw = Math.sqrt(R.pole.r * R.pole.r - d * d); s += '<rect x="' + r2(c - hw) + '" y="' + r2(-zU) + '" width="' + r2(2 * hw) + '" height="' + r2(zU) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="2" ' + NS + '/>'; } }
+  if (R.hel && R.pole) { const d = Dp([0, 0]), c = S([0, 0]); if (Math.abs(d) < R.pole.r) { const hw = Math.sqrt(R.pole.r * R.pole.r - d * d); s += cam('PILAR', '<rect x="' + r2(c - hw) + '" y="' + r2(-zU) + '" width="' + r2(2 * hw) + '" height="' + r2(zU) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="2" ' + NS + '/>'); } }
   /* a linha não atravessa a escada: avisa em vez de mostrar um corte vazio sem explicação */
   if (!pecas.length && !vistas.length) s += sText((s0 + s1) / 2, H / 2, 'A linha deste corte não passa pela escada nem por trás dela: desloque-a de volta.', fs * 0.9, C.accent, 'middle', 0, 600);
   /* altura livre sobre os degraus cortados */
-  pecas.forEach(pc => { const z = pc.top + st.hLivre; if (z <= H + 1e-6) s += sLine([pc.a, z], [pc.b, z], C.accent, 1.4, '5 4'); });
+  pecas.forEach(pc => { const z = pc.top + st.hLivre; if (z <= H + 1e-6) s += cam('ALTURA_LIVRE', sLine([pc.a, z], [pc.b, z], C.accent, 1.4, '5 4')); });
   /* números dos degraus cortados */
   pecas.forEach(pc => { if (pc.b - pc.a >= fs * 1.2) s += sText((pc.a + pc.b) / 2, pc.top - Math.min(e, 12) / 2 - 1, String(pc.k), fs * 0.7, C.ink, 'middle', 0, 600); });
   /* ---- níveis, cotas, título ---- */
@@ -515,7 +524,7 @@ function corteSVG(R, o, C, qual, lado) {
   s += sText(s0 + fs * 0.4, H + fs * 1.0, nivel(H), fs * 0.85, C.ink, 'start', 0, 600);
   s += dimLine([s1, 0], [s1, H], 1, 0, fs * 2.4, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([s1, zU], [s1, H], 1, 0, fs * 0.9, fmt(st.espLaje, 0), fs * 0.75, C);
-  if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500);
+  if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += cam('ALTURA_LIVRE', sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500));
   const nomeT = R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase();
   const t1 = elev ? 'ELEVAÇÃO · ' + LADOS_ELEV[LADOS_ELEV[lado] ? lado : 'frente'].toUpperCase() + ' · ESCADA ' + nomeT : 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + nomeT;
   const t2 = elev ? 'vista de fora, sem cortar nada · tudo em traço fino · cm' : 'hachura: cortado · traço fino: em vista · cm';
