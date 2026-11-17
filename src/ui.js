@@ -3,6 +3,9 @@ const $ = id => document.getElementById(id);
 const LS_KEY = 'patamar-v1';
 let S = Object.assign({}, DEFAULTS);
 let VIEW = 'planta', YAW = -32, PIT = 42, CUR = null, THEME = null, CV3 = null;
+/* painel visível no celular (Dados, Desenho ou Verificações); em telas maiores os três aparecem juntos */
+let PAINEL = 'desenho';
+const TEMA_KEY = 'patamar-tema';
 
 function getTheme() {
   const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
@@ -13,8 +16,18 @@ const plain = v => String(Math.round(v * 100) / 100).replace('.', ',');
 const parseNum = s => { const t = String(s).trim(); if (!/^[+-]?\d+(?:[.,]\d+)?$/.test(t) || /^[+-]?\d{1,3}\.\d{3}$/.test(t)) return NaN; /* "1.000" é ambíguo (milhar?), então é recusado */ const v = Number(t.replace(',', '.')); return isFinite(v) ? v : NaN; };
 const BAD = {};
 
+/* Perfis que deixaram de existir: 'sec' (escada secundária) e 'serv' (escada de serviço) vinham da NBR 9077:2001, 4.7.5,
+   cancelada pela edição de 2025. Quem tinha um deles salvo passa para 'mez' (NBR 9077:2025, 9.5.9.1) e vê um aviso.
+   Devolve true quando trocou. */
+function migrarNorma(s) {
+  if (s && (s.norma === 'sec' || s.norma === 'serv')) { s.norma = 'mez'; return true; }
+  return false;
+}
+const AVISO_MIGRA = 'O perfil que você usava vinha da NBR 9077:2001, cancelada pela edição de 2025. Agora usamos \u201cMezanino ou área privativa (NBR 9077:2025, 9.5.9.1)\u201d.';
+
 function load() {
   try { const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (j && j.S) S = Object.assign(S, j.S); } catch (e) { }
+  if (migrarNorma(S)) { const a = $('avisoMigra'); if (a) { $('avisoMigraTxt').textContent = AVISO_MIGRA; a.hidden = false; } }
   const h = (location.hash || '').slice(1);
   const m = h.match(/^(.*?)(?:-(planta|corte|3d|explica))?$/);
   if (m && TIPOS.some(t => t.id === m[1])) { S.tipo = m[1]; VIEW = m[2] || 'planta'; }
@@ -40,8 +53,7 @@ const FIELDS = [
 function mount() {
   const norm = Object.keys(NORMAS).map(k => '<option value="' + k + '">' + NORMAS[k].nome + '</option>').join('') + '<option value="custom">Personalizada (digite os limites)</option>';
   $('ctrl').innerHTML =
-    '<section class="card o1"><h2>Tipo de escada</h2><div id="tipos" class="tipos" role="radiogroup" aria-label="Tipo de escada"></div></section>' +
-    '<section class="card o2"><h2>Medidas</h2><div class="grid2">' +
+    '<section class="card"><h2>Medidas</h2><div class="grid2">' +
     fieldNum('H', 'Desnível piso a piso', 'cm', 'Do piso de baixo ao piso de cima, acabados.') + fieldNum('L', 'Largura útil', 'cm', 'Espaço livre para passar, entre paredes ou guardas.') + '</div>' +
     '<div class="field"><label for="norma">Referência de limites</label><select id="norma">' + norm + '</select></div>' +
     '<div id="customNorm" hidden><p class="hint" style="margin:0 0 8px">Digite os limites que o seu professor ou o código de obras da cidade usa.</p><div class="grid2">' + fieldNum('cEmin', 'Espelho mínimo', 'cm') + fieldNum('cEmax', 'Espelho máximo', 'cm') + fieldNum('cPmin', 'Piso mínimo', 'cm') + fieldNum('cPmax', 'Piso máximo', 'cm') + fieldNum('cBmin', 'Blondel mínimo', 'cm') + fieldNum('cBmax', 'Blondel máximo', 'cm') + fieldNum('cLmin', 'Largura mínima', 'cm') + fieldNum('cHpat', 'Desnível máx. sem patamar', 'cm') + fieldNum('cDw', 'Linha de caminhamento (do lado interno)', 'cm') + fieldNum('cLq', 'Ponta mínima do leque', 'cm') + '</div></div>' +
@@ -111,6 +123,17 @@ function bind() {
   $('nPerPlus').addEventListener('click', () => { limpaNPer(); S.nPerAuto = false; S.nPer = Math.min(72, nPerAtual() + 1); render(); });
   $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; render(); });
   $('tipos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.tipo = b.dataset.v; render(); });
+  /* setas do teclado andam entre os tipos (grupo de opções) */
+  $('tipos').addEventListener('keydown', e => {
+    const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!d) return;
+    e.preventDefault(); const i = TIPOS.findIndex(t => t.id === S.tipo), t = TIPOS[(i + d + TIPOS.length) % TIPOS.length];
+    S.tipo = t.id; render(); const b = document.querySelector('#tipos button[data-v="' + t.id + '"]'); if (b) b.focus();
+  });
+  $('mnav').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) mostrarPainel(b.dataset.p); });
+  $('miniRes').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) mostrarPainel(b.dataset.p); });
+  $('statusChip').addEventListener('click', () => { if (ehCelular()) mostrarPainel('verif'); else $('cardChecks').scrollIntoView({ block: 'start', behavior: rolagem() }); });
+  $('btnTema').addEventListener('click', () => { const ordem = ['auto', 'light', 'dark'], t = ordem[(ordem.indexOf(lerTema()) + 1) % 3]; try { localStorage.setItem(TEMA_KEY, t); } catch (e) { } aplicarTema(t); toast('Tema: ' + TEMA_NOME[t]); });
+  $('avisoMigraFechar').addEventListener('click', () => { $('avisoMigra').hidden = true; });
   $('yaw').addEventListener('input', e => { YAW = +e.target.value; draw3d(false); });
   $('pit').addEventListener('input', e => { PIT = +e.target.value; draw3d(false); });
   $('btnResumo').addEventListener('click', () => copiar(resumo(), 'Resumo copiado'));
@@ -129,6 +152,26 @@ function bind() {
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
   if (mq.addEventListener) mq.addEventListener('change', () => { THEME = null; renderTypes(); render(); });
   new MutationObserver(() => { THEME = null; renderTypes(); render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+const ehCelular = () => window.matchMedia('(max-width: 699px)').matches;
+const rolagem = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+/* celular: mostra um painel por vez (Dados, Desenho ou Verificações), escolhido na barra de baixo */
+function mostrarPainel(p) {
+  PAINEL = p; $('app').dataset.painel = p;
+  document.querySelectorAll('#mnav button').forEach(b => b.setAttribute('aria-selected', b.dataset.p === p));
+  if (ehCelular()) window.scrollTo({ top: 0 });
+  if (p === 'desenho') draw3d(true);
+}
+/* tema: automático (segue o aparelho), claro ou escuro; guardado só neste navegador */
+const TEMA_NOME = { auto: 'automático (segue o aparelho)', light: 'claro', dark: 'escuro' };
+function lerTema() { try { const t = localStorage.getItem(TEMA_KEY); return t === 'light' || t === 'dark' ? t : 'auto'; } catch (e) { return 'auto'; } }
+function aplicarTema(t) {
+  const root = document.documentElement;
+  if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+  const txt = $('temaTxt'), b = $('btnTema');
+  if (txt) txt.textContent = { auto: 'Automático', light: 'Claro', dark: 'Escuro' }[t];
+  if (b) { b.setAttribute('aria-label', 'Tema: ' + TEMA_NOME[t] + '. Toque para trocar.'); b.title = 'Tema: ' + TEMA_NOME[t]; }
 }
 
 function renderTypes() {
@@ -150,6 +193,10 @@ function falha(msg) {
   $('stage').dataset.view = 'erro';
   $('stage').innerHTML = '<div class="errbox"><b>Não dá para calcular com essas medidas.</b><p>' + msg + '</p><p>Nada foi desenhado para não mostrar uma escada que não corresponde ao que você pediu.</p></div>';
   $('checkSum').className = 'cs bad'; $('checkSum').textContent = 'Entrada ou configuração inválida';
+  $('statusChip').className = 'chip bad'; $('statusChip').textContent = 'Medidas inválidas'; $('statusChip').setAttribute('aria-label', 'Medidas inválidas: veja a mensagem no desenho.');
+  $('navBadge').hidden = false; $('navBadge').className = 'badge'; $('navBadge').textContent = '!';
+  $('miniRes').innerHTML = '<span class="mr">Não dá para calcular com essas medidas.</span><button type="button" class="chip bad" data-p="desenho">Ver o motivo</button>';
+  $('notaNorma').hidden = true;
   ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = true; });
   $('view3dBar').hidden = true; $('viewPlantaBar').hidden = true; $('viewCorteBar').hidden = true;
 }
@@ -177,7 +224,7 @@ function render(typing) {
   document.querySelector('#bocel button[data-v="inclinado"]').hidden = (helB || S.tipo === 'helicoidal') && bocM !== 'inclinado';
   document.querySelector('#bocel button[data-v="bocel"]').textContent = helB ? 'Placas sobrepostas' : 'Bocel';
   document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
-  $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1), no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
+  $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e), cancelada pela edição de 2025, pedia pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -202,7 +249,7 @@ function render(typing) {
   document.querySelectorAll('#modoP button').forEach(b => b.classList.toggle('on', b.dataset.v === S.modoPlanta));
   $('zcWrap').hidden = S.modoPlanta === 'sup';
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (R.bal ? 'bal' : 'conv')));
-  $('lqHint').textContent = R.bal ? 'Piso igual na linha de caminhamento, ponta larga na borda interna. É o que a NBR 9077 pede.' : 'Todos saem do canto interno, com ponta zero. Serve para comparar com os balanceados.';
+  $('lqHint').textContent = R.bal ? 'Piso igual na linha de caminhamento, ponta larga na borda interna. A NBR 9077:2001, cancelada pela edição de 2025, recomendava balancear os leques.' : 'Todos saem do canto interno, com ponta zero. Serve para comparar com os balanceados.';
   opcoesK(R.bal, R.kwMin, R.kw);
   $('kLeque').value = String(R.kw);
   $('kLab').textContent = R.bal ? 'Degraus no trecho de cada curva' : 'Leques em cada curva';
@@ -235,6 +282,13 @@ function render(typing) {
   const sev = cnt.bad ? 'bad' : cnt.warn ? 'warn' : 'ok';
   $('checkSum').className = 'cs ' + sev;
   $('checkSum').textContent = cnt.bad ? cnt.bad + ' fora da referência' + (cnt.warn ? ' e ' + cnt.warn + ' em atenção' : '') : cnt.warn ? cnt.warn + ' em atenção' : 'Tudo dentro da referência';
+  const curto = cnt.bad ? cnt.bad + ' fora' : cnt.warn ? cnt.warn + ' em atenção' : 'Tudo ok';
+  $('statusChip').className = 'chip ' + sev; $('statusChip').innerHTML = '<span class="longo">' + $('checkSum').textContent + '</span><span class="curto">' + curto + '</span>';
+  $('statusChip').setAttribute('aria-label', 'Verificações: ' + $('checkSum').textContent + '. Ver a lista.');
+  const nb = $('navBadge'); nb.hidden = !(cnt.bad + cnt.warn); nb.className = 'badge' + (cnt.bad ? '' : ' warn'); nb.textContent = cnt.bad || cnt.warn;
+  $('miniRes').innerHTML = '<span class="mr"><b>' + R.N + '</b> × <b>' + fmt(R.e, 2) + '</b> cm · piso <b>' + fmt(R.p, 1) + '</b> · Blondel <b>' + fmt(R.bl, 1) + '</b></span><button type="button" class="chip ' + sev + '" data-p="verif">' + curto + '</button>';
+  /* perfis que ainda usam números da NBR 9077:2001 como referência */
+  $('notaNorma').hidden = !(R.nm.id === 'res' || R.nm.id === 'mez');
   const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
   $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
   $('memo').innerHTML = R.memo.map(t => '<li>' + t + '</li>').join('');
@@ -260,6 +314,7 @@ function render(typing) {
   $('btnSvg').hidden = VIEW === '3d' || VIEW === 'explica';
   $('btnImg').hidden = VIEW === 'explica';
   $('legend').hidden = VIEW === 'explica';
+  mostrarTipo();
   /* palco */
   $('stage').dataset.view = VIEW;
   if (VIEW === 'planta') { $('stage').innerHTML = planSVG(R, {}, THEME); }
@@ -269,6 +324,12 @@ function render(typing) {
   save();
 }
 
+/* deixa o tipo escolhido à vista na faixa de tipos, que rola na horizontal */
+function mostrarTipo() {
+  const c = $('tipos'), b = c.querySelector('button.on'); if (!b || c.scrollWidth <= c.clientWidth) return;
+  const l = b.offsetLeft - c.offsetLeft;
+  if (l < c.scrollLeft || l + b.offsetWidth > c.scrollLeft + c.clientWidth) c.scrollLeft = Math.max(0, l - 12);
+}
 /* quantitativos: estimativas da geometria, para orçamento preliminar e para conferir ordem de grandeza */
 function quantHTML(R) {
   const q = R.quant, m2 = v => fmt(v / 10000, 2) + ' m²';
@@ -369,7 +430,8 @@ function gerarImagem() {
 
 window.addEventListener('beforeprint', montarRelatorio);
 window.addEventListener('DOMContentLoaded', () => {
-  load(); mount(); bind(); renderTypes(); render();
+  aplicarTema(lerTema());
+  load(); mount(); bind(); renderTypes(); mostrarPainel(PAINEL); render();
   let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => draw3d(true), 120); });
   window.addEventListener('hashchange', () => { const before = S.tipo + VIEW; load(); if (S.tipo + VIEW !== before) render(); });
 });
