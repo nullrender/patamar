@@ -178,8 +178,8 @@ function buildFaces(R, C) {
   /* laje superior */
   const sl = R.slab;
   prism(sl.pts, sl.arc ? triOf({ arc: sl.arc, pts: sl.pts }) : fan(sl.pts), R.H - R.st.espLaje, R.H, hexRGB(C.f3));
-  /* chegada da helicoidal: placa no nível do piso de cima, com a espessura do degrau */
-  if (R.hel && R.arrival && R.arrival.arc) prism(R.arrival.pts, triOf({ arc: R.arrival.arc, pts: R.arrival.pts }), R.H - R.thk, R.H, col3.patamar || col3.reto);
+  /* chegada da helicoidal: placa no nível do piso de cima; na laje maciça desce pelo menos um espelho, fechando a frente do último degrau */
+  if (R.hel && R.arrival && R.arrival.arc) prism(R.arrival.pts, triOf({ arc: R.arrival.arc, pts: R.arrival.pts }), R.H - (R.placas ? R.st.espDegrau : Math.max(R.st.espLaje, R.st.tLaje, R.e)), R.H, col3.patamar || col3.reto);
   /* pilar */
   if (R.pole) { const ring = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 2 * PI; ring.push([R.pole.r * Math.cos(a), R.pole.r * Math.sin(a)]); } prism(ring, fan(ring), 0, R.H - R.st.espLaje, [88, 98, 108]); }
   /* dente da chegada: espelho do último degrau sob a laje do piso de cima (quando o espelho é maior que a laje) */

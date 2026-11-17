@@ -20,6 +20,14 @@ const fmt = (n, d) => Number(n).toLocaleString('pt-BR', { minimumFractionDigits:
    Estudo: piso 25, largura 80 e desnível 3,20 m sem patamar são valores usuais, sem norma nacional que os sustente. */
 const NORMAS = {
   res:   { id: 'res',   nome: 'Estudo (valores usuais, sem norma específica)', curto: 'perfil de estudo', eMin: 16, eMax: 18, pMin: 25, pMax: 32, bMin: 63, bMax: 64, Lmin: 80,  hPat: 320, dw: 55, patReto: 0, lqMin: 15, lancoMin: 3, acess: false },
+  /* NBR 9077:2001, 4.7.5.1 (escada secundária: não é rota de fuga, mas pode funcionar como tal): segue 4.7.3 (espelho 16 a 18,
+     Blondel 63 a 64, lanço de 3 a 3,70 m), com ponta de leque de 7 cm e patamar de 80 cm sem a fórmula de 4.7.3.3.
+     4.7.5.2 (exclusivamente de serviço): espelho até 20 cm nas ocupações A a G, sempre com Blondel.
+     Piso: a norma não dá faixa própria; aqui é a que Blondel deixa com o espelho do perfil. Largura de 80 cm: não está na
+     NBR 9077 4.7.5; é o valor da escada secundária na NPT 011 dos Bombeiros do PR (5.7.5.3 a). A NT 11/2021 de GO dá 0,80 m
+     só para escada de uso restrito, de mezanino ou área privativa (5.7.5.1 b). */
+  sec:   { id: 'sec',   nome: 'Escada secundária (NBR 9077:2001, 4.7.5.1)', curto: 'escada secundária (NBR 9077:2001, 4.7.5.1)', eMin: 16, eMax: 18, pMin: 27, pMax: 32, bMin: 63, bMax: 64, Lmin: 80, hPat: 370, dw: 55, patReto: 80, patSec: true, lqMin: 7, lancoMin: 3, acess: false },
+  serv:  { id: 'serv',  nome: 'Escada de serviço (NBR 9077:2001, 4.7.5.2; espelho até 20 cm)', curto: 'escada de serviço (NBR 9077:2001, 4.7.5.2)', eMin: 16, eMax: 20, pMin: 23, pMax: 32, bMin: 63, bMax: 64, Lmin: 80, hPat: 370, dw: 55, patReto: 80, patSec: true, lqMin: 7, lancoMin: 3, acess: false },
   acess: { id: 'acess', nome: 'NBR 9050: conferência dimensional parcial',      curto: 'NBR 9050 (parcial)', eMin: 16, eMax: 18, pMin: 28, pMax: 32, bMin: 63, bMax: 65, Lmin: 120, hPat: 320, dw: 55, patReto: 120, lqMin: 15, lancoMin: 3, acess: true },
 };
 const NMAX = 300; /* limite do aplicativo (capacidade de cálculo), não é norma */
@@ -43,7 +51,7 @@ const DEFAULTS = {
   nAuto: true, N: 16, pAuto: true, p: 29, n1Auto: true, n1: 7,
   lado: 'dir', kLeque: 3, nMeio: 1, nMeioP: 4, nMeioPAuto: true, vao: 10, LpAuto: true, Lp: 100, leque: 'bal',
   D: 220, Dc: 20, nPerAuto: true, nPer: 13,
-  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5, bocel: 'bocel', avanco: 1.5,
+  hLivre: 210, espLaje: 12, tLaje: 10, espDegrau: 5, bocel: 'bocel', avanco: 1.5, estrutura: null,
   zCorte: 150, modoPlanta: 'inf', showDims: true, showNums: true, showPessoa: true, showCortes: true, vistaCorte: 'A', corteA: 0, corteB: 0, ladoElev: 'frente',
   cEmin: 16, cEmax: 18, cPmin: 25, cPmax: 32, cBmin: 63, cBmax: 64, cLmin: 80, cHpat: 320, cDw: 55, cLq: 15,
 };
@@ -93,7 +101,12 @@ function calc(inp) {
   /* borda do degrau: bocel (nariz saliente), espelho inclinado (a quina avança) ou sem saliência */
   if (st.bocel !== undefined && st.bocel !== null && ['bocel', 'inclinado', 'sem'].indexOf(st.bocel) < 0) erro('Borda do degrau: opção inválida. Escolha Bocel, Espelho inclinado ou Sem saliência.');
   const bocelModo = st.bocel || 'bocel';
-  if (bocelModo === 'inclinado' && st.tipo === 'helicoidal') erro('Na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar. Em "Borda do degrau", escolha Bocel (as placas se sobrepõem) ou Sem saliência.');
+  /* estrutura: 'laje' = peça de concreto maciça (laje inclinada, ou helicoidal na caracol); 'balanco' = degraus em balanço,
+     placas soltas presas na parede, numa viga ou no pilar. Sem escolha: helicoidal em balanço, as outras em laje. */
+  if (st.estrutura !== undefined && st.estrutura !== null && ['laje', 'balanco'].indexOf(st.estrutura) < 0) erro('Estrutura: opção inválida. Escolha Laje de concreto ou Degraus em balanço.');
+  const estrutura = st.estrutura || (st.tipo === 'helicoidal' ? 'balanco' : 'laje'), placas = estrutura === 'balanco';
+  if (bocelModo === 'inclinado' && placas && st.tipo !== 'helicoidal') erro('Com degraus em balanço não há espelho para inclinar: as placas ficam soltas. Em "Borda do degrau", escolha Placas sobrepostas ou Sem sobreposição.');
+  if (bocelModo === 'inclinado' && st.tipo === 'helicoidal') erro('Na helicoidal o espelho de cada degrau é radial e não se inclina como numa escada reta. Em "Borda do degrau", escolha Bocel (o degrau avança sobre o de baixo) ou Sem saliência.');
   if (bocelModo !== 'sem') {
     const av = Number(st.avanco);
     if (isFinite(av) && av <= 0) erro('Avanço sobre o degrau de baixo precisa ser maior que zero (você digitou ' + fmt(av, 2) + '). Para uma borda sem saliência, escolha "Sem saliência".');
@@ -123,7 +136,7 @@ function calc(inp) {
   let pAlvo;
   if (temFaixa) { const lo = Math.ceil(fP[0] - 1e-9), hi = Math.floor(fP[1] + 1e-9); pAlvo = lo <= hi ? clamp(Math.round(nm.bMid - 2 * e), lo, hi) : clamp(nm.bMid - 2 * e, fP[0], fP[1]); }
   else pAlvo = clamp(nm.bMid - 2 * e, nm.pMin, nm.pMax);
-  const thk = hel ? st.espDegrau : e + st.tLaje;
+  let thk = placas ? st.espDegrau : e + st.tLaje; /* espessura vertical no pé do espelho (helicoidal maciça: ajustada abaixo) */
   const mirror = st.lado === 'esq' && !hel;
 
   const polys = [], walk = [], checks = [], memo = [];
@@ -471,8 +484,14 @@ function calc(inp) {
     dw = Math.min(nm.dw, Leff / 2);
     const rw = rc + dw; /* linha de caminhamento medida a partir da borda interna (o pilar) */
     const pT = st.pAuto ? pAlvo : st.p;
+    /* laje helicoidal maciça: espessura vertical no pé do espelho = e + dv, com dv = tLaje na perpendicular à inclinação */
+    if (!placas) thk = e + st.tLaje * Math.hypot(pT, e) / pT;
     const nPref = Math.max(6, Math.round(2 * PI * rw / pT));
-    const nReq = Math.ceil((st.hLivre + thk) / e - 1e-9);
+    /* degraus por volta mínimos para a altura livre: n·e − espessura ≥ hLivre. Na laje helicoidal a espessura vertical
+       (e + dv) depende do piso real de cada n (rw·2π/n): procura o menor n que fecha com a espessura certa */
+    const espN = n => placas ? st.espDegrau : e + st.tLaje * Math.hypot(rw * 2 * PI / n, e) / (rw * 2 * PI / n);
+    let nReq = Math.max(3, Math.ceil((st.hLivre + espN(3)) / e - 1e-9));
+    while (nReq < 200 && nReq * e - espN(nReq) < st.hLivre - 1e-9) nReq++;
     /* degraus por volta: automático = o maior entre o que dá o piso desejado e o que dá a altura livre; ou escolhido pela estudante */
     let nPer = Math.max(nPref, nReq);
     if (!st.nPerAuto) { nPer = Math.round(Number(st.nPer)); if (!isFinite(nPer) || nPer < 4 || nPer > 72) erro('Degraus por volta precisa ser um número inteiro entre 4 e 72.'); }
@@ -504,6 +523,7 @@ function calc(inp) {
     slab = mkSector(R / Math.cos(rad(90 / 16)), R + 50, phiEnd, phiEnd + dir * 90); /* laje fora do furo: o raio interno compensa as cordas do polígono */
     pole = { r: rc, h: H };
     pReal = rw * rad(th);
+    if (!placas) thk = e + st.tLaje * Math.hypot(pReal, e) / pReal;
     helix = { R, rc, rw, th, nPer, nPref, nReq, nPerAuto: st.nPerAuto !== false, dir, phi0, phiEnd, turns: T * th / 360, clearance: nPer * e - thk, Leff, dw };
     rises = [H];
     avail = 0;
@@ -551,7 +571,7 @@ function calc(inp) {
     return z;
   };
   const undX = [];
-  if (!hel) {
+  if (!placas) {
     polys.forEach((pl, i) => {
       const z0 = (pl.k - 1) * e, z1 = pl.k * e;
       if (pl.kind === 'patamar') { const w = pl.x1 - pl.x0; for (let j = 0; j <= 16; j++) { const X = pl.x0 + w * j / 16; undX.push([X, fundoPatamar(i, X - pl.x0)]); } }
@@ -568,7 +588,14 @@ function calc(inp) {
   const saidaDe = i => i + 1 < polys.length ? polys[i + 1].entry : (hel ? null : arrivalPts.slice(0, 2));
   const zBot = (pl, q) => {
     const top = pl.k * e;
-    if (hel) return Math.max(0, top - thk);
+    if (placas) return Math.max(0, top - st.espDegrau);
+    if (hel) {
+      /* laje helicoidal: posição do ponto dentro do setor do degrau pelo ângulo, levada à linha de caminhamento */
+      const o = pl.arc.outer, a0 = Math.atan2(o[0][1], o[0][0]), a1 = Math.atan2(o[o.length - 1][1], o[o.length - 1][0]), aq = Math.atan2(q[1], q[0]);
+      const dif = (a, b) => { let d = a - b; while (d > PI) d -= 2 * PI; while (d < -PI) d += 2 * PI; return d; };
+      const tot = dif(a1, a0), f = Math.abs(tot) < 1e-9 ? 0 : clamp(dif(aq, a0) / tot, 0, 1);
+      return Uat(pl.x0 + f * (pl.x1 - pl.x0));
+    }
     if (pl.kind === 'patamar') {
       /* distância perpendicular às arestas de entrada e de saída, só onde o ponto fica dentro da largura delas
          (no patamar do U, o lance que sai está ao lado, e não deve "puxar" a laje do lado do lance que chega) */
@@ -583,7 +610,7 @@ function calc(inp) {
   /* "dente" da chegada: o último espelho sobe até a laje do piso de cima; quando o espelho é maior que a espessura dessa
      laje, a faixa de H − e a H − espLaje precisa existir (viga de borda), senão sobra uma fresta entre o degrau e a laje */
   let dente = null;
-  if (!hel && e > st.espLaje + 1e-9) {
+  if (!hel && !placas && e > st.espLaje + 1e-9) {
     const a0 = arrivalPts[0], a1 = arrivalPts[1], a3 = arrivalPts[3], l = Math.hypot(a3[0] - a0[0], a3[1] - a0[1]) || 1, w = Math.max(st.tLaje, 10);
     const d = [(a3[0] - a0[0]) / l * w, (a3[1] - a0[1]) / l * w];
     dente = { pts: [a0, a1, [a1[0] + d[0], a1[1] + d[1]], [a0[0] + d[0], a0[1] + d[1]]], z0: H - e, z1: H - st.espLaje };
@@ -606,7 +633,7 @@ function calc(inp) {
   const aPisos = polys.reduce((s, pl) => s + areaPl(pl), 0);
   const aEspelhos = riserLen.reduce((s, l) => s + l * e, 0);
   const incPl = pl => pl.kind === 'patamar' ? 1 : Math.hypot(pl.wlen, e) / pl.wlen;
-  const aForma = hel ? 0 : polys.reduce((s, pl) => s + areaPl(pl) * incPl(pl), 0);
+  const aForma = placas ? 0 : polys.reduce((s, pl) => s + areaPl(pl) * incPl(pl), 0);
   const corrimao = polys.reduce((s, pl) => s + (pl.kind === 'patamar' ? pl.wlen : Math.hypot(pl.wlen, e)), 0) + (nm.acess ? 60 : 0);
   const quant = { aPisos, aEspelhos, volConc, aForma, corrimao, riserLen };
 
@@ -658,11 +685,17 @@ function calc(inp) {
   {
     /* avanço com até 2 casas: 1,45 não pode aparecer como "1,5" ao lado de "mínimo 1,5" */
     const av2 = fmt(avanco, 2);
-    const nomeB = hel ? (bocelModo === 'sem' ? 'placas sem sobreposição' : 'cada placa avança ' + av2 + ' cm sobre a de baixo')
+    const nomeB = placas ? (bocelModo === 'sem' ? 'placas sem sobreposição' : 'cada placa avança ' + av2 + ' cm sobre a de baixo')
       : bocelModo === 'bocel' ? 'bocel de ' + av2 + ' cm' : bocelModo === 'inclinado' ? 'espelho inclinado, quina avança ' + av2 + ' cm' : 'sem saliência (espelho reto)';
     if (nm.id === 'custom') chk('bocel', 'Borda do degrau', nomeB, '', 'info', 'O perfil personalizado não tem limite de bocel. Referências: NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm de bocel ou de balanço da quina; NBR 9050:2020 (6.7.1) admite no máximo 1,5 cm.');
     else if (nm.acess) { const ruim = avanco > 1.5 + TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço máx. 1,5 cm', ruim ? 'bad' : 'ok', ruim ? 'Não atende: a NBR 9050:2020 (6.7.1) limita a projeção do bocel ou da quina a 1,5 cm. (Na prática, uma borda muito saliente pode prender a ponta do pé de quem sobe.)' : 'NBR 9050:2020, 6.7.1: com bocel ou espelho inclinado, a aresta avança no máximo 1,5 cm; degrau sem saliência também atende.'); }
-    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, balanço da quina do degrau sobre o de baixo com esse mesmo mínimo' + (hel ? '.' : ' (pela nota do 3.10, sem bocel o espelho é obrigatoriamente inclinado).') + ' ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou balanço da quina com o mesmo mínimo' + (hel ? '. ' : ' (nota do 3.10: sem bocel, espelho inclinado). ')) + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+    else { const ruim = avanco < 1.5 - TOL; chk('bocel', 'Borda do degrau', nomeB, 'avanço mín. 1,5 cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: a NBR 9077:2001 (4.7.3.1 e) pede bocel de pelo menos 1,5 cm ou, sem bocel, balanço da quina do degrau sobre o de baixo com esse mesmo mínimo' + (placas || hel ? '.' : ' (pela nota do 3.10, sem bocel o espelho é obrigatoriamente inclinado).') + ' ' : 'NBR 9077:2001, 4.7.3.1 e: bocel de 1,5 cm no mínimo, ou balanço da quina com o mesmo mínimo' + (placas || hel ? '. ' : ' (nota do 3.10: sem bocel, espelho inclinado). ')) + 'O avanço não se soma ao piso p, que é medido de bocel a bocel.'); }
+  }
+  /* degraus em balanço: placas soltas, sem espelho fechado (espelho vazado). NBR 9050:2020, 6.7.1: em rotas acessíveis não
+     podem ser usados degraus com espelhos vazados. */
+  if (placas) {
+    if (nm.acess) chk('vazado', 'Espelho vazado (degraus em balanço)', 'placas sem espelho', 'proibido em rota acessível', 'bad', 'Não atende: a NBR 9050:2020 (6.7.1) não admite degraus com espelho vazado em rotas acessíveis.');
+    else chk('vazado', 'Espelho vazado (degraus em balanço)', 'placas sem espelho', '', 'info', 'Degraus em balanço ficam com o espelho aberto entre uma placa e outra. A NBR 9050:2020 (6.7.1) proíbe isso em rota acessível; fora dela, confira a regra que vale para a sua escada.');
   }
   /* lanço mínimo: degraus seguidos entre pisos ou patamares (NBR 9077:2001 3.30 e 4.7.3.2; NBR 9050:2020 6.7.2 e 6.8.1) */
   const lancos = rises.map(r => Math.round(r / e));
@@ -670,10 +703,10 @@ function calc(inp) {
   chk('lanco', 'Espelhos por lance', lancos.join(' + '), 'mín. ' + fmt(nm.lancoMin) + ' por lance', lMin < nm.lancoMin ? 'bad' : 'ok', lMin < nm.lancoMin ? 'Não atende: lance com ' + lMin + ' espelho(s). Até dois degraus seguidos formam um degrau isolado, que a NBR 9050:2020 (6.7.2) manda evitar; a NBR 9077:2001 (4.7.3.2) pede lance de três degraus no mínimo. ' + (rises.length > 2 && lancos[1] === lMin ? 'O lance curto é o do meio: aumente "Pisos no lance do meio".' : 'Mude a divisão dos lances em "Pisos no 1º lance"' + (rises.length > 2 ? ' ou "Pisos no lance do meio"' : '') + '.') : '');
   if (tipo === 'reta-patamar') {
     const bb2 = 2 * e + p, mn = patRetoMin, ruim = Lp < mn - 1e-6;
-    chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn, 0) + ' cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: patamar curto. ' : '') + (nm.patReto ? 'NBR 9050:2020, 6.8.8: patamar entre lances com pelo menos 120 cm.' : 'NBR 9077:2001, 4.7.3.3 a: (2e + p) × n + p, com n = 1 passo no patamar: 2 × ' + fmt(e, 2) + ' + 2 × ' + fmt(p, 1) + ' = ' + fmt(mn, 1) + ' cm.' + (nm.id === 'custom' ? ' O perfil personalizado não tem limite próprio de patamar.' : '')));
+    chk('patprof', 'Comprimento do patamar (no sentido da escada)', fmt(Lp) + ' cm', 'mín. ' + fmt(mn, 0) + ' cm', ruim ? 'bad' : 'ok', (ruim ? 'Não atende: patamar curto. ' : '') + (nm.patSec ? 'Na escada secundária basta patamar de 80 cm, sem a fórmula (NBR 9077:2001, 4.7.5.1 d).' : nm.patReto ? 'NBR 9050:2020, 6.8.8: patamar entre lances com pelo menos 120 cm.' : 'NBR 9077:2001, 4.7.3.3 a: (2e + p) × n + p, com n = 1 passo no patamar: 2 × ' + fmt(e, 2) + ' + 2 × ' + fmt(p, 1) + ' = ' + fmt(mn, 1) + ' cm.' + (nm.id === 'custom' ? ' O perfil personalizado não tem limite próprio de patamar.' : '')));
     chk('patform', 'Fórmula do patamar (NBR 9077:2001, 4.7.3.3 a)', 'n = 1: ' + fmt(bb2 + p, 0) + ' · n = 2: ' + fmt(2 * bb2 + p, 0) + ' · n = 3: ' + fmt(3 * bb2 + p, 0) + ' cm', '(2e + p) × n + p', 'info', 'Comprimentos que dão n passos inteiros no patamar sem quebrar o ritmo da passada. Seu patamar tem ' + fmt(Lp) + ' cm.');
   }
-  if (tipo === 'u-patamar') chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', 'mín. = largura (' + fmt(L) + ' cm)', Lp < L - 1e-6 ? 'bad' : 'ok', (Lp < L - 1e-6 ? 'Não atende: patamar curto. ' : '') + 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).');
+  if (tipo === 'u-patamar') { const mnU = nm.patSec ? 80 : L, rU = Lp < mnU - 1e-6; chk('patprof', 'Profundidade do patamar de retorno', fmt(Lp) + ' cm', nm.patSec ? 'mín. 80 cm' : 'mín. = largura (' + fmt(L) + ' cm)', rU ? 'bad' : 'ok', (rU ? 'Não atende: patamar curto. ' : '') + (nm.patSec ? 'Na escada secundária basta patamar de 80 cm, sem a fórmula (NBR 9077:2001, 4.7.5.1 d).' : 'Na mudança de direção o patamar tem pelo menos a largura da escada (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).')); }
   if (tipo === 'l-patamar' || tipo === 'c-patamar' || tipo === 'z-patamar') chk('patprof', tipo === 'l-patamar' ? 'Patamar de canto' : 'Patamares de canto', fmt(L) + ' × ' + fmt(L) + ' cm', 'lados = largura', 'ok', 'Quadrado com lado igual à largura, por construção (NBR 9077:2001, 4.7.3.3 b; NBR 9050:2020, 6.8.8).');
   if (nm.acess && (nLeque || hel)) chk('mudanca', 'Mudança de direção sem patamar', hel ? 'helicoidal' : nLeque + ' leques', 'patamar obrigatório', 'bad', 'Não atende ao perfil NBR 9050: a norma pede patamar nas mudanças de direção. Use um tipo com patamar.');
   if (tipo === 'l-leque' || tipo === 'u-leque') {
@@ -682,7 +715,7 @@ function calc(inp) {
     if (bal) {
       chk('leque', 'Piso dos leques na linha de caminhamento', fmt(p, 1) + ' cm', 'igual ao dos degraus retos', 'ok', 'No balanceamento todos os degraus têm o mesmo piso na linha de caminhamento (NBR 9077:2001, 3.32 e 4.7.9.1 b), então o Blondel da curva é o mesmo dos trechos retos.');
       const pOk = ponta < nm.lqMin - TOL ? 'bad' : 'ok';
-      const refLq = nm.id === 'custom' ? ' Limite digitado por você (a NBR 9077:2001, 4.7.3.1 c, usa 15 cm).' : ' Referência: NBR 9077:2001, 4.7.3.1 c' + (nm.acess ? ', e NBR 9050:2020, 6.8.6 (Figura 75)' : '') + '.';
+      const refLq = nm.id === 'custom' ? ' Limite digitado por você (a NBR 9077:2001, 4.7.3.1 c, usa 15 cm).' : nm.patSec ? ' Referência: NBR 9077:2001, 4.7.5.1 d (escada secundária: ponta de 7 cm no mínimo).' : ' Referência: NBR 9077:2001, 4.7.3.1 c' + (nm.acess ? ', e NBR 9050:2020, 6.8.6 (Figura 75)' : '') + '.';
       chk('ponta', 'Parte mais estreita dos leques (borda interna)', fmt(ponta, 1) + ' cm', 'mín. ' + fmt(nm.lqMin) + ' cm', pOk, (pOk === 'bad' ? 'Não atende: mesmo balanceando ' + lqs.length + ' degraus, a ponta não chega ao mínimo. Aumente a largura, ponha mais pisos retos ' + (tipo === 'u-leque' ? 'no meio ou ' : '') + 'nos lances, ou use patamar.' : 'Balanceamento em ' + lqs.length + ' degraus: a borda interna cresce aos poucos do canto para fora.') + refLq);
       if (kwSubiu) chk('kw', 'Degraus no trecho da curva', kw + ' (você pediu ' + clamp(Math.round(num(st.kLeque, 3)), 2, 6) + ')', 'mín. ' + kwMin, 'info', 'Com piso de ' + fmt(p, 1) + ' cm, a curva da linha de caminhamento (' + fmt(A90, 1) + ' cm) precisa de pelo menos ' + kwMin + ' degraus para manter o piso constante. O app usou ' + kw + '.');
     } else {
@@ -693,14 +726,94 @@ function calc(inp) {
     }
   }
   if (hel) {
-    chk('altura', 'Altura livre sob a volta de cima e a chegada', fmt(helix.clearance, 0) + ' cm', 'mín. ' + fmt(st.hLivre, 0) + ' cm', helix.clearance < st.hLivre - 1e-6 ? 'bad' : 'ok', 'Degraus por volta × espelho − espessura do degrau = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk) + '. A laje do piso de cima fica fora do furo, então não passa sobre os degraus.');
+    chk('altura', 'Altura livre sob a volta de cima e a chegada', fmt(helix.clearance, 0) + ' cm', 'mín. ' + fmt(st.hLivre, 0) + ' cm', helix.clearance < st.hLivre - 1e-6 ? 'bad' : 'ok', 'Degraus por volta × espelho − ' + (placas ? 'espessura do degrau = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk) : 'espessura da laje helicoidal no pé do espelho (espelho + laje medida na vertical) = ' + helix.nPer + ' × ' + fmt(e, 2) + ' − ' + fmt(thk, 1)) + '. A laje do piso de cima fica fora do furo, então não passa sobre os degraus.');
     const pPilar = helix.rc * rad(helix.th);
-    chk('pilar', 'Piso junto ao pilar (parte mais estreita)', fmt(pPilar, 1) + ' cm', 'NBR 9077: ≥ ' + fmt(nm.lqMin) + ' cm em lanço curvo', 'warn', 'Na borda do pilar o degrau é bem mais curto que na linha de caminhamento. A NBR 9077:2001 (4.7.3.1 c) pede pelo menos 15 cm na parte mais estreita de lanços curvos, mas o app não sabe se a sua escada está no escopo dessa norma (saídas de emergência) ou se o código local aceita caracol com regra própria. Para aumentar: pilar mais grosso ou menos degraus por volta.');
+    /* ponta junto ao pilar = raio do pilar × ângulo do degrau; diâmetro mínimo do centro para a ponta de referência */
+    const ref = nm.lqMin, dMinC = ref > 0 ? 2 * ref / rad(helix.th) : 0, atende = pPilar >= ref - TOL;
+    const refTxt = nm.id === 'custom' ? 'limite digitado: ≥ ' + fmt(ref) + ' cm (a NBR 9077:2001, 4.7.3.1 c, usa 15 cm)' : (nm.patSec ? 'NBR 9077:2001, 4.7.5.1 d: ' : 'NBR 9077:2001, 4.7.3.1 c: ') + '≥ ' + fmt(ref) + ' cm em lanço curvo';
+    chk('pilar', 'Piso junto ao pilar (parte mais estreita)', fmt(pPilar, 1) + ' cm', refTxt, atende ? 'ok' : 'warn', atende ? 'A ponta junto ao pilar atende a referência do perfil.' : 'Na borda do pilar o degrau é bem mais curto que na linha de caminhamento. ' + (nm.id === 'custom' ? 'O limite é o que você digitou no perfil personalizado.' : 'A NBR 9077:2001 pede pelo menos ' + (nm.patSec ? '7 cm na escada secundária (4.7.5.1 d)' : '15 cm em lanço curvo (4.7.3.1 c)') + '.') + ' O app mostra como atenção porque não sabe se a sua escada está no escopo dessa norma (a caracol de casa costuma seguir o código de obras do município).');
   }
   if (dw < nm.dw - 1e-9) chk('dw', 'Linha de caminhamento', fmt(dw) + ' cm do lado interno', fmt(nm.dw) + ' cm no perfil', 'info', 'A escada é estreita: a linha passa no eixo (meio da largura). É a regra da NBR 9077:2001 (3.32, nota) para escadas com menos de 1,10 m.');
   if (opening && !hel) chk('laje', 'Vão mínimo na laje superior', fmt(opening.w, 0) + ' × ' + fmt(opening.h, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Cobre os degraus ' + kc + ' a ' + T + ' (a partir do degrau ' + kc + ' o teto ficaria baixo).');
   if (opening && hel) chk('laje', 'Furo mínimo na laje superior', 'Ø ' + fmt(helix.R * 2, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Furo circular na laje, com a chegada no degrau ' + T + '.');
   if (!opening) chk('laje', 'Vão na laje superior', 'não precisa', '', 'info', 'A altura livre fica atendida sem abrir a laje.');
+
+  /* ---- COMO RESOLVER: para cada verificação que não passa, uma saída concreta com os números desta escada.
+     Cada sugestão é TESTADA: o app refaz o cálculo com a mudança proposta e só mostra o que de fato resolve. ---- */
+  /* calculado sob demanda (R.resolver()), porque testar as saídas da helicoidal refaz o cálculo muitas vezes */
+  const resolver = () => {
+    if (st._semSol || resolver.feito) return checks; resolver.feito = true;
+    const testa = mud => { try { return calc(Object.assign({}, st, mud, { _semSol: true })); } catch (er) { return null; } };
+    const passa = (X, ids) => X && ids.every(id => { const c = X.checks.find(q => q.id === id); return !c || c.status === 'ok' || c.status === 'info'; });
+    const nVal = []; for (let n = 2; n <= NMAX; n++) { const ee = H / n; if (ee >= nm.eMin - TOL && ee <= nm.eMax + TOL) nVal.push(n); }
+    const perto = arr => arr.slice().sort((x, y) => Math.abs(x - N) - Math.abs(y - N));
+    const semN = 'Com ' + fmt(H) + ' cm de desnível, nenhum número inteiro de espelhos dá espelho entre ' + fmt(nm.eMin) + ' e ' + fmt(nm.eMax) + ' cm. Mude o desnível (contrapiso, laje) ou use rampa: a NBR 9077:2001 (4.6.1 d) pede rampa quando a altura não permite degraus equilibrados.';
+    const nLances = rises.length;
+    const sol = {
+      e: () => {
+        if (!nVal.length) return semN;
+        const n = perto(nVal)[0];
+        return 'Use ' + n + ' espelhos: o espelho fica com ' + fmt(H / n, 2) + ' cm.' + (e > nm.eMax && !nm.acess && nm.eMax < 20 ? ' Se a escada for só de serviço (não é rota de fuga nem rota acessível), o perfil "Escada de serviço" aceita até 20 cm (NBR 9077:2001, 4.7.5.2), sempre com Blondel.' : '');
+      },
+      p: () => {
+        if (!hel) return temFaixa ? 'Com este espelho, o piso que atende piso e Blondel vai de ' + fmt(fP[0], 1) + ' a ' + fmt(fP[1], 1) + ' cm. Marque "pela fórmula" no piso.' : null;
+        return solHel(['p', 'blondel', 'altura']);
+      },
+      blondel: () => {
+        if (hel) return solHel(['p', 'blondel', 'altura']);
+        if (temFaixa) return 'Com este espelho, o piso deve ficar entre ' + fmt(fP[0], 1) + ' e ' + fmt(fP[1], 1) + ' cm.';
+        const bons = perto(nVal).filter(n => { const f2 = faixaP(H / n, nm); return f2[0] <= f2[1] + 1e-9; }).slice(0, 2).sort((x, y) => x - y);
+        return bons.length ? 'Números de espelhos que fecham Blondel: ' + bons.map(n => { const f2 = faixaP(H / n, nm); return n + ' espelhos (' + fmt(H / n, 2) + ' cm, piso de ' + fmt(f2[0], 1) + ' a ' + fmt(f2[1], 1) + ')'; }).join('; ') + '.' : (nVal.length ? 'Com este desnível nenhum número de espelhos fecha espelho, piso e Blondel ao mesmo tempo no perfil escolhido.' : semN);
+      },
+      L: () => 'Faltam ' + fmt(nm.Lmin - L, 1) + ' cm de largura.' + (hel ? ' Na helicoidal a largura útil é o raio externo menos o raio do pilar: aumente o diâmetro externo.' : ''),
+      patamar: () => {
+        const porLance = Math.floor(nm.hPat / e + 1e-9), nl = Math.ceil(N / Math.max(1, porLance));
+        if (nl - 1 > nLances - 1) return 'Com lances de até ' + fmt(nm.hPat) + ' cm (' + porLance + ' espelhos de ' + fmt(e, 2) + ' cm), este desnível pede ' + nl + ' lances, ou seja, ' + (nl - 1) + (nl - 1 === 1 ? ' patamar' : ' patamares') + '. ' + (nLances === 1 ? 'Escolha um tipo com patamar.' : 'Este tipo tem ' + (nLances - 1) + (nLances - 1 === 1 ? '; escolha um com dois patamares (Em C ou Em Z).' : '; com este desnível seriam precisos mais.'));
+        const X = testa({ n1Auto: true, nMeioPAuto: true });
+        return passa(X, ['patamar']) ? 'Divida os lances por igual: marque "dividir ao meio" em "Pisos no 1º lance"' + (nLances > 2 ? ' e "um terço" em "Pisos no lance do meio"' : '') + '.' : 'Mesmo dividindo por igual, um lance passa de ' + fmt(nm.hPat) + ' cm: escolha um tipo com mais patamares.';
+      },
+      lanco: () => {
+        if (N < nm.lancoMin * nLances) return 'Com ' + N + ' espelhos não cabem ' + nLances + ' lances de ' + nm.lancoMin + ' espelhos. Use um tipo com menos lances (Reta, ou com leques) ou aumente o desnível.' + (H < nm.lancoMin * nm.eMin - TOL ? ' Abaixo de ' + fmt(nm.lancoMin * nm.eMin) + ' cm nem um lance de ' + nm.lancoMin + ' cabe: a NBR 9077:2001 (4.6.1 c) manda usar rampa abaixo de 0,48 m.' : '');
+        const X = testa({ n1Auto: true, nMeioPAuto: true });
+        return passa(X, ['lanco']) ? 'Marque "dividir ao meio" em "Pisos no 1º lance"' + (nLances > 2 ? ' e "um terço" em "Pisos no lance do meio"' : '') + ': cada lance fica com pelo menos ' + nm.lancoMin + ' espelhos.' : 'Use um tipo com menos lances ou aumente o desnível.';
+      },
+      patprof: () => 'Aumente o patamar para pelo menos ' + fmt(tipo === 'u-patamar' ? (nm.patSec ? 80 : L) : patRetoMin, 0) + ' cm (marque o automático).',
+      ponta: () => {
+        if (!bal) return 'Em "Detalhes do tipo", escolha Balanceados.';
+        /* testa saídas: escada mais estreita (a linha de caminhamento chega mais perto da borda interna), mais pisos no meio, outro número de degraus na curva */
+        const tent = [];
+        for (let d = 10; L - d >= nm.Lmin - TOL && d <= 60; d += 10) tent.push([{ L: L - d }, 'largura de ' + fmt(L - d) + ' cm (mais estreita: a linha de caminhamento fica mais perto da borda interna)']);
+        if (tipo === 'u-leque') for (let k = 1; k <= 3; k++) tent.push([{ nMeio: nMeio + k }, (nMeio + k) + ' pisos retos no meio']);
+        for (let k = 2; k <= 6; k++) if (k !== kw) tent.push([{ kLeque: k }, k + ' degraus no trecho de cada curva']);
+        const ok1 = tent.find(t => passa(testa(t[0]), ['ponta']));
+        const alt = nm.patSec ? '' : ' Se a escada for secundária, a NBR 9077:2001 (4.7.5.1 d) aceita ponta de 7 cm (perfil "Escada secundária").';
+        return (ok1 ? 'Funciona com ' + ok1[1] + '. Outra saída: um tipo com patamar na curva.' : 'Nenhum ajuste simples deste tipo leva a ponta ao mínimo: use um tipo com patamar na curva ou aumente o desnível.') + alt;
+      },
+      pilar: () => solHel(['pilar', 'p', 'blondel', 'L', 'altura']),
+      altura: () => { const X = testa({ nPerAuto: true }); return passa(X, ['altura']) ? 'Marque "automático" em "Degraus por volta": o app usa ' + X.helix.nPer + ', o mínimo para a altura livre.' : solHel(['altura', 'p', 'blondel']); },
+      bocel: () => nm.acess ? 'Reduza o avanço para 1,5 cm ou escolha "Sem saliência".' : (placas ? 'Escolha "Placas sobrepostas" com avanço de 1,5 cm.' : hel ? 'Escolha "Bocel" com avanço de 1,5 cm.' : 'Use bocel ou espelho inclinado com avanço de 1,5 cm.'),
+      mudanca: () => 'Use um tipo com patamar na curva: Em L com patamar, Em U com patamar, Em C ou Em Z.',
+      vazado: () => 'Escolha "Laje de concreto (maciça)" em Estrutura: os espelhos ficam fechados.',
+    };
+    /* helicoidal: procura uma combinação (pilar, diâmetro externo, degraus por volta) que deixe as verificações pedidas dentro */
+    function solHel(ids) {
+      const alvo = ids.indexOf('pilar') >= 0 ? nm.lqMin : 0;
+      const nIni = Math.max(4, helix.nReq - 1);
+      let X = null;
+      busca: for (let n = nIni; n <= nIni + 10; n++) {
+        const th2 = 2 * PI / n, dc0 = alvo ? Math.max(st.Dc, Math.ceil(2 * alvo / th2)) : st.Dc;
+        for (let dc = dc0; dc <= dc0 + 80; dc += 10) {
+          const D0 = Math.max(st.D, Math.ceil(dc + 2 * nm.Lmin));
+          for (let D = D0; D <= D0 + 50; D += 10) { const c = { nPerAuto: false, nPer: n, Dc: dc, D }, Y = testa(c); if (passa(Y, ids)) { X = [c, Y]; break busca; } }
+        }
+      }
+      if (!X) return 'Nenhuma combinação simples de pilar, diâmetro e degraus por volta deixa tudo dentro do perfil.' + (alvo && !nm.patSec ? ' A NBR 9077:2001 aceita ponta de 7 cm na escada secundária (4.7.5.1 d).' : '') + (alvo ? ' Se a escada é privativa de uma casa, quem diz se a caracol de pilar fino é aceita é o código de obras do município, que o app não conhece.' : '');
+      const c = X[0], Y = X[1];
+      return 'Funciona com pilar (ou vão central) de Ø ' + fmt(c.Dc) + ' cm, diâmetro externo de ' + fmt(c.D) + ' cm e ' + c.nPer + ' degraus por volta: ' + (alvo ? 'ponta de ' + fmt(Y.helix.rc * rad(Y.helix.th), 1) + ' cm, ' : '') + 'piso de ' + fmt(Y.p, 1) + ' cm, largura útil de ' + fmt(Y.L) + ' cm e altura livre de ' + fmt(Y.helix.clearance, 0) + ' cm.' + (alvo ? ' Se a escada é privativa de uma casa, quem diz se a caracol de pilar fino é aceita é o código de obras do município, que o app não conhece.' : '');
+    }
+    checks.forEach(c => { if ((c.status === 'bad' || c.status === 'warn') && sol[c.id]) { const t = sol[c.id](); if (t) c.sol = t; } });
+    return checks;
+  };
 
   /* ---- memória de cálculo ---- */
   const incl = deg(Math.atan(e / pReal));
@@ -720,7 +833,7 @@ function calc(inp) {
   return {
     st, nm, tipo, hel, H, N, e, T, p: pReal, pInput: p, pAlvo, bl, incl, L, Lp, g, kw, nMeio, dw, thk,
     a, b, avail, nSug, rises, polys, walk, arrival: hel ? arrival : { pts: arrivalPts }, slab: hel ? slab : { pts: slabPts },
-    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente, bocel: bocelModo, avanco,
+    bal, balInfo, kwMin, kwSubiu, gU, patRetoMin, zBot, quant, nMeioP: nMeioPUsado, undX, dente, bocel: bocelModo, avanco, estrutura, placas, resolver,
     pole, helix, opening, kc, kCut, zc, person, lances: lancesTxt, nReto, nLeque, nPat, contagem, areaOcup, temFaixa, fP, bbox, bboxAll, startEdge, Wtot, checks, memo, mirror,
   };
 }

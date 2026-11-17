@@ -61,11 +61,11 @@ function mount() {
     '<div class="grid2" data-for="helicoidal">' + fieldNum('D', 'Diâmetro externo', 'cm') + fieldNum('Dc', 'Diâmetro do pilar', 'cm') + '</div>' +
     '<div class="field" data-for="helicoidal"><div class="labrow"><label for="nPer">Degraus por volta</label><label class="auto"><input type="checkbox" id="nPerAuto"> automático</label></div><div class="stepper"><button type="button" id="nPerMinus" aria-label="Menos um degrau por volta">−</button><input id="nPer" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="nPerPlus" aria-label="Mais um degrau por volta">+</button></div><p class="hint" id="nPerHint"></p></div>' +
     '<div class="field" data-for="c-patamar z-patamar"><div class="labrow"><label for="nMeioP">Pisos no lance do meio</label><label class="auto"><input type="checkbox" id="nMeioPAuto"> um terço</label></div><div class="inp"><input id="nMeioP" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div></div>' +
-    '<p class="hint" id="semDetalhe" data-for="reta">Esse tipo não tem detalhes extras. Ajuste só as medidas e os degraus.</p></section>' +
+    '<div class="field"><span class="lab" id="estLab">Estrutura</span><div class="seg" id="estrutura" role="group" aria-labelledby="estLab"><button type="button" data-v="laje">Laje de concreto (maciça)</button><button type="button" data-v="balanco">Degraus em balanço</button></div><p class="hint" id="estHint"></p></div></section>' +
     '<details class="card"><summary>Altura livre e laje</summary><div class="grid2" style="margin-top:12px">' +
     fieldNum('hLivre', 'Altura livre mínima', 'cm') + fieldNum('espLaje', 'Laje do piso de cima', 'cm') +
-    '<div data-for="reta reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
-    '<div data-for="helicoidal">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
+    '<div id="tLajeWrap">' + fieldNum('tLaje', 'Laje da escada', 'cm') + '</div>' +
+    '<div id="espDegrauWrap">' + fieldNum('espDegrau', 'Espessura do degrau', 'cm') + '</div></div></details>';
   $('tabs').innerHTML = [['planta', 'Planta'], ['corte', 'Cortes'], ['3d', '3D'], ['explica', 'Explicação']].map(v => '<button type="button" role="tab" data-v="' + v[0] + '" id="tab-' + v[0] + '">' + v[1] + '</button>').join('');
 }
 function fieldNum(id, label, unit, hint) {
@@ -99,6 +99,7 @@ function bind() {
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
+  $('estrutura').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.estrutura = b.dataset.v; render(); });
   $('bocel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bocel = b.dataset.v; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
@@ -166,10 +167,14 @@ function render(typing) {
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
   const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
   document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
-  const helB = S.tipo === 'helicoidal';
+  const estM = S.estrutura === 'laje' || S.estrutura === 'balanco' ? S.estrutura : (S.tipo === 'helicoidal' ? 'balanco' : 'laje');
+  document.querySelectorAll('#estrutura button').forEach(b => b.classList.toggle('on', b.dataset.v === estM));
+  $('tLajeWrap').hidden = estM === 'balanco'; $('espDegrauWrap').hidden = estM !== 'balanco';
+  $('estHint').textContent = estM === 'balanco' ? (S.tipo === 'helicoidal' ? 'Cada degrau é uma placa presa no pilar central, sem laje embaixo e com o espelho aberto.' : 'Cada degrau é uma placa presa na parede ou numa viga lateral, sem laje embaixo e com o espelho aberto.') + ' A NBR 9050:2020 (6.7.1) não admite espelho vazado em rota acessível.' : (S.tipo === 'helicoidal' ? 'Uma peça só de concreto: os degraus apoiados numa laje helicoidal, que gira em volta do centro.' : 'Os degraus apoiados numa laje inclinada de concreto, com patamares horizontais.');
+  const helB = estM === 'balanco';
   $('avancoWrap').hidden = bocM === 'sem';
-  /* na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar */
-  document.querySelector('#bocel button[data-v="inclinado"]').hidden = helB;
+  /* "Espelho inclinado" some quando não se aplica, mas continua visível se estiver marcado, junto com a mensagem de erro */
+  document.querySelector('#bocel button[data-v="inclinado"]').hidden = (helB || S.tipo === 'helicoidal') && bocM !== 'inclinado';
   document.querySelector('#bocel button[data-v="bocel"]').textContent = helB ? 'Placas sobrepostas' : 'Bocel';
   document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
   $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1), no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
@@ -183,6 +188,8 @@ function render(typing) {
   let R;
   try { R = calc(S); } catch (err) { if (!err.patamar) console.error(err); falha(err.message); return; }
   CUR = R;
+  /* "Como resolver" testa saídas recalculando a escada: só depois que a digitação para */
+  if (!typing) R.resolver(); else { clearTimeout(render.tSol); render.tSol = setTimeout(() => { if (CUR === R) render(); }, 450); }
   ['btnImg', 'btnSvg', 'btnResumo', 'btnPrint'].forEach(id => { $(id).disabled = false; });
   /* controles */
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
@@ -229,7 +236,7 @@ function render(typing) {
   $('checkSum').className = 'cs ' + sev;
   $('checkSum').textContent = cnt.bad ? cnt.bad + ' fora da referência' + (cnt.warn ? ' e ' + cnt.warn + ' em atenção' : '') : cnt.warn ? cnt.warn + ' em atenção' : 'Tudo dentro da referência';
   const lab = { ok: 'ok', warn: 'atenção', bad: 'fora', info: 'info' };
-  $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('');
+  $('checks').innerHTML = R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('');
   $('memo').innerHTML = R.memo.map(t => '<li>' + t + '</li>').join('');
   $('quant').innerHTML = quantHTML(R);
   $('title').textContent = TIPOS.find(t => t.id === S.tipo).nome;
@@ -239,7 +246,7 @@ function render(typing) {
   if (R.polys.some(p => p.kind === 'leque')) lg.push(['sw', 'var(--winder)', R.bal ? 'Degrau balanceado' : 'Leque']);
   if (R.polys.some(p => p.kind === 'patamar')) lg.push(['sw', 'var(--patamar)', 'Patamar']);
   const lgH = lg.map(l => '<span class="lg"><i class="sw" style="background:' + l[1] + '"></i>' + l[2] + '</span>').join('');
-  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">' + (R.hel ? 'Modelo de estudo: degraus soltos em volta do pilar e corrimão do lado de fora, sem acabamentos.' : 'Modelo de estudo: degraus com o fundo real da laje e corrimãos, sem acabamentos.') + ' Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
+  $('legend').innerHTML = VIEW === '3d' ? lgH + '<span class="lg">' + ('Modelo de estudo: ' + (R.placas ? (R.hel ? 'degraus em balanço em volta do pilar' : 'degraus em balanço (placas soltas)') : (R.hel ? 'degraus sobre a laje helicoidal' : 'degraus com o fundo real da laje')) + ' e corrimãos, sem acabamentos.') + ' Arraste para girar.</span>' : lgH + '<span class="lg"><i class="ln"></i>Linha de caminhamento</span>' + (R.opening ? '<span class="lg"><i class="ln dash"></i>Vão mínimo na laje</span>' : '') + '<span class="lg">Cotas em cm.</span>';
   $('view3dBar').hidden = VIEW !== '3d';
   $('viewPlantaBar').hidden = VIEW !== 'planta';
   $('viewCorteBar').hidden = VIEW !== 'corte';
@@ -268,12 +275,12 @@ function quantHTML(R) {
   const linhas = [
     ['Piso dos degraus e patamares', m2(q.aPisos), 'soma das superfícies em planta (revestimento de piso)'],
   ];
-  if (R.hel) linhas[0][2] = 'soma das placas dos degraus; elas se sobrepõem em planta quando a escada dá mais de uma volta';
-  else linhas.push(['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'], ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte']);
-  if (R.hel) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm; pilar fora da conta']);
+  if (R.hel) linhas[0][2] = 'soma dos pisos dos degraus; eles se sobrepõem em planta quando a escada dá mais de uma volta';
+  if (!R.placas) linhas.push(['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'], ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte']);
+  if (R.placas) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm' + (R.hel ? '; pilar fora da conta' : '; apoio na parede ou viga fora da conta')]);
   else {
     linhas.push(['Concreto da escada', fmt(q.volConc / 1e6, 3) + ' m³', 'degraus + laje de ' + fmt(R.st.tLaje) + ' cm, até o chão; sem a laje do piso de cima']);
-    linhas.push(['Fôrma do fundo', m2(q.aForma), 'face de baixo da laje inclinada e dos patamares; sem as laterais']);
+    linhas.push(['Fôrma do fundo', m2(q.aForma), R.hel ? 'face de baixo da laje helicoidal, que gira em torno do pilar; sem as laterais' : 'face de baixo da laje inclinada e dos patamares; sem as laterais']);
   }
   linhas.push(['Corrimão (por lado)', fmt(q.corrimao / 100, 2) + ' m', 'medido na linha de caminhamento' + (R.nm.acess ? ', com os 30 cm de prolongamento em cada ponta' : '') + '; o lado externo de curvas é mais comprido']);
   return '<table class="tab tabq"><tbody>' + linhas.map(l => '<tr><td>' + l[0] + '<br><span class="hint">' + l[2] + '</span></td><td>' + l[1] + '</td></tr>').join('') + '</tbody></table><p class="hint" style="margin-top:8px">Contas feitas na geometria do desenho, para estudo e orçamento preliminar. Não incluem perdas, armadura, emendas nem detalhes de obra.</p>';
@@ -292,7 +299,7 @@ function legCorte(R, v) {
   if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
   if (v === 'E') return 'Elevação (' + ({ frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' }[S.ladoElev || 'frente']) + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
   if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
-  return R.hel ? 'Detalhe do degrau: ampliação dos degraus soltos da helicoidal (sem laje e sem espelho), com o piso medido na linha de caminhamento e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.';
+  return R.placas ? 'Detalhe do degrau: ampliação dos degraus em balanço (placas soltas, sem laje e com o espelho aberto)' + (R.hel ? ', com o piso medido na linha de caminhamento' : '') + ' e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão' + (R.hel ? ' (na helicoidal, medidos na linha de caminhamento)' : '') + '.';
 }
 function draw3d(hq) {
   if (VIEW !== '3d' || !CUR) return;
@@ -304,16 +311,18 @@ function draw3d(hq) {
 }
 
 function resumo() {
+  CUR.resolver();
   const R = CUR, t = TIPOS.find(x => x.id === S.tipo);
   return 'Escada ' + t.nome.toLowerCase() + ' (' + R.nm.nome + ')\n' +
     'Desnível ' + fmt(R.H) + ' cm · largura ' + fmt(R.L) + ' cm\n' +
     R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm · ' + R.contagem + ' · piso ' + fmt(R.p, 1) + ' cm · Blondel ' + fmt(R.bl, 1) + ' cm\n' +
-    'Inclinação ' + fmt(R.incl, 1) + '°\n\n' + R.memo.join('\n') + '\n\nVerificações:\n' + R.checks.map(c => '- ' + c.nome + ': ' + c.valor + (c.regra ? ' (ref. ' + c.regra + ')' : '') + ' [' + c.status + ']').join('\n');
+    'Inclinação ' + fmt(R.incl, 1) + '°\n\n' + R.memo.join('\n') + '\n\nVerificações:\n' + R.checks.map(c => '- ' + c.nome + ': ' + c.valor + (c.regra ? ' (ref. ' + c.regra + ')' : '') + ' [' + c.status + ']' + (c.sol ? '\n  Como resolver: ' + c.sol : '')).join('\n');
 }
 
 /* relatório para imprimir ou salvar em PDF: sempre com as cores do tema claro, que é o que sai no papel */
 function montarRelatorio() {
   if (!CUR) { $('printArea').innerHTML = '<p>Corrija as medidas antes de imprimir: com entrada inválida o app não desenha a escada.</p>'; return; }
+  CUR.resolver();
   const R = CUR, t = TIPOS.find(x => x.id === S.tipo), root = document.documentElement, antes = root.getAttribute('data-theme');
   root.setAttribute('data-theme', 'light');
   const C = getTheme();
@@ -329,7 +338,7 @@ function montarRelatorio() {
   h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
   h += '<figure>' + elevacaoSVG(R, {}, C, S.ladoElev || 'direita') + '<figcaption>Elevação: a escada vista de fora, sem cortar nada.</figcaption></figure>';
   const det = detalheSVG(R, {}, C); if (det) h += '<figure>' + det + '<figcaption>Detalhe do degrau.</figcaption></figure>';
-  h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('') + '</ul>';
+  h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + (c.sol ? '<div class="csol"><b>Como resolver:</b> ' + c.sol + '</div>' : '') + '</div></li>').join('') + '</ul>';
   h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
   h += '<h2>Quantitativos (estimativa)</h2>' + quantHTML(R);
   h += '<div class="quebra"></div><h2>Explicação</h2>' + explicacao(R, S, C).replace(/<details class="ex"( open)?>/g, '<details class="ex" open>');

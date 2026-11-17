@@ -1,4 +1,4 @@
-const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG}=require('./carregar.js');
+const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG,problemasHTML}=require('./carregar.js');
 const C={paper:'#fff',ink:'#000',muted:'#666',line:'#ccc',accent:'#f60',info:'#06f',tread:'#ddd',winder:'#fdc',patamar:'#cfc',piso:'#eee',t3:'#ddd',w3:'#fdc',p3:'#cfc',f3:'#eee',ground:'#ccc'};
 let fail=0; const ok=(c,m)=>{console.log((c?'PASSA ':'FALHA ')+m); if(!c)fail++;};
 const st=(R,id)=>(R.checks.find(c=>c.id===id)||{}).status;
@@ -180,7 +180,7 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
 {
   ok(/1,45/.test(calc({avanco:1.45}).checks.find(c=>c.id==='bocel').valor),'avanço 1,45 aparece como 1,45 (não arredonda para 1,5 ao lado do mínimo)');
   let e1=false; try{calc({bocel:'xyz'});}catch(e){e1=!!e.patamar;} ok(e1,'modo de borda inválido dá erro (não vira bocel em silêncio)');
-  let e2=false; try{calc({tipo:'helicoidal',bocel:'inclinado'});}catch(e){e2=!!e.patamar&&/placas soltas/.test(e.message);} ok(e2,'helicoidal não aceita espelho inclinado');
+  let e2=false; try{calc({tipo:'helicoidal',bocel:'inclinado'});}catch(e){e2=!!e.patamar&&/helicoidal/.test(e.message);} ok(e2,'helicoidal não aceita espelho inclinado');
   const hs=calc({tipo:'helicoidal',bocel:'sem'}).checks.find(c=>c.id==='bocel'); ok(/placas/.test(hs.valor) && !/espelho inclinado/.test(hs.nota),'helicoidal: borda descrita como placas, sem falar de espelho inclinado');
   let e3=''; try{calc({bocel:'inclinado',avanco:0});}catch(e){e3=e.message;} ok(/Avanço sobre o degrau de baixo/.test(e3) && /Sem saliência/.test(e3),'avanço zero: mensagem com o nome do campo e a sugestão de "Sem saliência"');
   ok(/nota do 3\.10/.test(calc({bocel:'sem'}).checks.find(c=>c.id==='bocel').nota),'espelho inclinado citado pela nota do 3.10 da NBR 9077:2001');
@@ -205,6 +205,63 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ok(/<td>perfil<\/td>/.test(xr) && /<td>espelhos<\/td>/.test(explicacao(calc({tipo:'reta'}),calc({tipo:'reta'}).st,C)) && /<td>fundo da laje<\/td>/.test(explicacao(calc({tipo:'reta',ladoElev:'fundos'}),calc({tipo:'reta',ladoElev:'fundos'}).st,C)),'roteiro diz o que se vê de cada degrau (espelhos, perfil, fundo da laje)');
   const he=calc({tipo:'helicoidal',ladoElev:'esquerda'}); const xe=explicacao(he,he.st,C); ok(/−110 × sen\(ângulo\)/.test(xe) && !/-450/.test(xe) && /214,6°/.test(xe),'helicoidal: fórmula com o sinal da vista e ângulos de 0 a 360°');
   let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){const X=calc({tipo:t,ladoElev:l}); if(/NaN|undefined|Infinity/.test(explicacao(X,X.st,C))) nan++;} ok(nan===0,'roteiro da elevação sem NaN nos 9 tipos e 4 lados');
+}
+/* perfis de escada secundária e de serviço (NBR 9077:2001, 4.7.5) e "Como resolver" */
+{
+  const sc=calc({norma:'sec',tipo:'l-leque',H:180}); ok(sc.nm.lqMin===7 && st(sc,'ponta')==='ok','secundária: ponta de leque de 7 cm (4.7.5.1 d)');
+  ok(st(calc({norma:'sec',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='ok' && st(calc({norma:'res',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='bad','secundária: patamar de 80 cm basta (sem a fórmula)');
+  ok(st(calc({norma:'serv',H:280,nAuto:false,N:14}),'e')==='ok' && st(calc({norma:'sec',H:280,nAuto:false,N:14}),'e')==='bad','serviço: espelho de 20 cm atende; secundária não');
+  ok(st(calc({norma:'sec',H:350,tipo:'reta'}),'patamar')==='ok' && st(calc({norma:'res',H:350,tipo:'reta'}),'patamar')==='bad','secundária: lance até 3,70 m (NBR 9077:2001, 4.7.3.2)');
+  const R14=calc({nAuto:false,N:14}); R14.resolver(); const e14=R14.checks.find(c=>c.id==='e'); ok(/Use 16 espelhos/.test(e14.sol||'') && calc({nAuto:false,N:16}).checks.find(c=>c.id==='e').status==='ok','como resolver: espelho alto sugere um número de espelhos que atende');
+  /* a sugestão do pilar é uma combinação testada: aplicada, a ponta passa a atender */
+  const RH=calc({tipo:'helicoidal'}); RH.resolver(); const hp=RH.checks.find(c=>c.id==='pilar'); const mm=/Ø (\d+) cm, diâmetro externo de (\d+) cm e (\d+) degraus/.exec(hp.sol||'');
+  ok(mm && calc({tipo:'helicoidal',Dc:+mm[1],D:+mm[2],nPerAuto:false,nPer:+mm[3]}).checks.find(c=>c.id==='pilar').status==='ok','como resolver: pilar da caracol sugere combinação que atende');
+  const R0=calc({}); R0.resolver(); ok(R0.checks.every(c=>!c.sol),'escada que atende não mostra "como resolver"');
+  const Rl=calc({}); ok(Rl.checks.every(c=>c.sol===undefined) && typeof Rl.resolver==='function','"como resolver" só é calculado quando pedido (resolver)');
+  ok(/4\.7\.5/.test(explicacao(calc({norma:'sec'}),calc({norma:'sec'}).st,C)),'explicação descreve os perfis da NBR 9077:2001, 4.7.5');
+}
+/* seção Problemas comuns */
+{
+  let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','sec','serv','acess']){const X=calc({tipo:t,norma:no,L:120}); const ex=explicacao(X,X.st,C); if(!/Problemas comuns e como os profissionais resolvem/.test(ex)||/NaN|undefined|Infinity/.test(ex)) ruim++;}
+  ok(ruim===0,'seção Problemas comuns nos 9 tipos e 4 perfis, sem NaN');
+  const ph=problemasHTML(calc({tipo:'helicoidal'})); ok(/62,1 cm para ponta de 15 cm/.test(ph) && /29 cm para ponta de 7 cm/.test(ph),'caracol: mesmo diâmetro mínimo da verificação (62,1 e 29 cm)');
+  ok(!/9077:2025/.test(ph.replace(/não foi lida|não lida|não foi lido/g,'')) || /2025[^.]*não/.test(ph),'nada atribuído à NBR 9077:2025');
+  ok(/class="agora"/.test(problemasHTML(calc({nAuto:false,N:14}))) && !/class="agora"/.test(problemasHTML(calc({norma:'sec'}))),'destaque "nesta escada" só quando há problema');
+  /* o destaque só vale para o problema que acontece de fato: "Espelho alto" só com espelho acima do limite, "Leque convergente" só no convergente */
+  const tituloMarcado=(h,t)=>{const i=h.indexOf(t); if(i<0) return false; const j=h.indexOf('</',i); const k=h.lastIndexOf('<h',i); return /class="agora"/.test(h.slice(k,j+120));};
+  ok(!tituloMarcado(problemasHTML(calc({nAuto:false,N:18})),'Espelho alto') && tituloMarcado(problemasHTML(calc({nAuto:false,N:14})),'Espelho alto'),'Espelho alto marcado só com espelho acima do limite');
+  ok(!tituloMarcado(problemasHTML(calc({tipo:'l-leque',L:150,lqMin:15})),'Leque convergente'),'Leque convergente não é marcado em leque balanceado');
+  ok(tituloMarcado(problemasHTML(calc({norma:'acess',estrutura:'balanco'})),'Bocel saliente demais'),'degrau vazado na NBR 9050 marca o item de bocel/vazado');
+  const pq=problemasHTML(calc({tipo:'helicoidal'})); ok(!/0,97 a 1,375/.test(pq) && /diâmetro mínimo de 0,97 m \(piso de 32 cm\) a 1,375 m \(piso de 27 cm\)/.test(pq),'vão central da escada curva de emergência: mínimo conforme o piso (4.7.8.1 b)');
+  ok(!/deles\)/.test(problemasHTML(calc({nAuto:false,N:14}))),'contagem de problemas sem "(1 deles)"');
+  { const cp=calc({tipo:'helicoidal',norma:'custom'}).checks.find(c=>c.id==='pilar'); ok(/limite digitado/.test(cp.regra) && !/^NBR/.test(cp.regra),'pilar no perfil personalizado não atribui o limite digitado à NBR'); }
+  { let ruimH=0; for(const D of [140,160,180,200,230,260]) for(const H of [250,280,300,340]){ const X=calc({tipo:'helicoidal',estrutura:'laje',D,H}); if(X.checks.find(c=>c.id==='altura').status==='bad') ruimH++; }
+    ok(ruimH===0,'helicoidal maciça: degraus por volta automático nunca deixa a altura livre fora'); }
+  /* helicoidal maciça: a chegada desce pelo menos um espelho, fechando a frente do último degrau (sem fresta no 3D) */
+  { const X=calc({tipo:'helicoidal',estrutura:'laje'}), fc=buildFaces(X,C), ult=X.polys[X.polys.length-1];
+    const dist=q=>Math.min.apply(null,ult.pts.map(v=>Math.hypot(v[0]-q[0],v[1]-q[1])));
+    const longe=X.arrival.pts.reduce((m,q)=>dist(q)>dist(m)?q:m,X.arrival.pts[0]);
+    const zs=[]; fc.forEach(f=>f.tris.forEach(t=>t.forEach(v=>{ if(Math.hypot(v[0]-longe[0],v[1]-longe[1])<1e-6) zs.push(v[2]); })));
+    ok(Math.min.apply(null,zs)<=X.H-X.e+1e-6,'helicoidal maciça: chegada desce até o pé do último espelho no 3D'); }
+  /* elevação: a faixa da laje de cima não apaga os corrimãos (corrimãos desenhados depois dela) */
+  { const X=calc({tipo:'reta'}), sv=elevacaoSVG(X,{},C,'direita'); const iL=sv.indexOf('piso superior: laje'), iC=sv.lastIndexOf('<polyline'); ok(iL>0 && iC>iL,'elevação: corrimãos desenhados por cima da faixa da laje'); }
+}
+/* estrutura: laje maciça x degraus em balanço, em todos os tipos; laje do piso superior na elevação */
+{
+  const hm=calc({tipo:'helicoidal',estrutura:'laje'}); const p6=hm.polys[5]; const c6=p6.pts.reduce((a,q)=>[a[0]+q[0]/p6.pts.length,a[1]+q[1]/p6.pts.length],[0,0]);
+  ok(!hm.placas && hm.zBot(p6,c6)<p6.top-hm.e,'helicoidal maciça: laje helicoidal abaixo do pé do espelho');
+  ok(hm.helix.clearance>=hm.st.hLivre-1e-6 || st(hm,'altura')==='bad','helicoidal maciça: altura livre conta com a laje helicoidal');
+  const rb=calc({tipo:'reta',estrutura:'balanco'}); ok(rb.placas && Math.abs(rb.zBot(rb.polys[5],[50,160])-(rb.polys[5].top-5))<1e-9 && !rb.dente,'reta em balanço: placas de 5 cm, sem dente de chegada');
+  ok(st(calc({tipo:'l-patamar',estrutura:'balanco',norma:'acess',L:120}),'vazado')==='bad','NBR 9050: degraus em balanço (espelho vazado) não atendem (6.7.1)');
+  ok(st(calc({tipo:'reta',estrutura:'balanco'}),'vazado')==='info','fora da NBR 9050: espelho vazado só informado');
+  let eE=false; try{calc({estrutura:'xyz'});}catch(e){eE=!!e.patamar;} ok(eE,'estrutura inválida dá erro');
+  let eB=false; try{calc({estrutura:'balanco',bocel:'inclinado'});}catch(e){eB=!!e.patamar;} ok(eB,'em balanço não há espelho para inclinar');
+  ok(calc({tipo:'helicoidal'}).placas===true && calc({}).placas===false,'padrão: helicoidal em balanço, demais em laje');
+  let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const est of ['laje','balanco']){const X=calc({tipo:t,estrutura:est}); const sv=planSVG(X,{},C)+sectionSVG(X,{},C)+corteSVG(X,{},C,'A')+corteSVG(X,{},C,'B')+elevacaoSVG(X,{},C,'direita')+detalheSVG(X,{},C)+explicacao(X,X.st,C); buildFaces(X,C); if(/NaN|undefined|Infinity/.test(sv)) nan++;}
+  ok(nan===0,'as duas estruturas nos 9 tipos, em todos os desenhos, sem NaN');
+  const ev=elevacaoSVG(calc({}),{},C,'frente'); ok(/<rect x="[^"]+" y="-280" width="[^"]+" height="12" fill="#eee"/.test(ev),'elevação: laje do piso superior desenhada em vista (faixa de 12 cm)');
+  ok(!/laje da escada 0 cm/.test(detalheSVG(calc({estrutura:'balanco'}),{},C)),'detalhe em balanço não fala de laje');
+  const sb=sectionSVG(calc({tipo:'reta',estrutura:'balanco'}),{},C); ok(/degraus em balanço de 5 cm/.test(sb),'perfil: degraus em balanço desenhados como placas');
 }
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
