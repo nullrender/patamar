@@ -61,7 +61,7 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
 /* v5: explicação */
 {
   const X=calc({tipo:'l-leque'}); const ex2=explicacao(X,X.st,C);
-  ok(/edição nova em 16\/07\/2025/.test(ex2),'explicação avisa da NBR 9077:2025 não lida');
+  ok(/cancela e substitui a edição de 2001/.test(ex2) && /16\/07\/2026/.test(ex2),'explicação diz que a NBR 9077:2025 cancelou a de 2001, com a transição até 16/07/2026');
   ok(/piso p \(cm\)/.test(ex2) && /sua escada/.test(ex2),'explicação tem o gráfico de Blondel');
   ok(/Borda interna/.test(ex2) && /progressão aritmética/.test(ex2),'explicação do balanceamento com tabela');
   ok(/Tales/.test(ex2) && /1:50/.test(ex2),'roteiro de desenho à mão');
@@ -291,6 +291,35 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   ok(ruim===0,'elevação lado a lado: roteiro "medir e copiar" com 4 figuras nos 9 tipos e 4 lados, exemplo batendo com a tabela');
   const Xf=calc({tipo:'helicoidal'}); const exf=explicacao(Xf,Object.assign({},Xf.st,{ladoElev:'fundos'}),C);
   ok(/vai para a <b>esquerda<\/b> na elevação/.test(exf),'elevação dos fundos lado a lado: avisa que direita e esquerda invertem');
+}
+
+/* textos de norma da Explicação pela NBR 9077:2025 (sem a seção Problemas comuns, que tem texto próprio) */
+{
+  const TIP=['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'];
+  const semTag=x=>x.replace(/<svg[\s\S]*?<\/svg>/g,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  let nan=0, velho=0, s91111=0, s9591=0, atrib=[];
+  for(const t of TIP)for(const no of ['res','fuga','mez','acess'])for(const lq of ['bal','conv']){
+    const X=calc({tipo:t,norma:no,L:120,leque:lq}); let ex=explicacao(X,X.st,C);
+    if(/NaN|undefined|Infinity/.test(ex)) nan++;
+    ex=semTag(ex.replace(problemasHTML(X),''));
+    if(/Escada secundária|Escada de serviço/i.test(ex)) velho++;
+    if(/9\.1\.11/.test(ex)) s91111++;
+    if(/9\.5\.9\.1/.test(ex)) s9591++;
+    /* frase a frase: nenhuma que fale da edição de 2025 pode trazer Blondel 63 a 64 ou ponta de 15 cm */
+    ex.split(/(?<=[.;:])\s+/).forEach(fr=>{ if(/2025/.test(fr) && (/63 a 64/.test(fr) || /ponta[^.]*\b15\b|\b15 cm[^.]*ponta/.test(fr))) atrib.push(fr); });
+  }
+  const tot=TIP.length*4*2;
+  ok(nan===0,'explicação dos 9 tipos nos perfis res/fuga/mez/acess sem NaN nem undefined');
+  ok(velho===0,'explicação sem "Escada secundária" nem "Escada de serviço" em nenhum perfil');
+  ok(s91111===tot && s9591===tot,'explicação cita 9.1.11 e 9.5.9.1 em todos os casos ('+s91111+'/'+s9591+' de '+tot+')');
+  ok(atrib.length===0,'nenhuma frase atribui à NBR 9077:2025 o Blondel de 63 a 64 ou a ponta de 15 cm'+(atrib.length?': '+atrib[0]:''));
+  const Xm=calc({norma:'mez'}), em=semTag(explicacao(Xm,Xm.st,C));
+  ok(/menor que 20 pessoas/.test(em) && /3,7 m/.test(em) && /0,80 m/.test(em) && /0,5/.test(em) && /1,20 m, basta corrimão de um lado/.test(em) && /Anexo A/.test(em),'explicação traz as alíneas a a f da 9.5.9.1 com os números');
+  const Xf=calc({norma:'fuga'}), ef=semTag(explicacao(Xf,Xf.st,C));
+  ok(['9.1.5','9.1.10','9.1.12','4.2 b','3.11','9.4.1 d','9.4.2.2'].every(k=>ef.indexOf(k)>=0),'explicação da rota de fuga cita 9.1.5, 9.1.10, 9.1.12, 4.2 b, 3.11, 9.4.1 d e 9.4.2.2');
+  ok(/edição cancelada/.test(ef) && /referência de estudo|como referência/.test(ef),'perfil Estudo: diz que os números de 2001 são da edição cancelada, como referência');
+  const dz=detalheSVG(calc({norma:'mez'}),{},C); ok(/3,0 a 4,5/.test(dz) && !/3,8 a 6,5/.test(dz),'detalhe no perfil Mezanino: corrimão pela NBR 9050 (a NBR 9077:2025 remete a ela)');
+  ok(/cancelada/.test(detalheSVG(calc({}),{},C)),'detalhe no perfil Estudo: diz que a NBR 9077:2001 foi cancelada');
 }
 
 console.log(fail?fail+' falha(s)':'todos passaram');

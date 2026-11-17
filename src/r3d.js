@@ -189,7 +189,7 @@ function buildFaces(R, C) {
   R.polys.forEach(pl => { const top = pl.k * R.e; prism(pl.pts, triOf(pl), R.zBot ? q => R.zBot(pl, q) : Math.max(top - R.thk, 0), top, col3[pl.kind] || col3.reto); });
   /* corrimãos: prismas finos de 5 × 5 cm sobre a linha dos bocéis, 4 cm para dentro da borda, com montante nas pontas */
   const ink = hexRGB(C.ink), pap = hexRGB(C.paper), colR = ink.map((v, i) => Math.round(v * 0.6 + pap[i] * 0.4));
-  /* eixo do corrimão a 4 cm + meia seção da borda: a face fica a 4 cm livres da parede (NBR 9077:2001 4.8.2.4; NBR 9050:2020 4.6.5), como no detalhe */
+  /* eixo do corrimão a 4 cm + meia seção da borda: a face fica a 4 cm livres da parede (NBR 9050:2020 4.6.5, que a NBR 9077:2025 manda seguir; era também a NBR 9077:2001 4.8.2.4, cancelada), como no detalhe */
   const W5 = 5, OFF = 4 + W5 / 2;
   const corrimao = (pts, postes) => {
     const tris = [], tn = [];
