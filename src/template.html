@@ -429,8 +429,19 @@ body.travado{overflow:hidden}
 .pprev{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px}
 .paviso{margin:0;font-size:13px;line-height:1.45;padding:6px 10px;border-left:3px solid var(--info);background:var(--panel);border-radius:0 6px 6px 0}
 .paviso.alerta{border-left-color:var(--warn)}
-.pfolha svg{display:block;width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
-@media (min-width:700px) and (max-width:1023px){.pcorpo{grid-template-columns:290px minmax(0,1fr)}}
+.pfolha{display:flex;flex-direction:column;gap:14px}
+.pfig{margin:0;display:flex;flex-direction:column;gap:4px}
+.pfig figcaption{font-size:13px;font-weight:600;color:var(--muted)}
+/* cada folha é um botão: tocar (ou clicar) abre ela grande, com rolagem e pinça */
+.pamp{position:relative;display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in;text-align:left}
+.pamp:focus-visible{outline:3px solid var(--btn);outline-offset:3px}
+.pamp svg{display:block;width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.pampTxt{position:absolute;top:6px;right:6px;padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font-size:13px;font-weight:500;box-shadow:var(--shadow)}
+.perr{margin:0;font-size:13px;color:var(--bad)}
+.pfs{display:flex;flex-direction:column;gap:2px;font-size:13px;font-weight:500}
+.pfs .pc{font-weight:400}
+.pbtns>.pbtns{display:contents}
+@media (min-width:700px) and (max-width:1023px){.pcorpo{grid-template-columns:290px minmax(0,1fr)} .pdois{grid-template-columns:1fr}}
 @media (max-width:699px){
   .modal.pmodal{padding:0}
   .pmodal .pbox{border-radius:0;max-height:none;overflow:auto;display:block}
@@ -478,7 +489,8 @@ body.travado{overflow:hidden}
   .printArea .rodape{margin-top:12pt;font-size:8pt;color:#555;border-top:1px solid #bbb;padding-top:4pt}
   /* prancha em escala: a folha inteira, sem margem (o @page com o tamanho dela vai em #pagePrancha, montado na hora) */
   html.imprPrancha,html.imprPrancha body{margin:0;padding:0;background:#fff}
-  #printArea.prancha{overflow:hidden;break-inside:avoid}
+  #printArea.prancha .pimp{overflow:hidden;break-inside:avoid;break-after:page}
+  #printArea.prancha .pimp:last-child{break-after:auto}
   #printArea.prancha svg{display:block;width:100%;height:100%}
 }
 </style>
@@ -567,14 +579,19 @@ body.travado{overflow:hidden}
           <label class="pf">Nome da aluna ou aluno <input id="prAluno" type="text" maxlength="60" autocomplete="name"></label>
           <label class="pf">Disciplina <input id="prDisc" type="text" maxlength="60" autocomplete="off"></label>
           <label class="pf">Professor(a) <input id="prProf" type="text" maxlength="60" autocomplete="off"></label>
-          <label class="pf">Data <input id="prData" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off"></label>
+          <label class="pf">Data <input id="prData" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="prDataErro"></label>
+          <p class="perr" id="prDataErro" hidden>Data inválida: use dd/mm/aaaa (ex.: 05/03/2027). Enquanto isso, o carimbo usa a data de hoje.</p>
         </fieldset>
         <fieldset><legend>Folha</legend>
           <div class="pdois">
             <label class="pf">Formato <select id="prFormato"><option value="A3">A3</option><option value="A2">A2 (maior)</option><option value="A4">A4 (menor)</option></select></label>
             <label class="pf">Escala <select id="prEscala"><option value="auto">Automática</option><option value="50">1:50</option><option value="75">1:75</option><option value="100">1:100</option></select></label>
           </div>
-          <p class="note">Automática: a maior escala que couber (1:50, depois 1:75, depois 1:100). O detalhe do degrau sai ampliado (1:5 ou 1:10; se não couber, 1:20 ou 1:25).</p>
+          <div class="pfs" role="radiogroup" aria-labelledby="prFolhasNome" id="prFolhas"><span id="prFolhasNome">Folhas</span>
+            <label class="pc"><input type="radio" name="prFolhas" value="varias"> Várias, mantendo a escala (recomendado)</label>
+            <label class="pc"><input type="radio" name="prFolhas" value="uma"> Uma só, reduzindo a escala</label>
+          </div>
+          <p class="note">Com “Várias”, a escala fica (na automática, quase sempre 1:50) e as vistas se dividem em quantas folhas forem precisas, todas do mesmo formato. Com “Uma só”, tudo vai numa folha e a escala automática cai para 1:75 ou 1:100 se for preciso. O detalhe do degrau sai ampliado (1:5 ou 1:10; se não couber, 1:20 ou 1:25).</p>
         </fieldset>
         <fieldset id="prVistas"><legend>Vistas (valem para a prancha e para o DXF)</legend>
           <label class="pc"><input type="checkbox" data-v="planta"> Planta do pavimento inferior</label>
@@ -585,7 +602,8 @@ body.travado{overflow:hidden}
           <label class="pc"><input type="checkbox" data-v="detalhe"> Detalhe do degrau</label>
         </fieldset>
         <fieldset><legend>Prancha</legend>
-          <div class="pbtns"><button type="button" class="btn pri" id="prSvg">Baixar SVG da prancha</button><button type="button" class="btn" id="prImp">Imprimir / PDF</button></div>
+          <div class="pbtns"><span class="pbtns" id="prSvgs"></span><button type="button" class="btn" id="prImp">Imprimir / PDF</button></div>
+          <p class="paviso alerta" id="prMotivo" role="status" hidden></p>
           <p class="note" id="prDicaImp">Na janela de impressão, escolha o papel A3, orientação paisagem, margens “nenhuma” e escala 100% (ou “Tamanho real”). Com “Ajustar à página” a prancha sai fora de escala. Depois de imprimir, confira a régua de 100 mm do carimbo.</p>
         </fieldset>
         <fieldset><legend>DXF (para AutoCAD, LibreCAD e outros programas de CAD)</legend>
@@ -593,7 +611,7 @@ body.travado{overflow:hidden}
           <p class="note" id="prDxfNota"></p>
         </fieldset>
       </form>
-      <div class="pprev"><p class="paviso" id="prAviso" role="status" aria-live="polite"></p><div class="pfolha" id="prFolha"></div></div>
+      <div class="pprev"><p class="paviso" id="prAviso"></p><div class="pfolha" id="prFolha"></div></div>
     </div>
   </div>
 </div>
