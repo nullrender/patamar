@@ -1,4 +1,4 @@
-const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG}=require('./carregar.js');
+const {calc,planSVG,sectionSVG,explicacao,buildFaces,corteSVG,detalheSVG,elevacaoSVG}=require('./carregar.js');
 const C={paper:'#fff',ink:'#000',muted:'#666',line:'#ccc',accent:'#f60',info:'#06f',tread:'#ddd',winder:'#fdc',patamar:'#cfc',piso:'#eee',t3:'#ddd',w3:'#fdc',p3:'#cfc',f3:'#eee',ground:'#ccc'};
 let fail=0; const ok=(c,m)=>{console.log((c?'PASSA ':'FALHA ')+m); if(!c)fail++;};
 const st=(R,id)=>(R.checks.find(c=>c.id===id)||{}).status;
@@ -163,6 +163,49 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const fc=buildFaces(calc({}),C); ok(fc.some(f=>f.kind==='top'&&f.tris.some(t=>t.some(v=>Math.abs(v[2]-(280-12))<1e-6))) ,'3D: dente da chegada sob a laje de cima');
 }
 { const hc=corteSVG(calc({tipo:'helicoidal'}),{},C,'A'); const pp=[...hc.matchAll(/<polygon points="([^"]+)" fill="url\(#hcc\d+\)"/g)].map(m=>m[1].split(' ').map(p=>p.split(',').map(Number))); const top1=p=>{const ys=p.map(q=>q[1]),mn=Math.min(...ys);return ys.filter(y=>Math.abs(y-mn)<1e-6).length===2;}; ok(pp.length>1 && pp.every(top1),'helicoidal: cada degrau cortado é uma placa solta (sem espelho ligando)'); }
+/* v6.1: borda do degrau (bocel, espelho inclinado, sem saliência) */
+{
+  ok(st(calc({}),'bocel')==='ok','padrão: bocel de 1,5 cm atende o perfil Estudo');
+  ok(st(calc({bocel:'sem'}),'bocel')==='bad' && st(calc({avanco:1}),'bocel')==='bad','Estudo (NBR 9077): sem saliência ou bocel de 1 cm não atende (mín. 1,5)');
+  ok(st(calc({bocel:'inclinado',avanco:2}),'bocel')==='ok','Estudo: espelho inclinado com quina de 2 cm atende');
+  ok(st(calc({norma:'acess',L:120,bocel:'sem'}),'bocel')==='ok' && st(calc({norma:'acess',L:120,avanco:2}),'bocel')==='bad','NBR 9050: sem saliência atende; bocel de 2 cm não (máx. 1,5)');
+  ok(st(calc({norma:'custom',avanco:3}),'bocel')==='info','perfil personalizado: borda só informada');
+  let eA=false; try{calc({avanco:0});}catch(e){eA=!!e.patamar;} ok(eA,'avanço de bocel zero com "bocel" escolhido dá erro de entrada');
+  let eS=true; try{calc({bocel:'sem',avanco:'abc'});}catch(e){eS=false;} ok(eS,'sem saliência ignora o campo de avanço');
+  const dB=detalheSVG(calc({avanco:2.5}),{},C), dI=detalheSVG(calc({bocel:'inclinado'}),{},C), dS=detalheSVG(calc({bocel:'sem'}),{},C);
+  ok(/bocel 2,5/.test(dB) && /quina 1,5/.test(dI) && /sem saliência/.test(dS),'detalhe desenha e cota cada tipo de borda');
+  ok(/espelho reto, sem saliência/.test(explicacao(calc({bocel:'sem'}),calc({bocel:'sem'}).st,C)),'explicação cita a borda escolhida');
+}
+/* revisão da borda do degrau */
+{
+  ok(/1,45/.test(calc({avanco:1.45}).checks.find(c=>c.id==='bocel').valor),'avanço 1,45 aparece como 1,45 (não arredonda para 1,5 ao lado do mínimo)');
+  let e1=false; try{calc({bocel:'xyz'});}catch(e){e1=!!e.patamar;} ok(e1,'modo de borda inválido dá erro (não vira bocel em silêncio)');
+  let e2=false; try{calc({tipo:'helicoidal',bocel:'inclinado'});}catch(e){e2=!!e.patamar&&/placas soltas/.test(e.message);} ok(e2,'helicoidal não aceita espelho inclinado');
+  const hs=calc({tipo:'helicoidal',bocel:'sem'}).checks.find(c=>c.id==='bocel'); ok(/placas/.test(hs.valor) && !/espelho inclinado/.test(hs.nota),'helicoidal: borda descrita como placas, sem falar de espelho inclinado');
+  let e3=''; try{calc({bocel:'inclinado',avanco:0});}catch(e){e3=e.message;} ok(/Avanço sobre o degrau de baixo/.test(e3) && /Sem saliência/.test(e3),'avanço zero: mensagem com o nome do campo e a sugestão de "Sem saliência"');
+  ok(/nota do 3\.10/.test(calc({bocel:'sem'}).checks.find(c=>c.id==='bocel').nota),'espelho inclinado citado pela nota do 3.10 da NBR 9077:2001');
+}
+/* elevação */
+{
+  let ruim=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos'])for(const lado of ['dir','esq']){const sv=elevacaoSVG(calc({tipo:t,lado}),{},C,l); if(/NaN|undefined|Infinity/.test(sv)||/url\(#hcc/.test(sv)||!/ELEVAÇÃO/.test(sv)) ruim++;}
+  ok(ruim===0,'elevação nos 9 tipos e 4 lados: sem NaN e sem nada hachurado (nada é cortado)');
+  const ev=elevacaoSVG(calc({tipo:'reta'}),{},C,'direita'); const pv=[...ev.matchAll(/<polygon points="([^"]+)" fill="#ddd"/g)].map(m=>m[1].split(' ').map(p=>+p.split(',')[1]));
+  const pvg=pv.filter(p=>p.length>4); ok(pvg.length===1 && new Set(pvg[0].filter(y=>y<0).map(y=>y.toFixed(2))).size>=15 && /LADO DIREITO/.test(ev),'reta, elevação lateral: um contorno só, com os 15 dentes do perfil (sem linhas atravessando a laje)');
+  const ef=elevacaoSVG(calc({tipo:'reta'}),{},C,'fundos'); ok(!/<line[^>]+stroke-width="0.7"/.test(ef),'reta, elevação dos fundos (vê o fundo da laje): sem linhas de degrau');
+  const en=elevacaoSVG(calc({tipo:'reta'}),{},C,'frente'); ok((en.match(/<line[^>]+stroke-width="0.7"/g)||[]).length>=14,'reta, elevação de frente: linhas dos bocéis');
+  ok(/<polyline/.test(elevacaoSVG(calc({tipo:'helicoidal'}),{},C,'frente')),'helicoidal: corrimão na elevação');
+}
+/* roteiro da elevação na explicação */
+{
+  const h=calc({tipo:'helicoidal'}); const xh=explicacao(h,h.st,C);
+  ok(/Roteiro para desenhar a elevação \(vista Frente\)/.test(xh) && /-90,5/.test(xh) && /-8,2/.test(xh),'helicoidal: roteiro da elevação com as chamadas dos raios (raio 2: −90,5 e −8,2)');
+  const r=calc({tipo:'reta',ladoElev:'direita'}); const xr=explicacao(r,r.st,C);
+  ok(/vista Direita/.test(xr) && /gire a planta 90° no sentido horário/.test(xr),'roteiro segue o lado escolhido em Cortes › Elevação e manda girar a planta');
+  const rp=calc({tipo:'reta-patamar',ladoElev:'direita'}); const xp=explicacao(rp,rp.st,C); ok(/<tr><td>9<\/td><td>157,5<\/td><td>128,3<\/td>/.test(xp),'roteiro: fundo do 1º degrau depois do patamar igual ao desenho (128,3)');
+  ok(/<td>perfil<\/td>/.test(xr) && /<td>espelhos<\/td>/.test(explicacao(calc({tipo:'reta'}),calc({tipo:'reta'}).st,C)) && /<td>fundo da laje<\/td>/.test(explicacao(calc({tipo:'reta',ladoElev:'fundos'}),calc({tipo:'reta',ladoElev:'fundos'}).st,C)),'roteiro diz o que se vê de cada degrau (espelhos, perfil, fundo da laje)');
+  const he=calc({tipo:'helicoidal',ladoElev:'esquerda'}); const xe=explicacao(he,he.st,C); ok(/−110 × sen\(ângulo\)/.test(xe) && !/-450/.test(xe) && /214,6°/.test(xe),'helicoidal: fórmula com o sinal da vista e ângulos de 0 a 360°');
+  let nan=0; for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const l of ['frente','direita','esquerda','fundos']){const X=calc({tipo:t,ladoElev:l}); if(/NaN|undefined|Infinity/.test(explicacao(X,X.st,C))) nan++;} ok(nan===0,'roteiro da elevação sem NaN nos 9 tipos e 4 lados');
+}
 /* varredura */
 let n=0,bug=0;for(const t of ['reta','reta-patamar','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal'])for(const no of ['res','acess'])for(const H of [20,100,280,450,700])for(const lado of ['dir','esq'])for(const leque of ['bal','conv']){try{const X=calc({tipo:t,norma:no,H,L:120,lado,leque});const x=explicacao(X,X.st,C)+planSVG(X,{},C)+planSVG(X,{modo:'sup'},C)+sectionSVG(X,{},C);buildFaces(X,C);if(/NaN|undefined|Infinity/.test(x)){bug++;console.log('RUIM',t,no,H)}n++}catch(e){if(!e.patamar){bug++;console.log('BUG',t,no,H,e.message)}}}
 ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');

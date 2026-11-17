@@ -32,7 +32,7 @@ const FIELDS = [
   { id: 'D', key: 'D', kind: 'num' }, { id: 'Dc', key: 'Dc', kind: 'num' },
   { id: 'hLivre', key: 'hLivre', kind: 'num' }, { id: 'espLaje', key: 'espLaje', kind: 'num' },
   { id: 'tLaje', key: 'tLaje', kind: 'num' }, { id: 'espDegrau', key: 'espDegrau', kind: 'num' },
-  { id: 'zCorte', key: 'zCorte', kind: 'num' },
+  { id: 'zCorte', key: 'zCorte', kind: 'num' }, { id: 'avanco', key: 'avanco', kind: 'num' },
   { id: 'cEmin', key: 'cEmin', kind: 'num' }, { id: 'cEmax', key: 'cEmax', kind: 'num' }, { id: 'cPmin', key: 'cPmin', kind: 'num' }, { id: 'cPmax', key: 'cPmax', kind: 'num' },
   { id: 'cBmin', key: 'cBmin', kind: 'num' }, { id: 'cBmax', key: 'cBmax', kind: 'num' }, { id: 'cLmin', key: 'cLmin', kind: 'num' }, { id: 'cHpat', key: 'cHpat', kind: 'num' }, { id: 'cDw', key: 'cDw', kind: 'num' }, { id: 'cLq', key: 'cLq', kind: 'num' },
 ];
@@ -49,6 +49,8 @@ function mount() {
     '<section class="card"><h2>Degraus</h2>' +
     '<div class="field"><div class="labrow"><label for="N">Número de espelhos</label><label class="auto"><input type="checkbox" id="nAuto"> sugerido</label></div><div class="stepper"><button type="button" id="Nminus" aria-label="Menos um espelho">−</button><input id="N" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="Nplus" aria-label="Mais um espelho">+</button></div><p class="hint" id="Nhint"></p></div>' +
     '<div class="field"><div class="labrow"><label for="p" id="pLab">Piso (profundidade)</label><label class="auto"><input type="checkbox" id="pAuto"> pela fórmula</label></div><div class="inp"><input id="p" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
+    '<div class="field"><span class="lab" id="bocLab">Borda do degrau</span><div class="seg" id="bocel" role="group" aria-labelledby="bocLab"><button type="button" data-v="bocel">Bocel</button><button type="button" data-v="inclinado">Espelho inclinado</button><button type="button" data-v="sem">Sem saliência</button></div></div>' +
+    '<div class="field" id="avancoWrap"><label for="avanco">Avanço sobre o degrau de baixo</label><div class="inp"><input id="avanco" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div><p class="hint" id="bocHint"></p></div>' +
     '<div class="field" data-for="reta-patamar l-patamar l-leque u-patamar u-leque c-patamar z-patamar"><div class="labrow"><label for="n1">Pisos no 1º lance</label><label class="auto"><input type="checkbox" id="n1Auto"> dividir ao meio</label></div><div class="inp"><input id="n1" type="text" inputmode="numeric" autocomplete="off"><span class="un" id="n1Un"></span></div></div></section>' +
     '<section class="card" id="cardEsp"><h2>Detalhes do tipo</h2>' +
     '<div class="field" data-for="l-leque u-leque"><span class="lab" id="lqLab">Forma dos leques</span><div class="seg" id="leque" role="group" aria-labelledby="lqLab"><button type="button" data-v="bal">Balanceados</button><button type="button" data-v="conv">Convergentes</button></div><p class="hint" id="lqHint"></p></div>' +
@@ -93,9 +95,11 @@ function bind() {
   $('showDims').addEventListener('change', e => { S.showDims = e.target.checked; render(); });
   $('showNums').addEventListener('change', e => { S.showNums = e.target.checked; render(); });
   $('showCortes').addEventListener('change', e => { S.showCortes = e.target.checked; render(); });
+  $('ladoE').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.ladoElev = b.dataset.v; render(); });
   $('vistaC').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vistaCorte = b.dataset.v; render(); });
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
+  $('bocel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bocel = b.dataset.v; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
   $('Nminus').addEventListener('click', () => { S.nAuto = false; S.N = Math.max(2, (CUR ? CUR.N : S.N) - 1); render(); });
@@ -134,7 +138,9 @@ function renderTypes() {
   }).join('');
 }
 
-function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) el.value = v; }
+/* escreve o valor num campo que não está sendo digitado; o valor escrito é válido, então o campo sai do estado de erro
+   (sem isso, um erro antigo de um campo escondido voltava a travar o app quando o campo reaparecia) */
+function setVal(id, v, force) { const el = $(id); if (!el) return; if (force || document.activeElement !== el) { el.value = v; delete BAD[id]; el.classList.remove('err'); } }
 
 function falha(msg) {
   CUR = null;
@@ -158,6 +164,15 @@ function render(typing) {
   THEME = THEME || getTheme();
   opcoesK(S.leque !== 'conv', 0, clamp(Math.round(num(S.kLeque, 3)), 2, 6));
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
+  const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
+  document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
+  const helB = S.tipo === 'helicoidal';
+  $('avancoWrap').hidden = bocM === 'sem';
+  /* na helicoidal os degraus são placas soltas, sem espelho: não há espelho para inclinar */
+  document.querySelector('#bocel button[data-v="inclinado"]').hidden = helB;
+  document.querySelector('#bocel button[data-v="bocel"]').textContent = helB ? 'Placas sobrepostas' : 'Bocel';
+  document.querySelector('#bocel button[data-v="sem"]').textContent = helB ? 'Sem sobreposição' : 'Sem saliência';
+  $('bocHint').textContent = (helB ? 'Quanto cada placa avança sobre a de baixo. ' : bocM === 'inclinado' ? 'Quanto a quina do espelho inclinado avança sobre o degrau de baixo. ' : 'Quanto o nariz do degrau avança sobre o espelho de baixo. ') + 'A NBR 9077:2001 (4.7.3.1 e) pede pelo menos 1,5 cm; a NBR 9050:2020 (6.7.1), no máximo 1,5 cm. O avanço não muda o piso p, medido de bocel a bocel.';
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for.split(' ').indexOf(S.tipo) < 0; });
   document.querySelectorAll('#tipos button').forEach(b => { const on = b.dataset.v === S.tipo; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.v === VIEW; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
@@ -193,6 +208,7 @@ function render(typing) {
     $('nPerHint').textContent = 'Cada degrau gira ' + fmt(R.helix.th, 1) + '°. Para o piso de ' + fmt(R.hel ? R.pAlvo : R.p, 1) + ' cm seriam ' + R.helix.nPref + '; para a altura livre, no mínimo ' + R.helix.nReq + '. Menos degraus por volta: piso mais largo e menos altura livre.';
   }
   setVal('nMeioP', String(R.nMeioP));
+  setVal('avanco', plain(S.avanco));
   setVal('N', String(R.N)); setVal('p', S.pAuto ? plain(R.hel ? R.pAlvo : R.pInput) : plain(S.p)); setVal('n1', String(R.a)); setVal('Lp', plain(R.Lp));
   $('pLab').textContent = R.hel ? 'Piso desejado (linha de caminhamento)' : 'Piso (profundidade)';
   $('Nhint').textContent = 'Sugestão: ' + R.nSug + ' espelhos (espelho de ' + fmt(S.H / R.nSug, 2) + ' cm). Atual: ' + fmt(R.e, 2) + ' cm.';
@@ -229,6 +245,8 @@ function render(typing) {
   $('viewCorteBar').hidden = VIEW !== 'corte';
   document.querySelectorAll('#vistaC button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.vistaCorte || 'A')));
   $('deslWrap').hidden = !(S.vistaCorte === 'A' || S.vistaCorte === 'B' || !S.vistaCorte);
+  $('ladoE').hidden = S.vistaCorte !== 'E';
+  document.querySelectorAll('#ladoE button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.ladoElev || 'frente')));
   if (document.activeElement !== $('desl')) $('desl').classList.remove('err');
   setVal('desl', plain(num(S.vistaCorte === 'B' ? S.corteB : S.corteA, 0)));
   $('showCortes').checked = S.showCortes !== false;
@@ -265,12 +283,14 @@ function svgCorte(R, o, C) {
   const v = S.vistaCorte || 'A';
   if (v === 'perfil') return sectionSVG(R, o, C);
   if (v === 'detalhe') return detalheSVG(R, o, C);
+  if (v === 'E') return elevacaoSVG(R, o, C, S.ladoElev || 'frente');
   return corteSVG(R, o, C, v);
 }
 function legCorte(R, v) {
   const fora = R.st['corte' + v] ? ' A linha foi deslocada ' + fmt(R.st['corte' + v]) + ' cm.' : '';
   if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do pilar, marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
   if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
+  if (v === 'E') return 'Elevação (' + ({ frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' }[S.ladoElev || 'frente']) + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
   if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
   return R.hel ? 'Detalhe do degrau: ampliação dos degraus soltos da helicoidal (sem laje e sem espelho), com o piso medido na linha de caminhamento e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão.';
 }
@@ -307,6 +327,7 @@ function montarRelatorio() {
   h += '<figure>' + sectionSVG(R, {}, C) + '<figcaption>Perfil desenvolvido ao longo da linha de caminhamento (esquema, não é corte A-A).</figcaption></figure>';
   h += '<div class="quebra"></div><figure>' + corteSVG(R, {}, C, 'A') + '<figcaption>Corte A-A, marcado na planta.</figcaption></figure>';
   h += '<figure>' + corteSVG(R, {}, C, 'B') + '<figcaption>Corte B-B, marcado na planta.</figcaption></figure>';
+  h += '<figure>' + elevacaoSVG(R, {}, C, S.ladoElev || 'direita') + '<figcaption>Elevação: a escada vista de fora, sem cortar nada.</figcaption></figure>';
   const det = detalheSVG(R, {}, C); if (det) h += '<figure>' + det + '<figcaption>Detalhe do degrau.</figcaption></figure>';
   h += '<div class="quebra"></div><h2>Verificações</h2><ul class="checks">' + R.checks.map(c => '<li class="ck ' + c.status + '"><span class="pill">' + lab[c.status] + '</span><div class="cb"><div class="cn">' + c.nome + '</div><div class="cv"><b>' + c.valor + '</b>' + (c.regra ? ' <span>referência ' + c.regra + '</span>' : '') + '</div>' + (c.nota ? '<div class="cnote">' + c.nota + '</div>' : '') + '</div></li>').join('') + '</ul>';
   h += '<h2>Memória de cálculo</h2><ol class="memo">' + R.memo.map(x => '<li>' + x + '</li>').join('') + '</ol>';
@@ -327,7 +348,7 @@ function copiar(txt, msg) {
 
 function gerarImagem() {
   const T = THEME || getTheme();
-  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? 'corte-' + (S.vistaCorte || 'A') : VIEW) + '.png'; $('modal').hidden = false; };
+  const done = url => { $('modalImg').src = url; const a = $('modalDl'); a.href = url; a.download = 'patamar-' + S.tipo + '-' + (VIEW === 'corte' ? (S.vistaCorte === 'E' ? 'elevacao-' + (S.ladoElev || 'frente') : 'corte-' + (S.vistaCorte || 'A')) : VIEW) + '.png'; $('modal').hidden = false; };
   if (VIEW === '3d') { draw3d(true); done(CV3.toDataURL('image/png')); return; }
   const svg = VIEW === 'corte' ? svgCorte(CUR, { pxW: 1600 }, T) : planSVG(CUR, { pxW: 1600 }, T);
   const m = svg.match(/width="(\d+)" height="(\d+)"/); const w = +m[1], h = +m[2];

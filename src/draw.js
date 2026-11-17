@@ -349,10 +349,24 @@ function ladoDeLa(pts, P0, n) {
   return out;
 }
 
-function corteSVG(R, o, C, qual) {
+/* ELEVAÇÃO: o mesmo mecanismo do corte, com o plano posto fora da escada, do lado de quem olha. Nada é atravessado,
+   então tudo aparece em vista (traço fino). lado: 'frente' (de quem vai subir o 1º lance), 'direita', 'esquerda', 'fundos'.
+   Direita e esquerda são as de quem sobe o 1º lance. */
+const LADOS_ELEV = { frente: 'frente', direita: 'lado direito', esquerda: 'lado esquerdo', fundos: 'fundos' };
+function elevacaoDe(R, lado) {
+  const pts = []; R.polys.forEach(pl => pl.pts.forEach(q => pts.push(q))); R.arrival.pts.forEach(q => pts.push(q));
+  if (R.hel) pts.push([-R.helix.R, -R.helix.R], [R.helix.R, R.helix.R]);
+  const b = bboxOf(pts), mg = 40;
+  const v = { frente: { P0: [0, b[1] - mg], n: [0, 1] }, fundos: { P0: [0, b[3] + mg], n: [0, -1] }, direita: { P0: [b[2] + mg, 0], n: [-1, 0] }, esquerda: { P0: [b[0] - mg, 0], n: [1, 0] } }[LADOS_ELEV[lado] ? lado : 'frente'];
+  return { P0: v.P0, n: v.n, u: [v.n[1], -v.n[0]] };
+}
+function elevacaoSVG(R, o, C, lado) { return corteSVG(R, o, C, 'E', lado); }
+
+function corteSVG(R, o, C, qual, lado) {
   o = o || {};
-  qual = qual === 'B' ? 'B' : 'A';
-  const cs = cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u, st = R.st, H = R.H, e = R.e;
+  const elev = qual === 'E';
+  qual = elev ? 'E' : qual === 'B' ? 'B' : 'A';
+  const cs = elev ? elevacaoDe(R, lado) : cortesDe(R)[qual], P0 = cs.P0, n = cs.n, u = cs.u, st = R.st, H = R.H, e = R.e;
   const S = q => (q[0] - P0[0]) * u[0] + (q[1] - P0[1]) * u[1], Dp = q => (q[0] - P0[0]) * n[0] + (q[1] - P0[1]) * n[1];
   const ptAt = (s, d) => [P0[0] + u[0] * s + n[0] * d, P0[1] + u[1] * s + n[1] * d];
   /* extensão do desenho */
@@ -365,8 +379,8 @@ function corteSVG(R, o, C, qual) {
     '<pattern id="' + hid2 + '" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="' + C.tread + '"/><line x1="0" y1="0" x2="0" y2="9" stroke="' + C.ink + '" stroke-width="0.9"/></pattern></defs>';
   let s = '';
   /* ---- elementos além do plano (em vista), do mais longe para o mais perto ---- */
-  const vistas = [];
-  R.polys.forEach(pl => {
+  const vistas = [], itens = [];
+  R.polys.forEach((pl, idx) => {
     const lado = ladoDeLa(pl.pts, P0, n); if (lado.length < 3) return;
     const ss = lado.map(S), ta = Math.min.apply(null, ss), tb = Math.max.apply(null, ss);
     if (tb - ta < 1e-6) return;
@@ -376,12 +390,45 @@ function corteSVG(R, o, C, qual) {
     for (let i = 0; i <= NS2; i++) {
       const sx = Math.min(tb - 1e-6, Math.max(ta + 1e-6, ta + (tb - ta) * i / NS2));
       let zmin = pl.top;
-      /* fatia do degrau na posição sx (reta na direção do olhar): o ponto mais baixo do intradorso nela */
       const base = ptAt(sx, 0);
-      cortaPoligono(lado, base, u, n).forEach(iv => [iv[0], (iv[0] + iv[1]) / 2, iv[1]].forEach(d => { zmin = Math.min(zmin, R.zBot(pl, [base[0] + n[0] * d, base[1] + n[1] * d])); }));
+      cortaPoligono(lado, base, u, n).forEach(iv => [iv[0] + 1e-4, (iv[0] + iv[1]) / 2, iv[1] - 1e-4].forEach(d => { zmin = Math.min(zmin, R.zBot(pl, [base[0] + n[0] * d, base[1] + n[1] * d])); }));
       fundo.push([sx, zmin]);
     }
-    vistas.push({ prof, svg: sPoly([[ta, pl.top], [tb, pl.top]].concat(fundo.slice().reverse()), treadFill(pl.kind, C), C.ink, 0.9) });
+    /* para onde o degrau "sobe" em relação a quem olha: de frente (vê os espelhos), de lado (vê o perfil) ou por baixo (vê a laje) */
+    const sai = idx + 1 < R.polys.length ? R.polys[idx + 1].entry : R.arrival.pts.slice(0, 2);
+    const ce = [(pl.entry[0][0] + pl.entry[1][0]) / 2, (pl.entry[0][1] + pl.entry[1][1]) / 2], cs2 = [(sai[0][0] + sai[1][0]) / 2, (sai[0][1] + sai[1][1]) / 2];
+    const dl = Math.hypot(cs2[0] - ce[0], cs2[1] - ce[1]) || 1, d = ((cs2[0] - ce[0]) * n[0] + (cs2[1] - ce[1]) * n[1]) / dl;
+    const cls = R.hel ? 'placa' : pl.kind === 'patamar' ? 'plano' : d > 0.35 ? 'frente' : d < -0.35 ? 'baixo' : 'lado';
+    itens.push({ k: pl.k, kind: pl.kind, ta, tb, top: pl.top, fundo, prof, cls });
+  });
+  /* junta degraus seguidos do mesmo lance num só contorno: numa elevação não há aresta entre um degrau e o outro
+     dentro da laje; só ficam o contorno, as linhas dos bocéis (vistos de frente) e o perfil dentado (vistos de lado) */
+  const grupos2 = [];
+  itens.forEach(it => {
+    const g = grupos2[grupos2.length - 1], ult = g && g[g.length - 1];
+    const junta = g && it.cls === ult.cls && it.cls !== 'plano' && it.cls !== 'placa' && it.k === ult.k + 1 && it.ta <= ult.tb + 1e-3 && it.tb >= ult.ta - 1e-3;
+    if (junta) g.push(it); else grupos2.push([it]);
+  });
+  const fundoEm = (it, sx) => { const f = it.fundo; if (sx <= f[0][0]) return f[0][1]; for (let i = 1; i < f.length; i++) if (sx <= f[i][0]) { const a = f[i - 1], b = f[i], t = (sx - a[0]) / ((b[0] - a[0]) || 1); return a[1] + (b[1] - a[1]) * t; } return f[f.length - 1][1]; };
+  grupos2.forEach(g => {
+    const prof = Math.min.apply(null, g.map(it => it.prof));
+    if (g.length === 1) { const it = g[0]; vistas.push({ prof, svg: sPoly([[it.ta, it.top], [it.tb, it.top]].concat(it.fundo.slice().reverse()), treadFill(it.kind, C), C.ink, 0.9) }); return; }
+    /* contorno da união: em cada trecho entre bordas, topo = o mais alto e fundo = o mais baixo dos degraus que cobrem o trecho */
+    const bps = []; g.forEach(it => { bps.push(it.ta, it.tb); it.fundo.forEach(q => bps.push(q[0])); });
+    bps.sort((a, b) => a - b);
+    const xs = bps.filter((v, i) => i === 0 || v - bps[i - 1] > 1e-6);
+    const topo = [], baixo = [];
+    for (let i = 0; i + 1 < xs.length; i++) {
+      const a = xs[i], b = xs[i + 1], m = (a + b) / 2, cob = g.filter(it => it.ta <= m && it.tb >= m);
+      if (!cob.length) continue;
+      const tz = Math.max.apply(null, cob.map(it => it.top));
+      topo.push([a, tz], [b, tz]);
+      baixo.push([a, Math.min.apply(null, cob.map(it => fundoEm(it, a + 1e-6)))], [b, Math.min.apply(null, cob.map(it => fundoEm(it, b - 1e-6)))]);
+    }
+    let svg = sPoly(topo.concat(baixo.reverse()), treadFill(g[0].kind, C), C.ink, 0.9);
+    /* de frente: as linhas dos bocéis (topo de cada degrau) aparecem; de lado e por baixo, não */
+    if (g[0].cls === 'frente') g.forEach(it => { svg += sLine([it.ta, it.top], [it.tb, it.top], C.ink, 0.7); });
+    vistas.push({ prof, svg });
   });
   /* dente da chegada (espelho do último degrau sob a laje de cima) em vista */
   if (R.dente) {
@@ -395,9 +442,9 @@ function corteSVG(R, o, C, qual) {
   vistas.forEach(v => { s += v.svg; });
   /* corrimãos em vista: os dois lados, pelo mesmo caminho do 3D (railLado: contorna os patamares na horizontal),
      só nos trechos além do plano, cortados exatamente no plano */
-  if (!R.hel && typeof railLado === 'function') {
-    (R.nm.acess ? [92, 70] : [92]).forEach(hR => [0, 1].forEach(lado => {
-      const pts = railLado(R, lado, hR);
+  if (typeof railLado === 'function') {
+    const listas = R.hel ? [railHel(R, 4).pts] : [].concat.apply([], (R.nm.acess ? [92, 70] : [92]).map(hR => [0, 1].map(lado => railLado(R, lado, hR))));
+    listas.forEach(pts => {
       let tr = [];
       const fecha = () => { if (tr.length > 1) s += sPolyline(tr, C.ink, 1.2); tr = []; };
       for (let i = 0; i < pts.length; i++) {
@@ -408,7 +455,7 @@ function corteSVG(R, o, C, qual) {
         if ((dA > 0) !== (dB > 0)) { const k = dA / (dA - dB), q = [A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k], z = A[2] + (B[2] - A[2]) * k; tr.push([S(q), z]); if (dA > 0) fecha(); }
       }
       fecha();
-    }));
+    });
   }
   /* ---- pisos e lajes ---- */
   const zU = H - st.espLaje;
@@ -422,7 +469,11 @@ function corteSVG(R, o, C, qual) {
     else { const b = R.opening.bbox; const box = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]; const iv = cortaPoligono(box, P0, n, u); if (iv.length) furo = iv[0]; }
   }
   const lajeRet = (a, b) => b - a > 1e-6 ? '<rect x="' + r2(a) + '" y="' + r2(-H) + '" width="' + r2(b - a) + '" height="' + r2(st.espLaje) + '" fill="url(#' + hid2 + ')" stroke="' + C.ink + '" stroke-width="1.8" ' + NS + '/>' : '';
-  if (furo) {
+  if (elev) {
+    /* na elevação nada é cortado: a laje do piso de cima aparece só como as duas linhas da borda, em traço fino */
+    s += sLine([s0, zU], [s1, zU], C.muted, 0.9, '10 4') + sLine([s0, H], [s1, H], C.muted, 0.9, '10 4');
+    s += sText(s0 + fs * 0.4, H + fs * 2.2, 'piso superior (laje em linha tracejada)', fs * 0.72, C.muted, 'start', 0, 500);
+  } else if (furo) {
     s += lajeRet(s0, furo[0]) + lajeRet(furo[1], s1);
     s += sLine([furo[0], zU], [furo[1], zU], C.muted, 0.9) + sLine([furo[0], H], [furo[1], H], C.muted, 0.9);
   } else s += lajeRet(s0, s1);
@@ -461,8 +512,9 @@ function corteSVG(R, o, C, qual) {
   s += dimLine([s1, 0], [s1, H], 1, 0, fs * 2.4, 'H ' + fmt(H, 0), fs, C);
   s += dimLine([s1, zU], [s1, H], 1, 0, fs * 0.9, fmt(st.espLaje, 0), fs * 0.75, C);
   if (pecas.some(pc => pc.top + st.hLivre <= H + 1e-6)) s += sText(s0 + fs * 0.4, H + fs * 3.2, 'tracejado laranja: altura livre de ' + fmt(st.hLivre, 0) + ' sobre os degraus cortados', fs * 0.72, C.accent, 'start', 0, 500);
-  const t1 = 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + (R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase());
-  const t2 = 'hachura: cortado · traço fino: em vista · cm';
+  const nomeT = R.hel ? 'HELICOIDAL' : TIPOS.find(t => t.id === R.tipo).nome.toUpperCase();
+  const t1 = elev ? 'ELEVAÇÃO · ' + LADOS_ELEV[LADOS_ELEV[lado] ? lado : 'frente'].toUpperCase() + ' · ESCADA ' + nomeT : 'CORTE ' + qual + '-' + qual + ' · ESCADA ' + nomeT;
+  const t2 = elev ? 'vista de fora, sem cortar nada · tudo em traço fino · cm' : 'hachura: cortado · traço fino: em vista · cm';
   const ymin = -fs * 9.5;
   s += titleBlock(s0 - fs * 2, -fs * 3, s1 - s0 + fs * 8, fs, t1, t2, C);
   const vx = s0 - fs * 3, vxw = s1 - s0 + fs * 11, ymax = H + (R.hel ? 0 : 92) + fs * 5;
