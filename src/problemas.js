@@ -11,7 +11,7 @@ const PROB_GO = 'NT 11/2021 dos Bombeiros de GO';
 
 const PROBLEMAS = [
   { tema: 'Geometria do degrau', itens: [
-    { t: 'Espelho alto (19 a 20 cm) em casa apertada', ids: ['e'],
+    { t: 'Espelho alto (19 a 20 cm) em casa apertada', ids: ['e'], cond: R => R.e > R.nm.eMax + 1e-6,
       pq: 'O desnível é fixo e a projeção em planta é pequena; com menos espelhos, cada um fica mais alto e a escada fica mais curta.',
       regra: 'Saída de emergência: espelho de 16 a 18 cm (NBR 9077:2001, 4.7.3.1 a). Rota acessível: 16 a 18 cm, sem exceção (NBR 9050:2020, 6.8.2). Só nas escadas secundárias "exclusivamente de serviço" a NBR 9077:2001 (4.7.5.2) aceita até 20 cm (19 cm no grupo de ocupação H, 23 cm em I e J), sempre com Blondel. O PR (' + PROB_PR + ', 5.7.5.1 e 5.7.5.2) aceita os mesmos 20 cm em mezanino e área privativa, que inclui a residência unifamiliar, com população abaixo de 10 pessoas e escada de até 3,7 m. GO (' + PROB_GO + ', 5.7.5.1 e 5.7.5.2) aceita em escada de uso restrito, exclusivamente de serviço, com população abaixo de 20, escada de até 3,7 m e um só pavimento atendido. O limite do código de obras municipal não foi encontrado.',
       sol: [
@@ -62,7 +62,7 @@ const PROBLEMAS = [
       ] }
   ] },
   { tema: 'Curvas e caracol', itens: [
-    { t: 'Leque convergente com ponta zero: os degraus da curva viram triângulos', ids: ['ponta', 'leque'],
+    { t: 'Leque convergente com ponta zero: os degraus da curva viram triângulos', ids: ['ponta', 'leque'], cond: R => !R.bal,
       pq: 'Dividir o giro em fatias iguais a partir do canto é rápido e economiza espaço (' + PROB_SF + ').',
       regra: 'NBR 9077:2001, 4.7.3.1 c: na curva os degraus são balanceados, o piso é medido na linha de percurso (a linha por onde se anda, a 55 cm da borda, ou no eixo se a escada tiver menos de 1,10 m, item 3.32) e a parte mais estreita tem no mínimo 15 cm. Em escada secundária, 7 cm (4.7.5.1 d). NBR 9050:2020, 6.8.6 e Figura 75: medida a 55 cm da borda interna, ponta de 15 cm. Ponta zero não atende nenhuma das duas.',
       sol: [
@@ -80,7 +80,7 @@ const PROBLEMAS = [
       ] },
     { t: 'Caracol com pilar central fino: a ponta do degrau junto ao pilar fica com poucos centímetros', ids: ['pilar'], conta: true,
       pq: 'Caracóis de catálogo usam pilar fino e diâmetro pequeno para caber num furo pequeno de laje (' + PROB_SF + ').',
-      regra: 'NBR 9077:2001, 4.7.5.1 d: em escada secundária, ponta mínima de 7 cm. Em saída de emergência, 4.7.8.1 b pede degraus convergindo para um vão central de 0,97 a 1,375 m de diâmetro, o que, pela nossa leitura, tira o caracol de pilar fino da rota de fuga. Em GO (' + PROB_GO + ', 5.7.5.1 g), uso restrito: 15 cm em lance curvo e 7 cm em espiral. No PR (' + PROB_PR + ', 5.7.3.1 c): 15 cm em leque ou espiral, sem exceção de 7 cm, e largura mínima de 0,80 m (5.7.5.1 b).',
+      regra: 'NBR 9077:2001, 4.7.5.1 d: em escada secundária, ponta mínima de 7 cm. Em saída de emergência, 4.7.8.1 b pede degraus convergindo para um vão central de diâmetro mínimo de 0,97 m (piso de 32 cm) a 1,375 m (piso de 27 cm), conforme o piso, o que, pela nossa leitura, tira o caracol de pilar fino da rota de fuga. Em GO (' + PROB_GO + ', 5.7.5.1 g), uso restrito: 15 cm em lance curvo e 7 cm em espiral. No PR (' + PROB_PR + ', 5.7.3.1 c): 15 cm em leque ou espiral, sem exceção de 7 cm, e largura mínima de 0,80 m (5.7.5.1 b).',
       sol: [
         ['Usar o caracol só onde a regra permite (uso restrito, mezanino, residência) e conferir a ponta: 7 cm em GO e na secundária da NBR 9077:2001, 15 cm no PR, aumentando o pilar ou criando um vão central', 'diâmetro total e furo na laje maiores', 'NBR 9077:2001, 4.7.5.1 d; ' + PROB_GO + ', 5.7.5.1 g; ' + PROB_PR + ', 5.7.3.1 c'],
         ['Diminuir os degraus por volta (ângulo maior por degrau) para aumentar a ponta, conferindo Blondel e altura livre', 'piso na linha maior ou espelho maior; a altura livre sob a volta de cima diminui', PROB_SF + '; a conta é geometria'],
@@ -89,10 +89,10 @@ const PROBLEMAS = [
       ] },
     { t: 'Escada em leque ou curva usada como saída de emergência do prédio', ids: [],
       pq: 'A escada curva é peça de destaque no hall e acaba sendo a única do pavimento (' + PROB_SF + ').',
-      regra: 'NBR 9077:2001, 4.7.8.1: lance curvo só é de emergência no grupo A (residencial) ou em escada não enclausurada (menos na divisão F-3), com degraus iguais convergindo para um vão central de 0,97 a 1,375 m e largura de 1,10 a 1,65 m. 4.7.8.2 e 4.7.9.2: proibido em escada à prova de fumaça; o leque também nos grupos F e H. A capacidade cai 10% em lance curvo (nota da tabela). 4.7.7: nos grupos A, B, D, G, I ou J, em prédio com menos de 50 pessoas e até 6 m de altura, ou quando a escada é só a segunda saída (com outra escada para toda a população, de no máximo 50 pessoas, nos mesmos grupos), aceitam-se 90 cm e degraus em leque. Em GO (' + PROB_GO + ', 5.7.1 k), leque e espiral não são escada de segurança, salvo em mezanino e área privativa.',
+      regra: 'NBR 9077:2001, 4.7.8.1: lance curvo só é de emergência no grupo A (residencial) ou em escada não enclausurada (menos na divisão F-3), com degraus iguais convergindo para um vão central de diâmetro mínimo de 0,97 m (piso de 32 cm) a 1,375 m (piso de 27 cm), conforme o piso, e largura de 1,10 a 1,65 m. 4.7.8.2 e 4.7.9.2: proibido em escada à prova de fumaça; o leque também nos grupos F e H. A capacidade cai 10% em lance curvo (nota da tabela). 4.7.7: nos grupos A, B, D, G, I ou J, em prédio com menos de 50 pessoas e até 6 m de altura, ou quando a escada é só a segunda saída (com outra escada para toda a população, de no máximo 50 pessoas, nos mesmos grupos), aceitam-se 90 cm e degraus em leque. Em GO (' + PROB_GO + ', 5.7.1 k), leque e espiral não são escada de segurança, salvo em mezanino e área privativa.',
       sol: [
         ['Separar funções: a escada curva fica como escada social (secundária) e uma escada reta com patamares faz a rota de fuga', 'duas escadas: mais área e custo', 'NBR 9077:2001, 4.7.5.1; ' + PROB_GO + ', 5.7.1 k'],
-        ['Manter a curva como emergência, onde a regra do estado permitir: vão central de 0,97 a 1,375 m, largura de 1,10 a 1,65 m, degraus iguais', 'escada grande; a curva é proibida em escada à prova de fumaça, e o leque também nos grupos F e H', 'NBR 9077:2001, 4.7.8.1, 4.7.8.2 e 4.7.9.2'],
+        ['Manter a curva como emergência, onde a regra do estado permitir: vão central com diâmetro mínimo de 0,97 m (piso de 32 cm) a 1,375 m (piso de 27 cm), conforme o piso; largura de 1,10 a 1,65 m, degraus iguais', 'escada grande; a curva é proibida em escada à prova de fumaça, e o leque também nos grupos F e H', 'NBR 9077:2001, 4.7.8.1, 4.7.8.2 e 4.7.9.2'],
         ['Prédio pequeno (grupos A, B, D, G, I ou J, menos de 50 pessoas, até 6 m) ou escada só de segunda saída nessas condições: degraus em leque com 90 cm de largura', 'só nesses casos; o estado pode ter regra própria', 'NBR 9077:2001, 4.7.7']
       ] },
     { t: 'Leque ou curva numa rota acessível', ids: ['mudanca'],
@@ -207,7 +207,7 @@ const PROBLEMAS = [
         ['Deixar chumbadores ou reforço na laje e no degrau para pôr a guarda depois', 'custo pequeno na obra', PROB_SF],
         ['Paliativo: rede de proteção e portões de segurança', 'pouco durável; a fixação pede manutenção', 'site Decorfácil, lido só o resumo']
       ] },
-    { t: 'Bocel saliente demais, ausente, ou degrau sem espelho (vazado)', ids: ['bocel'],
+    { t: 'Bocel saliente demais, ausente, ou degrau sem espelho (vazado)', ids: ['bocel', 'vazado'],
       pq: 'A pedra é assentada com 3 a 4 cm de sobra, ou rente; em escada metálica ou de madeira o degrau fica solto para parecer leve.',
       regra: 'NBR 9077:2001, 4.7.3.1 e: bocel de NO MÍNIMO 1,5 cm (sem bocel, a quina avança o mesmo sobre o degrau de baixo). NBR 9050:2020, 6.7.1, em rota acessível: espelho vazado proibido e avanço de NO MÁXIMO 1,5 cm. No PR (' + PROB_PR + ', 5.7.3.1 e e f): também no máximo 1,5 cm. Quem precisa atender as duas fica com exatamente 1,5 cm.',
       sol: [
@@ -236,14 +236,14 @@ function problemasHTML(R) {
   const f = (v, d) => fmt(v, d);
   const ruins = {};
   (R.checks || []).forEach(c => { if (c.status === 'bad' || c.status === 'warn') ruins[c.id] = 1; });
-  const agora = it => it.ids.some(id => ruins[id]);
+  const agora = it => it.ids.some(id => ruins[id]) && (!it.cond || it.cond(R));
   const nm = R.nm || {};
   let n = 0;
   PROBLEMAS.forEach(g => g.itens.forEach(it => { if (agora(it)) n++; }));
 
   let h = '<p>Muita escada feita na prática não atende ao limite da norma. Antes de tudo, é preciso saber QUAL regra vale para esta escada: saída de emergência (NBR 9077:2001 e a instrução dos Bombeiros do estado), rota acessível (NBR 9050:2020), escada secundária ou de serviço (NBR 9077:2001, 4.7.5) ou escada de casa, que segue o código de obras do município (o app não conhece esse código). Por isso, além de Estudo e NBR 9050, o app tem os perfis "Escada secundária" e "Escada de serviço" (NBR 9077:2001, 4.7.5).</p>';
   h += '<p>As regras da ' + PROB_PR + ' valem só no Paraná, e as da ' + PROB_GO + ' só em Goiás. Toda citação da NBR 9077 é da edição de 2001; a edição de 2025 não foi lida. Onde não achamos fonte, está escrito "' + PROB_SF + '". Perfil em uso: ' + (nm.nome || '') + '.</p>';
-  h += '<p>' + (n ? 'Os problemas marcados com <span class="agora">nesta escada</span> aparecem nas verificações da escada atual (' + n + ' deles).' : 'Nenhum dos problemas abaixo aparece nas verificações da escada atual.') + '</p>';
+  h += '<p>' + (n ? 'Os problemas marcados com <span class="agora">nesta escada</span> aparecem nas verificações da escada atual: ' + n + (n === 1 ? ' problema.' : ' problemas.') : 'Nenhum dos problemas abaixo aparece nas verificações da escada atual.') + '</p>';
 
   PROBLEMAS.forEach(g => {
     h += '<h4>' + g.tema + '</h4><dl>';

@@ -212,9 +212,12 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   ok(st(calc({norma:'sec',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='ok' && st(calc({norma:'res',tipo:'reta-patamar',LpAuto:false,Lp:80}),'patprof')==='bad','secundária: patamar de 80 cm basta (sem a fórmula)');
   ok(st(calc({norma:'serv',H:280,nAuto:false,N:14}),'e')==='ok' && st(calc({norma:'sec',H:280,nAuto:false,N:14}),'e')==='bad','serviço: espelho de 20 cm atende; secundária não');
   ok(st(calc({norma:'sec',H:350,tipo:'reta'}),'patamar')==='ok' && st(calc({norma:'res',H:350,tipo:'reta'}),'patamar')==='bad','secundária: lance até 3,70 m (NBR 9077:2001, 4.7.3.2)');
-  const e14=calc({nAuto:false,N:14}).checks.find(c=>c.id==='e'); ok(/pelo menos 16 espelhos/.test(e14.sol||''),'como resolver: espelho alto sugere o número de espelhos');
-  const hp=calc({tipo:'helicoidal'}).checks.find(c=>c.id==='pilar'); ok(/Ø 62,1 cm/.test(hp.sol||'') && /Ø 29 cm/.test(hp.sol||''),'como resolver: diâmetro mínimo do centro da caracol (62,1 cm para 15; 29 cm para 7)');
-  ok(calc({}).checks.every(c=>!c.sol),'escada que atende não mostra "como resolver"');
+  const R14=calc({nAuto:false,N:14}); R14.resolver(); const e14=R14.checks.find(c=>c.id==='e'); ok(/Use 16 espelhos/.test(e14.sol||'') && calc({nAuto:false,N:16}).checks.find(c=>c.id==='e').status==='ok','como resolver: espelho alto sugere um número de espelhos que atende');
+  /* a sugestão do pilar é uma combinação testada: aplicada, a ponta passa a atender */
+  const RH=calc({tipo:'helicoidal'}); RH.resolver(); const hp=RH.checks.find(c=>c.id==='pilar'); const mm=/Ø (\d+) cm, diâmetro externo de (\d+) cm e (\d+) degraus/.exec(hp.sol||'');
+  ok(mm && calc({tipo:'helicoidal',Dc:+mm[1],D:+mm[2],nPerAuto:false,nPer:+mm[3]}).checks.find(c=>c.id==='pilar').status==='ok','como resolver: pilar da caracol sugere combinação que atende');
+  const R0=calc({}); R0.resolver(); ok(R0.checks.every(c=>!c.sol),'escada que atende não mostra "como resolver"');
+  const Rl=calc({}); ok(Rl.checks.every(c=>c.sol===undefined) && typeof Rl.resolver==='function','"como resolver" só é calculado quando pedido (resolver)');
   ok(/4\.7\.5/.test(explicacao(calc({norma:'sec'}),calc({norma:'sec'}).st,C)),'explicação descreve os perfis da NBR 9077:2001, 4.7.5');
 }
 /* seção Problemas comuns */
@@ -224,6 +227,24 @@ ok(st(calc({tipo:'helicoidal'}),'pilar')==='warn','helicoidal: piso junto ao pil
   const ph=problemasHTML(calc({tipo:'helicoidal'})); ok(/62,1 cm para ponta de 15 cm/.test(ph) && /29 cm para ponta de 7 cm/.test(ph),'caracol: mesmo diâmetro mínimo da verificação (62,1 e 29 cm)');
   ok(!/9077:2025/.test(ph.replace(/não foi lida|não lida|não foi lido/g,'')) || /2025[^.]*não/.test(ph),'nada atribuído à NBR 9077:2025');
   ok(/class="agora"/.test(problemasHTML(calc({nAuto:false,N:14}))) && !/class="agora"/.test(problemasHTML(calc({norma:'sec'}))),'destaque "nesta escada" só quando há problema');
+  /* o destaque só vale para o problema que acontece de fato: "Espelho alto" só com espelho acima do limite, "Leque convergente" só no convergente */
+  const tituloMarcado=(h,t)=>{const i=h.indexOf(t); if(i<0) return false; const j=h.indexOf('</',i); const k=h.lastIndexOf('<h',i); return /class="agora"/.test(h.slice(k,j+120));};
+  ok(!tituloMarcado(problemasHTML(calc({nAuto:false,N:18})),'Espelho alto') && tituloMarcado(problemasHTML(calc({nAuto:false,N:14})),'Espelho alto'),'Espelho alto marcado só com espelho acima do limite');
+  ok(!tituloMarcado(problemasHTML(calc({tipo:'l-leque',L:150,lqMin:15})),'Leque convergente'),'Leque convergente não é marcado em leque balanceado');
+  ok(tituloMarcado(problemasHTML(calc({norma:'acess',estrutura:'balanco'})),'Bocel saliente demais'),'degrau vazado na NBR 9050 marca o item de bocel/vazado');
+  const pq=problemasHTML(calc({tipo:'helicoidal'})); ok(!/0,97 a 1,375/.test(pq) && /diâmetro mínimo de 0,97 m \(piso de 32 cm\) a 1,375 m \(piso de 27 cm\)/.test(pq),'vão central da escada curva de emergência: mínimo conforme o piso (4.7.8.1 b)');
+  ok(!/deles\)/.test(problemasHTML(calc({nAuto:false,N:14}))),'contagem de problemas sem "(1 deles)"');
+  { const cp=calc({tipo:'helicoidal',norma:'custom'}).checks.find(c=>c.id==='pilar'); ok(/limite digitado/.test(cp.regra) && !/^NBR/.test(cp.regra),'pilar no perfil personalizado não atribui o limite digitado à NBR'); }
+  { let ruimH=0; for(const D of [140,160,180,200,230,260]) for(const H of [250,280,300,340]){ const X=calc({tipo:'helicoidal',estrutura:'laje',D,H}); if(X.checks.find(c=>c.id==='altura').status==='bad') ruimH++; }
+    ok(ruimH===0,'helicoidal maciça: degraus por volta automático nunca deixa a altura livre fora'); }
+  /* helicoidal maciça: a chegada desce pelo menos um espelho, fechando a frente do último degrau (sem fresta no 3D) */
+  { const X=calc({tipo:'helicoidal',estrutura:'laje'}), fc=buildFaces(X,C), ult=X.polys[X.polys.length-1];
+    const dist=q=>Math.min.apply(null,ult.pts.map(v=>Math.hypot(v[0]-q[0],v[1]-q[1])));
+    const longe=X.arrival.pts.reduce((m,q)=>dist(q)>dist(m)?q:m,X.arrival.pts[0]);
+    const zs=[]; fc.forEach(f=>f.tris.forEach(t=>t.forEach(v=>{ if(Math.hypot(v[0]-longe[0],v[1]-longe[1])<1e-6) zs.push(v[2]); })));
+    ok(Math.min.apply(null,zs)<=X.H-X.e+1e-6,'helicoidal maciça: chegada desce até o pé do último espelho no 3D'); }
+  /* elevação: a faixa da laje de cima não apaga os corrimãos (corrimãos desenhados depois dela) */
+  { const X=calc({tipo:'reta'}), sv=elevacaoSVG(X,{},C,'direita'); const iL=sv.indexOf('piso superior: laje'), iC=sv.lastIndexOf('<polyline'); ok(iL>0 && iC>iL,'elevação: corrimãos desenhados por cima da faixa da laje'); }
 }
 /* estrutura: laje maciça x degraus em balanço, em todos os tipos; laje do piso superior na elevação */
 {
