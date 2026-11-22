@@ -221,6 +221,7 @@ function detalheSVG(R, o, C) {
   if (hel) {
     notas.push('piso medido na linha de caminhamento (' + fmt(R.helix.rw, 0) + ' cm do eixo);');
     notas.push('fora dela o piso muda: menor perto do eixo, maior perto da borda');
+    if (R.olho) notas.push('autoportante: corrimão também do lado do olho (lado aberto)');
   } else if (!plc) notas.push('laje da escada ' + fmt(tl) + ' cm, medida na perpendicular à inclinação');
   const fN = fs * 0.78, lh = fs * 1.35;
   const wN = Math.max.apply(null, notas.map(t => tW(t, fN)));

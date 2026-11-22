@@ -84,11 +84,13 @@ const PROBLEMAS = [
         ['Conferir o resultado, não o método: piso igual em todos os degraus na linha de caminhamento, ponta mais estreita acima do mínimo e Blondel na linha', 'outros processos gráficos dão degraus um pouco diferentes', 'NBR 9050:2020, 6.8.6; referência da NBR 9077:2001 (3.32, 4.7.3.1 b e c, 4.7.9.1 b e c), cancelada'],
         ['Programas BIM têm opção de largura mínima do degrau em leque; no ArchiCAD ela é medida da projeção do ponto de giro até a borda interna', 'cada programa tem seu cálculo; conferir os valores na linha de caminhamento', 'ajuda do ArchiCAD, Graphisoft, lido só o resumo']
       ] },
-    { t: 'Caracol com pilar central fino: a ponta do degrau junto ao pilar fica com poucos centímetros', ids: ['pilar', 'mudanca'], cond: R => !!R.hel && (!!(R.nm && R.nm.fuga) || (R.checks || []).some(c => c.id === 'pilar' && c.status !== 'ok')), conta: true,
-      pq: 'Caracóis de catálogo usam pilar fino e diâmetro pequeno para caber num furo pequeno de laje (' + PROB_SF + ').',
-      regra: 'NBR 9077:2025, 9.1.11: escada em espiral é proibida nas rotas de saída. 9.5.9.1: no acesso a mezanino e área privativa ela é permitida, com população abaixo de 20, altura até 3,7 m, largura de 0,80 m, corrimão, guarda nos lados abertos e patamares de pelo menos 0,80 m nas escadas curvas; a norma não fixa a ponta junto ao pilar. A NBR 9077:2001, cancelada pela de 2025, aceitava ponta de 7 cm na escada secundária (4.7.5.1 d) e, em saída de emergência, pedia degraus convergindo para um vão central de diâmetro mínimo de 0,97 m (piso de 32 cm) a 1,375 m (piso de 27 cm), conforme o piso (4.7.8.1 b). Em GO (' + PROB_GO + ', 5.7.5.1 g), uso restrito: 15 cm em lance curvo e 7 cm em espiral. No PR (' + PROB_PR + ', 5.7.3.1 c): 15 cm em leque ou espiral, sem exceção de 7 cm, e largura mínima de 0,80 m (5.7.5.1 b). ' + PROB_EST.charAt(0).toUpperCase() + PROB_EST.slice(1) + '.',
-      sol: [
-        ['Usar o caracol só fora da rota de fuga: no acesso a mezanino ou área privativa, nas condições da 9.5.9.1, e conferir a ponta pela regra do estado (7 cm em GO na espiral, 15 cm no PR), aumentando o pilar ou criando um vão central', 'diâmetro total e furo na laje maiores', 'NBR 9077:2025, 9.1.11 e 9.5.9.1; ' + PROB_GO + ', 5.7.5.1 g; ' + PROB_PR + ', 5.7.3.1 c'],
+    { t: R => R.olho ? 'Caracol com olho pequeno: a ponta do degrau junto ao olho fica com poucos centímetros' : 'Caracol com pilar central fino: a ponta do degrau junto ao pilar fica com poucos centímetros', ids: ['pilar', 'mudanca'], cond: R => !!R.hel && (!!(R.nm && R.nm.fuga) || (R.checks || []).some(c => c.id === 'pilar' && c.status !== 'ok')), conta: true,
+      pq: R => (R.olho ? 'Um olho pequeno deixa o diâmetro total menor, para caber num furo pequeno de laje' : 'Caracóis de catálogo usam pilar fino e diâmetro pequeno para caber num furo pequeno de laje') + ' (' + PROB_SF + ').',
+      regra: R => 'NBR 9077:2025, 9.1.11: escada em espiral é proibida nas rotas de saída. 9.5.9.1: no acesso a mezanino e área privativa ela é permitida, com população abaixo de 20, altura até 3,7 m, largura de 0,80 m, corrimão, guarda nos lados abertos e patamares de pelo menos 0,80 m nas escadas curvas; a norma não fixa a ponta junto ao ' + (R.olho ? 'olho' : 'pilar') + '. A NBR 9077:2001, cancelada pela de 2025, aceitava ponta de 7 cm na escada secundária (4.7.5.1 d) e, em saída de emergência, pedia degraus convergindo para um vão central de diâmetro mínimo de 0,97 m (piso de 32 cm) a 1,375 m (piso de 27 cm), conforme o piso (4.7.8.1 b). Em GO (' + PROB_GO + ', 5.7.5.1 g), uso restrito: 15 cm em lance curvo e 7 cm em espiral. No PR (' + PROB_PR + ', 5.7.3.1 c): 15 cm em leque ou espiral, sem exceção de 7 cm, e largura mínima de 0,80 m (5.7.5.1 b). ' + PROB_EST.charAt(0).toUpperCase() + PROB_EST.slice(1) + '.',
+      sol: R => [
+        ['Usar o caracol só fora da rota de fuga: no acesso a mezanino ou área privativa, nas condições da 9.5.9.1, e conferir a ponta pela regra do estado (7 cm em GO na espiral, 15 cm no PR), ' + (R.olho ? 'aumentando o olho (Diâmetro do centro)' : 'aumentando o pilar ou criando um vão central') + '', 'diâmetro total e furo na laje maiores', 'NBR 9077:2025, 9.1.11 e 9.5.9.1; ' + PROB_GO + ', 5.7.5.1 g; ' + PROB_PR + ', 5.7.3.1 c'],
+        R.olho ? ['Fora da rota de fuga (mezanino, área privativa ou casa), aumentar o olho (Diâmetro do centro): o olho maior aumenta a ponta do degrau, que é o raio do olho × o ângulo do degrau', 'diâmetro total e furo na laje maiores; a laje helicoidal precisa de cálculo estrutural de engenheiro; não vale na rota de fuga, onde a espiral é proibida (NBR 9077:2025, 9.1.11)', PROB_SF + '; a conta é geometria']
+          : ['Fora da rota de fuga (mezanino, área privativa ou casa), trocar o pilar fino pela caracol autoportante, sem pilar e com um olho (vão no meio) maior: o olho maior aumenta a ponta do degrau, que é o raio do olho × o ângulo do degrau. No app: Centro "Vazio (autoportante)" e um diâmetro do centro maior', 'diâmetro total e furo na laje maiores; a laje helicoidal se sustenta sozinha e precisa de cálculo estrutural de engenheiro; não vale na rota de fuga, onde a espiral é proibida (NBR 9077:2025, 9.1.11)', PROB_SF + '; a conta é geometria'],
         ['Na rota de fuga, trocar o caracol por lances retos com patamares nas mudanças de direção', 'bem mais área em planta', 'NBR 9077:2025, 9.1.11 e 9.1.12'],
         ['Diminuir os degraus por volta (ângulo maior por degrau) para aumentar a ponta, conferindo Blondel e altura livre', 'piso na linha maior ou espelho maior; a altura livre sob a volta de cima diminui', PROB_SF + '; a conta é geometria'],
         ['Em GO, barrilete, casa de máquinas e piso técnico de manutenção eventual podem ter espiral sem largura mínima e sem Blondel', 'só em GO e só nesses locais técnicos', PROB_GO + ', nota da 5.7.5.2'],
@@ -259,19 +261,22 @@ function problemasHTML(R) {
   h += '<p>A NBR 9077:2025 cancelou a edição de 2001. Os itens da edição de 2025 citados aqui foram conferidos no texto; os da edição de 2001 aparecem só como histórico ou como referência de estudo, sempre com o aviso de que ela foi cancelada. As regras da ' + PROB_PR + ' valem só no Paraná, e as da ' + PROB_GO + ' só em Goiás; ' + PROB_EST + '. Onde não achamos fonte, está escrito "' + PROB_SF + '". Perfil em uso: ' + (nm.nome || '') + '.</p>';
   h += '<p>' + (n ? 'Os problemas marcados com <span class="agora">nesta escada</span> aparecem nas verificações da escada atual: ' + n + (n === 1 ? ' problema.' : ' problemas.') : 'Nenhum dos problemas abaixo aparece nas verificações da escada atual.') + '</p>';
 
+  /* título, regra e saídas podem depender da escada (ex.: pilar ou olho na caracol) */
+  const tx = v => typeof v === 'function' ? v(R) : v;
   PROBLEMAS.forEach(g => {
     h += '<h4>' + g.tema + '</h4><dl>';
     g.itens.forEach(it => {
-      h += '<dt>' + it.t + (agora(it) ? ' <span class="agora">nesta escada</span>' : '') + '</dt><dd>';
-      h += '<p><b>Por que acontece:</b> ' + it.pq + '</p>';
-      h += '<p><b>O que a regra diz:</b> ' + it.regra + '</p>';
+      h += '<dt>' + tx(it.t) + (agora(it) ? ' <span class="agora">nesta escada</span>' : '') + '</dt><dd>';
+      h += '<p><b>Por que acontece:</b> ' + tx(it.pq) + '</p>';
+      h += '<p><b>O que a regra diz:</b> ' + tx(it.regra) + '</p>';
       if (it.conta && R.hel && R.helix) {
         const hx = R.helix, th = hx.th * Math.PI / 180, ponta = hx.rc * th, ang = 2 * Math.PI / hx.nPer;
         const D = t => 2 * t / ang;
-        h += '<p><b>A conta nesta escada:</b> ponta = raio do pilar × ângulo do degrau em radianos = ' + f(hx.rc, 1) + ' × ' + f(th, 3) + ' = ' + f(ponta, 1) + ' cm. Com ' + hx.nPer + ' degraus por volta, o diâmetro mínimo do centro (pilar ou vão central) seria Dmin = 2 × ponta desejada ÷ (2π ÷ ' + hx.nPer + '): ' + f(Math.ceil(D(15) * 10 - 1e-9) / 10, 1) + ' cm para ponta de 15 cm e ' + f(Math.ceil(D(7) * 10 - 1e-9) / 10, 1) + ' cm para ponta de 7 cm (arredondado para cima: é um mínimo). O pilar atual tem ' + f(2 * hx.rc, 1) + ' cm de diâmetro.</p>';
+        const nc = R.olho ? 'olho' : 'pilar';
+        h += '<p><b>A conta nesta escada:</b> ponta = raio do ' + nc + ' × ângulo do degrau em radianos = ' + f(hx.rc, 1) + ' × ' + f(th, 3) + ' = ' + f(ponta, 1) + ' cm. Com ' + hx.nPer + ' degraus por volta, o diâmetro mínimo do centro (pilar ou olho) seria Dmin = 2 × ponta desejada ÷ (2π ÷ ' + hx.nPer + '): ' + f(Math.ceil(D(15) * 10 - 1e-9) / 10, 1) + ' cm para ponta de 15 cm e ' + f(Math.ceil(D(7) * 10 - 1e-9) / 10, 1) + ' cm para ponta de 7 cm (arredondado para cima: é um mínimo). O ' + nc + ' atual tem ' + f(2 * hx.rc, 1) + ' cm de diâmetro.</p>';
       }
       h += '<p><b>Como resolvem na prática:</b></p><ul>';
-      it.sol.forEach(s => { h += '<li>' + s[0] + '. Efeito: ' + s[1] + '. (' + s[2] + ')</li>'; });
+      tx(it.sol).forEach(s => { h += '<li>' + s[0] + '. Efeito: ' + s[1] + '. (' + s[2] + ')</li>'; });
       h += '</ul></dd>';
     });
     h += '</dl>';

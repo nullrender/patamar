@@ -91,15 +91,17 @@ function railLado(R, lado, hR) {
 
 /* corrimão da helicoidal: do lado de fora (raio R − off), 92 cm acima da borda externa de cada degrau; montantes a cada 4 degraus.
    Usado pelo 3D e pela elevação/cortes. */
-function railHel(R, off) {
-  const rr = R.helix.R - off, sc = rr / R.helix.R, pts = [], postes = [];
+/* interno = true: corrimão do lado do olho (caracol autoportante), 'off' cm para fora da borda do olho */
+function railHel(R, off, interno) {
+  const r0 = interno ? R.helix.rc : R.helix.R, rr = interno ? r0 + off : r0 - off, sc = rr / r0, pts = [], postes = [];
+  const borda = a => interno ? a.inner : a.outer;
   const ponto = (q, z) => [q[0] * sc, q[1] * sc, z];
   R.polys.forEach((pl, i) => {
-    const o = pl.arc.outer, z0 = pl.top, z1 = (pl.k + 1) * R.e, m = o.length - 1;
+    const o = borda(pl.arc), z0 = pl.top, z1 = (pl.k + 1) * R.e, m = o.length - 1;
     [0, m >> 1].forEach(s => pts.push(ponto(o[s], z0 + (z1 - z0) * s / m + 92)));
     if (i % 4 === 0) postes.push([o[0][0] * sc, o[0][1] * sc, z0, z0 + 92]);
   });
-  const ch = R.arrival && R.arrival.arc ? R.arrival.arc.outer[0] : R.polys[R.polys.length - 1].arc.outer.slice(-1)[0];
+  const ch = R.arrival && R.arrival.arc ? borda(R.arrival.arc)[0] : borda(R.polys[R.polys.length - 1].arc).slice(-1)[0];
   pts.push(ponto(ch, R.H + 92));
   postes.push([ch[0] * sc, ch[1] * sc, R.H, R.H + 92]);
   return { pts, postes };
@@ -181,6 +183,7 @@ function buildFaces(R, C) {
   /* chegada da helicoidal: placa no nível do piso de cima; na laje maciça desce pelo menos um espelho, fechando a frente do último degrau */
   if (R.hel && R.arrival && R.arrival.arc) prism(R.arrival.pts, triOf({ arc: R.arrival.arc, pts: R.arrival.pts }), R.H - (R.placas ? R.st.espDegrau : Math.max(R.st.espLaje, R.st.tLaje, R.e)), R.H, col3.patamar || col3.reto);
   /* pilar */
+  /* pilar (na caracol autoportante não há pilar: o centro é o olho, vazio) */
   if (R.pole) { const ring = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 2 * PI; ring.push([R.pole.r * Math.cos(a), R.pole.r * Math.sin(a)]); } prism(ring, fan(ring), 0, R.H - R.st.espLaje, [88, 98, 108]); }
   /* dente da chegada: espelho do último degrau sob a laje do piso de cima (quando o espelho é maior que a laje) */
   if (R.dente) prism(R.dente.pts, fan(R.dente.pts), R.dente.z0, R.dente.z1, hexRGB(C.f3));
@@ -219,6 +222,8 @@ function buildFaces(R, C) {
   } else if (R.polys.length && R.hel && R.helix) {
     const c = railHel(R, OFF);
     corrimao(c.pts, c.postes);
+    /* caracol autoportante: o lado do olho é aberto e também leva corrimão */
+    if (R.olho) { const ci = railHel(R, OFF, true); corrimao(ci.pts, ci.postes); }
   }
   return faces;
 }
