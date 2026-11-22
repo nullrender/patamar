@@ -830,7 +830,7 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   ok(/Trace o círculo externo e o do olho/.test(ex) && /Trace o círculo externo e o pilar/.test(exP),'roteiro à mão: "trace o círculo externo e o do olho"');
   ok(/caracol autoportante/.test(ex) && /se sustenta sozinha/.test(ex) && /piso de baixo e na laje de cima/.test(ex) && /engenheiro/.test(ex),'Explicação: o que é a caracol autoportante, e o cálculo estrutural é de um engenheiro');
   ok(/No olho<\/th>/.test(ex) && !/No pilar/.test(ex) && /raio do olho × ângulo/.test(ex) && /O olho atual tem/.test(ex),'Explicação e Problemas comuns: colunas e contas falam em olho');
-  ok(/caracol autoportante, sem pilar e com um olho/.test(ex),'Problemas comuns: a autoportante com olho maior como saída da caracol de pilar fino');
+  ok(/caracol autoportante, sem pilar e com um olho/.test(exP) && !/caracol autoportante, sem pilar e com um olho/.test(ex),'Problemas comuns: a autoportante com olho maior como saída da caracol de pilar fino (só com pilar)');
   ok(!/NaN|undefined|Infinity/.test(ex),'Explicação do autoportante sem NaN');
   /* interface */
   ok(/id="centro" role="group"/.test(ui) && /data-v="vazio">Vazio \(autoportante\)</.test(ui) && /Diâmetro do centro/.test(ui) && /id="DcHint"/.test(ui) && /Diâmetro do olho, o vão no meio/.test(ui) && /S\.centro = b\.dataset\.v/.test(ui),'interface: botões Centro (Pilar / Vazio) e "Diâmetro do centro" com dica que muda');
@@ -846,6 +846,37 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   TIPOS.forEach(t=>{const R=calc({tipo:t.id,centro:'vazio'}); n++; if(/NaN|Infinity/.test(tudo(R))) nan++;});
   [[160,60],[220,20],[300,120],[400,240],[600,500],[1000,900],[200,4]].forEach(([D,Dc])=>['pilar','vazio'].forEach(centro=>['esq','dir'].forEach(lado=>{const R=calc({tipo:'helicoidal',D,Dc,centro,lado,estrutura:centro==='vazio'?null:'laje'}); R.resolver(); n++; if(/NaN|Infinity/.test(tudo(R))) nan++;})));
   ok(nan===0,'sem NaN: '+n+' casos (9 tipos com centro vazio; D e Dc de 160/60 a 1000/900, pilar e vazio, dois lados)');
+  /* correções da revisão do autoportante */
+  {
+    const dtMarcado=(h,t)=>{const i=h.indexOf('<dt>'+t); if(i<0) return null; return /class="agora"/.test(h.slice(i,h.indexOf('</dt>',i)));};
+    const item=(h,t)=>{const i=h.indexOf('<dt>'+t); return i<0?'':h.slice(i,h.indexOf('</dd>',i));};
+    /* corrimão do lado do olho no mezanino: a 9.5.9.1 d pede um lado só abaixo de 1,20 m */
+    const M=calc({tipo:'helicoidal',centro:'vazio',norma:'mez',D:300,Dc:120}), nO=ck(M,'olho').nota||'';
+    ok(M.L<120 && /9\.5\.9\.1 e/.test(nO) && /guarda-corpo/.test(nO) && !/Precisa de guarda-corpo e de corrimão/.test(nO) && /basta de um lado/.test(nO) && /recomendação, não exigência/.test(nO) && !/dos dois lados \(9\.5\.9\.1 d\)/.test(nO) && ck(M,'olho').regra==='guarda-corpo','olho no mezanino com largura < 1,20 m: corrimão do lado do olho é recomendação (9.5.9.1 d), guarda-corpo pela 9.5.9.1 e');
+    const M2=calc({tipo:'helicoidal',centro:'vazio',norma:'mez',D:400,Dc:120}), nO2=ck(M2,'olho').nota||'';
+    ok(M2.L>=120 && /dos dois lados \(9\.5\.9\.1 d\)/.test(nO2) && /9\.5\.9\.1 e/.test(nO2),'olho no mezanino com largura ≥ 1,20 m: corrimão dos dois lados (9.5.9.1 d)');
+    const F=calc({tipo:'helicoidal',centro:'vazio',norma:'fuga',D:300,Dc:120}), nF=ck(F,'olho').nota||'';
+    ok(/9\.1\.4/.test(nF) && /9\.1\.5/.test(nF) && /também do lado do olho/.test(nF),'olho na rota de fuga: guarda-corpo (9.1.4) e corrimão dos dois lados (9.1.5)');
+    const exM=explicacao(M,M.st,C);
+    ok(!/pede guarda-corpo e corrimão também desse lado/.test(exM) && !/pede guarda-corpo e corrimão\./.test(ui),'Explicação e dica do Centro: o corrimão do lado do olho depende do perfil');
+    /* Problemas comuns no autoportante: olho, não pilar fino */
+    for(const X of [calc({tipo:'helicoidal',centro:'vazio',D:220,Dc:20}),calc({tipo:'helicoidal',centro:'vazio',D:300,Dc:120,norma:'fuga'})]){
+      const ph=problemasHTML(X), it=item(ph,'Caracol com olho pequeno');
+      ok(it && dtMarcado(ph,'Caracol com olho pequeno')===true && !/pilar fino/.test(ph) && !/Trocar o pilar fino/.test(ph) && !/Caracol com pilar central fino/.test(ph) && /junto ao olho/.test(it) && /aumentando o olho/.test(it) && /Aumentar o olho \(Diâmetro do centro\)|aumentar o olho \(Diâmetro do centro\)/.test(it) && !/vão central'/.test(it),'Problemas comuns no autoportante (Dc '+X.helix.rc*2+', '+X.nm.id+'): item "Caracol com olho pequeno", sem "pilar fino" nem trocar pela autoportante');
+    }
+    const phP=problemasHTML(calc({tipo:'helicoidal'})), itP=item(phP,'Caracol com pilar central fino');
+    ok(/Fora da rota de fuga \(mezanino, área privativa ou casa\), trocar o pilar fino pela caracol autoportante/.test(itP) && /espiral é proibida \(NBR 9077:2025, 9\.1\.11\)/.test(itP),'Problemas comuns com pilar: trocar pela autoportante só fora da rota de fuga (9.1.11)');
+    /* mensagem do erro de balanço com centro vazio: sem afirmação estrutural sem fonte */
+    const eb=err({tipo:'helicoidal',centro:'vazio',estrutura:'balanco'});
+    ok(eb && eb.campo==='centro' && !/apoio no meio/.test(eb.message) && /presos no pilar do meio/.test(eb.message) && /Laje de concreto \(maciça\)/.test(eb.message) && /"Pilar" em Centro/.test(eb.message) && !/apoio no meio/.test(ui),'erro balanço + vazio: o app prende as placas no pilar; sem "cada placa precisa de um apoio no meio"');
+    /* caracol com pilar e laje: os degraus não "se apoiam no pilar" */
+    ok(/há um pilar no meio \(os degraus se prendem nele, em balanço, ou se apoiam numa laje helicoidal em volta dele\)/.test(exP) && !/os degraus se apoiam num pilar no meio/.test(exP),'"Caracol com pilar ou autoportante?": vale com laje e com balanço');
+    /* interface: foco do "Ir ao campo" no grupo de botões; espaço antes do D/Dc; campos preenchidos no erro */
+    ok(/el\.classList\.contains\('seg'\)\) \(el\.querySelector\('button\.on'\) \|\| el\.querySelector\('button'\)\)\.focus\(\)/.test(ui),'"Ir ao campo" num grupo de botões põe o foco no botão escolhido');
+    const tplC=fs.readFileSync(path.join(__dirname,'..','src','template.html'),'utf8');
+    ok(/\.field\+\.grid2\{margin-top:12px\}/.test(tplC),'espaço de 12 px entre a dica do Centro e o Diâmetro externo');
+    ok(/function falha[\s\S]{0,600}FIELDS\.forEach\(f => \{ const el = \$\(f\.id\); if \(el && !BAD\[f\.id\][^\n]*el\.value = /.test(ui),'erro ao abrir: os campos mostram os números do estado (não ficam vazios)');
+  }
   /* prancha A3 do autoportante */
   const Pr=montarPrancha(V,C,{formato:'A3'}); ok(!Pr.omitidas.length && !/data-camada="PILAR"/.test(Pr.folhas.map(f=>f.svg).join('')),'prancha A3 do autoportante: todas as vistas, sem pilar');
 }

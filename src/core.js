@@ -124,7 +124,7 @@ function calc(inp) {
      placas soltas presas na parede, numa viga ou no pilar. Sem escolha: helicoidal com pilar em balanço, helicoidal com
      centro vazio em laje (sem pilar não há onde prender as placas), as outras em laje. */
   if (st.estrutura !== undefined && st.estrutura !== null && ['laje', 'balanco'].indexOf(st.estrutura) < 0) erro('Estrutura: opção inválida. Escolha Laje de concreto ou Degraus em balanço.', 'estrutura');
-  if (olhoV && st.estrutura === 'balanco') erro('Com o centro vazio não há pilar para prender os degraus em balanço: cada placa precisa de um apoio no meio. Escolha "Laje de concreto (maciça)" em Estrutura (a laje helicoidal se sustenta sozinha, sem pilar) ou "Pilar" em Centro.', 'centro');
+  if (olhoV && st.estrutura === 'balanco') erro('Na helicoidal, o app desenha os degraus em balanço presos no pilar do meio; com o centro vazio não há esse pilar. Escolha "Laje de concreto (maciça)" em Estrutura (a caracol autoportante: a laje helicoidal se sustenta sozinha) ou "Pilar" em Centro.', 'centro');
   const estrutura = st.estrutura || (st.tipo === 'helicoidal' && !olhoV ? 'balanco' : 'laje'), placas = estrutura === 'balanco';
   if (bocelModo === 'inclinado' && placas && st.tipo !== 'helicoidal') erro('Com degraus em balanço não há espelho para inclinar: as placas ficam soltas. Em "Borda do degrau", escolha Placas sobrepostas ou Sem sobreposição.', 'bocel');
   if (bocelModo === 'inclinado' && st.tipo === 'helicoidal') erro('Na helicoidal o espelho de cada degrau é radial e não se inclina como numa escada reta. Em "Borda do degrau", escolha Bocel (o degrau avança sobre o de baixo) ou Sem saliência.', 'bocel');
@@ -788,7 +788,19 @@ function calc(inp) {
     chk('pilar', olhoV ? 'Piso junto ao olho (borda interna)' : 'Piso junto ao pilar (parte mais estreita)', fmt(pPilar, 1) + ' cm', refTxt, pilOk, (atende ? 'A ponta junto ao ' + nomeC + ' fica dentro do mínimo do perfil.' : abre + 'na borda ' + (olhoV ? 'do olho' : 'do pilar') + ' o degrau é bem mais curto que na linha de caminhamento.') + refPonta(pilOk, 'pilar') + (atende || nm.acess || nm.fuga ? '' : ' A caracol de casa costuma seguir o código de obras do município.'));
   }
   /* caracol autoportante: o lado de dentro é um vão aberto (o olho), não um pilar. Só informação: o app não desenha guarda-corpo */
-  if (hel && olhoV) chk('olho', 'Lado do olho (borda interna)', 'aberto, Ø ' + fmt(helix.rc * 2) + ' cm', 'guarda-corpo e corrimão', 'info', 'Sem pilar, a borda interna dá para o vão do meio: é um lado aberto, como a borda externa sem parede. Precisa de guarda-corpo e de corrimão também do lado do olho. ' + (nm.fuga ? 'Na rota de fuga, a NBR 9077:2025 pede guarda-corpo nos lados abertos (9.1.4) e corrimão dos dois lados (9.1.5).' : nm.mez ? 'No mezanino ou área privativa, a NBR 9077:2025 pede corrimão (9.5.9.1 d) e guarda-corpo nos lados abertos (9.5.9.1 e).' : 'Na NBR 9077:2025: guarda-corpo nos lados abertos (9.1.4) e corrimão dos dois lados (9.1.5), na rota de fuga; corrimão e guarda-corpo nos lados abertos (9.5.9.1 d e e), no mezanino ou área privativa.') + ' O app desenha o corrimão dos dois lados, mas não dimensiona o guarda-corpo.');
+  if (hel && olhoV) {
+    /* guarda-corpo do lado aberto em todos os perfis; corrimão do lado do olho conforme o perfil (no mezanino, a 9.5.9.1 d
+       aceita um lado só quando a largura é menor que 1,20 m) */
+    const umLado = L < 120 - TOL;
+    const notaOlho = 'Sem pilar, a borda interna dá para o vão do meio: é um lado aberto, como a borda externa sem parede, e pede guarda-corpo. ' +
+      (nm.fuga ? 'Na rota de fuga, a NBR 9077:2025 pede guarda-corpo nos lados abertos (9.1.4) e corrimão dos dois lados (9.1.5), então também do lado do olho.'
+        : nm.mez ? 'No mezanino ou área privativa, a NBR 9077:2025 pede guarda-corpo nos lados abertos (9.5.9.1 e). ' + (umLado
+          ? 'O corrimão basta de um lado quando a largura é menor que 1,20 m (9.5.9.1 d; é o caso aqui): o corrimão do lado do olho é recomendação, não exigência.'
+          : 'Com largura de 1,20 m ou mais, o corrimão vai dos dois lados (9.5.9.1 d), então também do lado do olho.')
+        : 'Na NBR 9077:2025: na rota de fuga, guarda-corpo nos lados abertos (9.1.4) e corrimão dos dois lados (9.1.5); no mezanino ou área privativa, guarda-corpo nos lados abertos (9.5.9.1 e) e corrimão de um lado só quando a largura é menor que 1,20 m (9.5.9.1 d).') +
+      ' O app desenha o corrimão dos dois lados, mas não dimensiona o guarda-corpo.';
+    chk('olho', 'Lado do olho (borda interna)', 'aberto, Ø ' + fmt(helix.rc * 2) + ' cm', nm.mez && umLado ? 'guarda-corpo' : 'guarda-corpo e corrimão', 'info', notaOlho);
+  }
   if (dw < nm.dw - 1e-9) chk('dw', 'Linha de caminhamento', fmt(dw) + ' cm do lado interno', fmt(nm.dw) + ' cm no perfil', 'info', 'A escada é estreita: a linha passa no eixo (meio da largura). É a regra da NBR 9077:2001 (3.32, nota; edição cancelada) para escadas com menos de 1,10 m.');
   if (opening && !hel) chk('laje', 'Vão mínimo na laje superior', fmt(opening.w, 0) + ' × ' + fmt(opening.h, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Cobre os degraus ' + kc + ' a ' + T + ' (a partir do degrau ' + kc + ' o teto ficaria baixo).');
   if (opening && hel) chk('laje', 'Furo mínimo na laje superior', 'Ø ' + fmt(helix.R * 2, 0) + ' cm', 'altura livre ' + fmt(st.hLivre, 0) + ' cm', 'info', 'Furo circular na laje, com a chegada no degrau ' + T + '.');

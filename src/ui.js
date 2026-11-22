@@ -156,7 +156,7 @@ function bind() {
   /* o botão do resumo fixo é o mesmo nó em todo render (trocar o nó fazia o primeiro toque se perder quando um campo saía de foco) */
   $('miniBtn').addEventListener('click', () => {
     const b = $('miniBtn');
-    if (b.dataset.campo) { const el = $(b.dataset.campo); if (el) { const d = el.closest('details'); if (d) d.open = true; el.focus(); el.scrollIntoView({ block: 'center', behavior: rolagem() }); } return; }
+    if (b.dataset.campo) { const el = $(b.dataset.campo); if (el) { const d = el.closest('details'); if (d) d.open = true; /* num grupo de botões (.seg), o foco vai para o botão escolhido */ if (el.classList.contains('seg')) (el.querySelector('button.on') || el.querySelector('button')).focus(); else el.focus(); el.scrollIntoView({ block: 'center', behavior: rolagem() }); } return; }
     if (b.dataset.p) mostrarPainel(b.dataset.p);
   });
   $('statusChip').addEventListener('click', () => { if (ehCelular()) mostrarPainel('verif'); else $('cardChecks').scrollIntoView({ block: 'start', behavior: rolagem() }); });
@@ -257,6 +257,8 @@ function miniRes(html, chip, rotulo, destino) {
 function falha(msg, campo) {
   CUR = null;
   FIELDS.forEach(f => { if (f.auto) $(f.auto).checked = !!S[f.auto]; });
+  /* sem cálculo não há os valores de R: mostra os números do estado, para nenhum campo aparecer vazio (ex.: ao abrir com erro salvo) */
+  FIELDS.forEach(f => { const el = $(f.id); if (el && !BAD[f.id] && document.activeElement !== el && el.value === '' && S[f.key] !== undefined && S[f.key] !== null && isFinite(S[f.key])) el.value = f.kind === 'int' ? String(S[f.key]) : plain(S[f.key]); });
   ['tiles', 'memo', 'checks', 'legend', 'quant'].forEach(id => { $(id).innerHTML = ''; });
   const el = marcarCampo(campo || (Object.keys(BAD).find(id => $(id) && !$(id).closest('[hidden]')) || null));
   /* a mensagem fica no painel Dados, logo abaixo do campo com problema (ou no topo, se o erro não é de um campo) */
@@ -294,12 +296,12 @@ function render(typing) {
   /* centro da helicoidal: pilar ou vazio (caracol autoportante); no automático, a helicoidal com pilar é em balanço e a sem pilar, em laje */
   const ctrM = S.centro === 'vazio' ? 'vazio' : 'pilar';
   document.querySelectorAll('#centro button').forEach(b => b.classList.toggle('on', b.dataset.v === ctrM));
-  $('ctrHint').textContent = ctrM === 'vazio' ? 'Caracol autoportante: sem pilar, a laje helicoidal se sustenta sozinha e deixa no meio um vão vazio, o olho. O lado do olho é aberto: pede guarda-corpo e corrimão.' : 'Os degraus giram em volta de um pilar no meio, do diâmetro que o projeto pedir.';
+  $('ctrHint').textContent = ctrM === 'vazio' ? 'Caracol autoportante: sem pilar, a laje helicoidal se sustenta sozinha e deixa no meio um vão vazio, o olho. O lado do olho é aberto: pede guarda-corpo, e o corrimão desse lado depende do perfil (veja as verificações).' : 'Os degraus giram em volta de um pilar no meio, do diâmetro que o projeto pedir.';
   $('DcHint').textContent = ctrM === 'vazio' ? 'Diâmetro do olho, o vão no meio. Olho maior: degrau mais largo na borda de dentro.' : 'Diâmetro do pilar.';
   const estM = S.estrutura === 'laje' || S.estrutura === 'balanco' ? S.estrutura : (S.tipo === 'helicoidal' && ctrM !== 'vazio' ? 'balanco' : 'laje');
   document.querySelectorAll('#estrutura button').forEach(b => b.classList.toggle('on', b.dataset.v === estM));
   $('tLajeWrap').hidden = estM === 'balanco'; $('espDegrauWrap').hidden = estM !== 'balanco';
-  $('estHint').textContent = estM === 'balanco' ? (S.tipo === 'helicoidal' ? (ctrM === 'vazio' ? 'Sem pilar não há onde prender as placas: escolha Laje de concreto ou o centro com Pilar.' : 'Cada degrau é uma placa presa no pilar central, sem laje embaixo e com o espelho aberto.') : 'Cada degrau é uma placa presa na parede ou numa viga lateral, sem laje embaixo e com o espelho aberto.') + ' A NBR 9050:2020 (6.7.1) não admite espelho vazado em rota acessível.' : (S.tipo === 'helicoidal' ? (ctrM === 'vazio' ? 'Uma peça só de concreto: a laje helicoidal se sustenta sozinha, sem pilar, apoiada no piso de baixo e na laje de cima. O cálculo estrutural é de um engenheiro.' : 'Uma peça só de concreto: os degraus apoiados numa laje helicoidal, que gira em volta do centro.') : 'Os degraus apoiados numa laje inclinada de concreto, com patamares horizontais.');
+  $('estHint').textContent = estM === 'balanco' ? (S.tipo === 'helicoidal' ? (ctrM === 'vazio' ? 'O app desenha os degraus em balanço presos no pilar do meio, e com o centro vazio não há esse pilar: escolha Laje de concreto ou o centro com Pilar.' : 'Cada degrau é uma placa presa no pilar central, sem laje embaixo e com o espelho aberto.') : 'Cada degrau é uma placa presa na parede ou numa viga lateral, sem laje embaixo e com o espelho aberto.') + ' A NBR 9050:2020 (6.7.1) não admite espelho vazado em rota acessível.' : (S.tipo === 'helicoidal' ? (ctrM === 'vazio' ? 'Uma peça só de concreto: a laje helicoidal se sustenta sozinha, sem pilar, apoiada no piso de baixo e na laje de cima. O cálculo estrutural é de um engenheiro.' : 'Uma peça só de concreto: os degraus apoiados numa laje helicoidal, que gira em volta do centro.') : 'Os degraus apoiados numa laje inclinada de concreto, com patamares horizontais.');
   const helB = estM === 'balanco';
   $('avancoWrap').hidden = bocM === 'sem';
   /* "Espelho inclinado" some quando não se aplica, mas continua visível se estiver marcado, junto com a mensagem de erro */
