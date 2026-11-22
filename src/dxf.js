@@ -399,7 +399,7 @@ function dxfDe(R, C, op) {
     p.pts.forEach(q => { if (!pts.length || dist(pts[pts.length - 1], q) >= MIN) pts.push(q); });
     if (p.fechada && pts.length > 1 && dist(pts[0], pts[pts.length - 1]) < MIN) pts.pop();
     let L = 0; for (let i = 0; i + 1 < pts.length; i++) L += dist(pts[i], pts[i + 1]);
-    /* polilinha de menos de 2 mm no total: lasca do recorte junto ao pilar (o CIRCLE do pilar já cobre esse trecho) */
+    /* polilinha de menos de 2 mm no total: lasca do recorte junto ao pilar ou ao olho (o contorno já cobre esse trecho) */
     if (pts.length < 2 || L < 0.2) return;
     if (pts.length === 2 && !p.fechada) limpas.push({ t: 'line', a: pts[0], b: pts[1], cam: p.cam, lt: p.lt, dx: p.dx });
     else limpas.push(Object.assign({}, p, { pts, fechada: p.fechada && pts.length > 2 }));
@@ -441,15 +441,17 @@ function dxfDe(R, C, op) {
     d.forEach(v => par(49, num(v)));
   });
   par(0, 'ENDTAB');
-  par(0, 'TABLE'); par(2, 'LAYER'); par(70, DXF_CAMADAS.length);
-  DXF_CAMADAS.forEach(c => { par(0, 'LAYER'); par(2, c[0]); par(70, 0); par(62, c[1]); par(6, c[2]); });
+  /* a camada PILAR só existe quando há pilar (a caracol autoportante tem o olho vazio no meio) */
+  const camadas = DXF_CAMADAS.filter(c => c[0] !== 'PILAR' || R.pole);
+  par(0, 'TABLE'); par(2, 'LAYER'); par(70, camadas.length);
+  camadas.forEach(c => { par(0, 'LAYER'); par(2, c[0]); par(70, 0); par(62, c[1]); par(6, c[2]); });
   par(0, 'ENDTAB');
   par(0, 'TABLE'); par(2, 'STYLE'); par(70, 1);
   par(0, 'STYLE'); par(2, 'STANDARD'); par(70, 0); par(40, 0); par(41, 1); par(50, 0); par(71, 0); par(42, num(2.5 * k)); par(3, 'txt'); par(4, '');
   par(0, 'ENDTAB');
   par(0, 'ENDSEC');
 
-  const conhecidas = new Set(DXF_CAMADAS.map(c => c[0]));
+  const conhecidas = new Set(camadas.map(c => c[0]));
   par(0, 'SECTION'); par(2, 'ENTITIES');
   const cab = (tipo, p) => { par(0, tipo); par(8, conhecidas.has(p.cam) ? p.cam : 'CONTORNO'); if (p.lt) par(6, p.lt); };
   todas.forEach(p => {

@@ -75,7 +75,8 @@ function mount() {
     '<div class="field" data-for="u-leque"><label for="nMeio">Pisos retos entre as duas curvas</label><div class="inp"><input id="nMeio" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div><p class="hint" id="nMeioHint"></p></div>' +
     '<div class="field" data-for="u-patamar"><label for="vao">Vão entre os dois lances</label><div class="inp"><input id="vao" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
     '<div class="field" data-for="reta-patamar u-patamar"><div class="labrow"><label for="Lp">Profundidade do patamar</label><label class="auto"><input type="checkbox" id="LpAuto"> igual à largura</label></div><div class="inp"><input id="Lp" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div></div>' +
-    '<div class="grid2" data-for="helicoidal">' + fieldNum('D', 'Diâmetro externo', 'cm') + fieldNum('Dc', 'Diâmetro do pilar', 'cm') + '</div>' +
+    '<div class="field" data-for="helicoidal"><span class="lab" id="ctrLab">Centro</span><div class="seg" id="centro" role="group" aria-labelledby="ctrLab"><button type="button" data-v="pilar">Pilar</button><button type="button" data-v="vazio">Vazio (autoportante)</button></div><p class="hint" id="ctrHint"></p></div>' +
+    '<div class="grid2" data-for="helicoidal">' + fieldNum('D', 'Diâmetro externo', 'cm') + '<div class="field"><label for="Dc">Diâmetro do centro</label><div class="inp"><input id="Dc" type="text" inputmode="decimal" autocomplete="off"><span class="un">cm</span></div><p class="hint" id="DcHint"></p></div></div>' +
     '<div class="field" data-for="helicoidal"><div class="labrow"><label for="nPer">Degraus por volta</label><label class="auto"><input type="checkbox" id="nPerAuto"> automático</label></div><div class="stepper"><button type="button" id="nPerMinus" aria-label="Menos um degrau por volta">−</button><input id="nPer" type="text" inputmode="numeric" autocomplete="off"><button type="button" id="nPerPlus" aria-label="Mais um degrau por volta">+</button></div><p class="hint" id="nPerHint"></p></div>' +
     '<div class="field" data-for="c-patamar z-patamar"><div class="labrow"><label for="nMeioP">Pisos no lance do meio</label><label class="auto"><input type="checkbox" id="nMeioPAuto"> um terço</label></div><div class="inp"><input id="nMeioP" type="text" inputmode="numeric" autocomplete="off"><span class="un">pisos</span></div></div>' +
     '<div class="field"><span class="lab" id="estLab">Estrutura</span><div class="seg" id="estrutura" role="group" aria-labelledby="estLab"><button type="button" data-v="laje">Laje de concreto (maciça)</button><button type="button" data-v="balanco">Degraus em balanço</button></div><p class="hint" id="estHint"></p></div></section>' +
@@ -122,6 +123,7 @@ function bind() {
   $('desl').addEventListener('input', e => { const v = parseNum(e.target.value); if (isNaN(v) || Math.abs(v) > 2000) { e.target.classList.add('err'); return; } e.target.classList.remove('err'); if (S.vistaCorte === 'B') S.corteB = v; else S.corteA = v; render(true); });
   $('kLeque').addEventListener('change', e => { S.kLeque = +e.target.value; render(); });
   $('estrutura').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.estrutura = b.dataset.v; render(); });
+  $('centro').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.centro = b.dataset.v; render(); });
   $('bocel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bocel = b.dataset.v; render(); });
   $('leque').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.leque = b.dataset.v; render(); });
   $('lado').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.lado = b.dataset.v; render(); });
@@ -240,7 +242,8 @@ function marcarCampo(campo) {
   if (CAMPO_ERR && CAMPO_ERR !== campo && !BAD[CAMPO_ERR]) { const v = $(CAMPO_ERR); if (v) { v.classList.remove('err'); v.removeAttribute('aria-invalid'); v.removeAttribute('aria-describedby'); } }
   CAMPO_ERR = null;
   const el = campo ? $(campo) : null;
-  if (!el || !/^(INPUT|SELECT)$/.test(el.tagName)) return null;
+  /* também os grupos de botões (.seg), como Centro e Estrutura */
+  if (!el || !(/^(INPUT|SELECT)$/.test(el.tagName) || el.classList.contains('seg'))) return null;
   CAMPO_ERR = campo; el.classList.add('err'); el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', 'erroDados');
   const d = el.closest('details'); if (d) d.open = true;
   return el;
@@ -288,10 +291,15 @@ function render(typing) {
   document.querySelectorAll('#leque button').forEach(b => b.classList.toggle('on', b.dataset.v === (S.leque === 'conv' ? 'conv' : 'bal')));
   const bocM = ['bocel', 'inclinado', 'sem'].indexOf(S.bocel) >= 0 ? S.bocel : 'bocel';
   document.querySelectorAll('#bocel button').forEach(b => b.classList.toggle('on', b.dataset.v === bocM));
-  const estM = S.estrutura === 'laje' || S.estrutura === 'balanco' ? S.estrutura : (S.tipo === 'helicoidal' ? 'balanco' : 'laje');
+  /* centro da helicoidal: pilar ou vazio (caracol autoportante); no automático, a helicoidal com pilar é em balanço e a sem pilar, em laje */
+  const ctrM = S.centro === 'vazio' ? 'vazio' : 'pilar';
+  document.querySelectorAll('#centro button').forEach(b => b.classList.toggle('on', b.dataset.v === ctrM));
+  $('ctrHint').textContent = ctrM === 'vazio' ? 'Caracol autoportante: sem pilar, a laje helicoidal se sustenta sozinha e deixa no meio um vão vazio, o olho. O lado do olho é aberto: pede guarda-corpo e corrimão.' : 'Os degraus giram em volta de um pilar no meio, do diâmetro que o projeto pedir.';
+  $('DcHint').textContent = ctrM === 'vazio' ? 'Diâmetro do olho, o vão no meio. Olho maior: degrau mais largo na borda de dentro.' : 'Diâmetro do pilar.';
+  const estM = S.estrutura === 'laje' || S.estrutura === 'balanco' ? S.estrutura : (S.tipo === 'helicoidal' && ctrM !== 'vazio' ? 'balanco' : 'laje');
   document.querySelectorAll('#estrutura button').forEach(b => b.classList.toggle('on', b.dataset.v === estM));
   $('tLajeWrap').hidden = estM === 'balanco'; $('espDegrauWrap').hidden = estM !== 'balanco';
-  $('estHint').textContent = estM === 'balanco' ? (S.tipo === 'helicoidal' ? 'Cada degrau é uma placa presa no pilar central, sem laje embaixo e com o espelho aberto.' : 'Cada degrau é uma placa presa na parede ou numa viga lateral, sem laje embaixo e com o espelho aberto.') + ' A NBR 9050:2020 (6.7.1) não admite espelho vazado em rota acessível.' : (S.tipo === 'helicoidal' ? 'Uma peça só de concreto: os degraus apoiados numa laje helicoidal, que gira em volta do centro.' : 'Os degraus apoiados numa laje inclinada de concreto, com patamares horizontais.');
+  $('estHint').textContent = estM === 'balanco' ? (S.tipo === 'helicoidal' ? (ctrM === 'vazio' ? 'Sem pilar não há onde prender as placas: escolha Laje de concreto ou o centro com Pilar.' : 'Cada degrau é uma placa presa no pilar central, sem laje embaixo e com o espelho aberto.') : 'Cada degrau é uma placa presa na parede ou numa viga lateral, sem laje embaixo e com o espelho aberto.') + ' A NBR 9050:2020 (6.7.1) não admite espelho vazado em rota acessível.' : (S.tipo === 'helicoidal' ? (ctrM === 'vazio' ? 'Uma peça só de concreto: a laje helicoidal se sustenta sozinha, sem pilar, apoiada no piso de baixo e na laje de cima. O cálculo estrutural é de um engenheiro.' : 'Uma peça só de concreto: os degraus apoiados numa laje helicoidal, que gira em volta do centro.') : 'Os degraus apoiados numa laje inclinada de concreto, com patamares horizontais.');
   const helB = estM === 'balanco';
   $('avancoWrap').hidden = bocM === 'sem';
   /* "Espelho inclinado" some quando não se aplica, mas continua visível se estiver marcado, junto com a mensagem de erro */
@@ -424,7 +432,7 @@ function legendaHTML(R, svg) {
   let lg = it(sw(cores[0]), R.hel ? 'Degrau' : 'Degrau reto');
   if (R.polys.some(p => p.kind === 'leque')) lg += it(sw(cores[1]), R.bal ? 'Degrau balanceado' : 'Leque');
   if (R.polys.some(p => p.kind === 'patamar')) lg += it(sw(cores[2]), 'Patamar');
-  if (VIEW === '3d') return lg + '<span class="lg">Modelo de estudo: ' + (R.placas ? (R.hel ? 'degraus em balanço em volta do pilar' : 'degraus em balanço (placas soltas)') : (R.hel ? 'degraus sobre a laje helicoidal' : 'degraus com o fundo real da laje')) + ' e corrimãos, sem acabamentos. Arraste para girar.</span>';
+  if (VIEW === '3d') return lg + '<span class="lg">Modelo de estudo: ' + (R.placas ? (R.hel ? 'degraus em balanço em volta do pilar' : 'degraus em balanço (placas soltas)') : (R.hel ? (R.olho ? 'caracol autoportante: degraus sobre a laje helicoidal, com o olho vazio no meio' : 'degraus sobre a laje helicoidal') : 'degraus com o fundo real da laje')) + ' e corrimãos, sem acabamentos. Arraste para girar.</span>';
   if (VIEW === 'planta') {
     const inf = S.modoPlanta !== 'sup';
     return lg + it('<i class="ln"></i>', 'Linha de caminhamento') + (R.opening && inf ? it('<i class="ln dash"></i>', 'Vão mínimo na laje') : '') + (inf && S.showCortes !== false ? it('<i class="ln dashdot"></i>', 'Linhas dos cortes A-A e B-B') : '') + '<span class="lg">Cotas em cm.</span>';
@@ -452,10 +460,10 @@ function quantHTML(R) {
   ];
   if (R.hel) linhas[0][2] = 'soma dos pisos dos degraus; eles se sobrepõem em planta quando a escada dá mais de uma volta';
   if (!R.placas) linhas.push(['Espelhos', m2(q.aEspelhos), R.N + ' espelhos de ' + fmt(R.e, 2) + ' cm pelo comprimento de cada aresta'], ['Revestimento total', m2(q.aPisos + q.aEspelhos), 'pisos + espelhos, sem perda de corte']);
-  if (R.placas) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm' + (R.hel ? '; pilar fora da conta' : '; apoio na parede ou viga fora da conta')]);
+  if (R.placas) linhas.push(['Volume dos degraus', fmt(q.volConc / 1e6, 3) + ' m³', 'placas de ' + fmt(R.st.espDegrau) + ' cm' + (R.hel && R.pole ? '; pilar fora da conta' : '; apoio na parede ou viga fora da conta')]);
   else {
     linhas.push(['Concreto da escada', fmt(q.volConc / 1e6, 3) + ' m³', 'degraus + laje de ' + fmt(R.st.tLaje) + ' cm, até o chão; sem a laje do piso de cima']);
-    linhas.push(['Fôrma do fundo', m2(q.aForma), R.hel ? 'face de baixo da laje helicoidal, que gira em torno do pilar; sem as laterais' : 'face de baixo da laje inclinada e dos patamares; sem as laterais']);
+    linhas.push(['Fôrma do fundo', m2(q.aForma), R.hel ? 'face de baixo da laje helicoidal, que gira em torno do ' + (R.olho ? 'olho' : 'pilar') + '; sem as laterais' : 'face de baixo da laje inclinada e dos patamares; sem as laterais']);
   }
   linhas.push(['Corrimão (por lado)', fmt(q.corrimao / 100, 2) + ' m', 'medido na linha de caminhamento' + (R.nm.acess ? ', com os 30 cm de prolongamento em cada ponta' : '') + '; o lado externo de curvas é mais comprido']);
   return '<table class="tab tabq"><tbody>' + linhas.map(l => '<tr><td>' + l[0] + '<br><span class="hint">' + l[2] + '</span></td><td>' + l[1] + '</td></tr>').join('') + '</tbody></table><p class="hint" style="margin-top:8px">Contas feitas na geometria do desenho, para estudo e orçamento preliminar. Não incluem perdas, armadura, emendas nem detalhes de obra.</p>';
@@ -470,8 +478,8 @@ function svgCorte(R, o, C) {
 }
 function legCorte(R, v) {
   const fora = R.st['corte' + v] ? ' A linha foi deslocada ' + fmt(R.st['corte' + v]) + ' cm.' : '';
-  if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do pilar, marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
-  if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do pilar, perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
+  if (v === 'A') return (R.hel ? 'Corte A-A: plano vertical que passa pelo centro do ' + (R.olho ? 'olho' : 'pilar') + ', marcado na planta com as letras A.' : 'Corte A-A: plano vertical ao longo do 1º lance, marcado na planta com as letras A.') + ' O que o plano corta aparece hachurado e com traço grosso; o que está além dele aparece em vista, com traço fino. A seta na planta mostra para onde se olha.' + fora;
+  if (v === 'B') return (R.hel ? 'Corte B-B: plano vertical que passa pelo centro do ' + (R.olho ? 'olho' : 'pilar') + ', perpendicular ao A-A, marcado na planta com as letras B.' : 'Corte B-B: plano vertical atravessado ao 1º lance, marcado na planta com as letras B.') + ' Hachura = cortado; traço fino = em vista, além do plano.' + fora;
   if (v === 'E') return 'Elevação (' + LADO_NOME[S.ladoElev || 'frente'] + '): a escada vista de fora, sem cortar nada, por isso tudo sai em traço fino. Frente é o lado de quem chega para subir o 1º lance; direita e esquerda são as de quem sobe esse lance. Compare com o corte, que mostra hachurado o que o plano atravessa.';
   if (v === 'perfil') return 'Perfil desenvolvido (esquema): a escada é esticada ao longo da linha de caminhamento, então curvas e leques viram trecho reto. Não é um corte A-A da edificação.';
   return R.placas ? 'Detalhe do degrau: ampliação dos degraus em balanço (placas soltas, sem laje e com o espelho aberto)' + (R.hel ? ', com o piso medido na linha de caminhamento' : '') + ' e o corrimão.' : 'Detalhe do degrau: ampliação de degraus típicos com espelho, piso, bocel, laje e corrimão' + (R.hel ? ' (na helicoidal, medidos na linha de caminhamento)' : '') + '.';

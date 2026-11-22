@@ -177,7 +177,8 @@ function planSVG(R, o, C) {
     R.polys.forEach(pl => { if (on(pl)) s += cam(camadaDegrau(pl), sPoly(pl.pts, treadFill(pl.kind, C), C.ink, thumb ? 1 : 1.5)); });
     R.polys.forEach(pl => { if (!on(pl)) s += cam('PROJECAO', sPoly(pl.pts, treadFill(pl.kind, C), C.muted, 1.1, '6 4', R.hel ? 0 : 0.28)); });
   }
-  if (R.hel) s += cam('PILAR', sCircle(0, 0, R.helix.rc, C.ink, C.ink, 1));
+  /* pilar maciço no centro; na caracol autoportante (centro vazio) a borda do olho é só o contorno interno dos degraus */
+  if (R.hel && R.pole) s += cam('PILAR', sCircle(0, 0, R.helix.rc, C.ink, C.ink, 1));
   if (!thumb && !sup && useCut && kCut >= 1 && kCut < T) {
     const nx = R.polys[kCut];
     if (nx && nx.entry) s += breakLine(nx.entry[0], nx.entry[1], fs, C);
@@ -259,8 +260,8 @@ function planSVG(R, o, C) {
     const topGap = (bbEsc[3] - bb[3]) + fs * 5.4, rightGap = (bbEsc[2] - bb[2]) + fs * 5.4;
     if (R.hel) {
       s += dimLine([bb[0], bb[3]], [bb[2], bb[3]], 0, 1, topGap, 'Ø ' + fmt(R.helix.R * 2, 0), fs, C);
-      /* com a chamada do corte A passando pelo eixo, o texto do pilar vai para o lado, longe da linha e da seta */
-      const tp = 'pilar Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau';
+      /* com a chamada do corte A passando pelo eixo, o texto do pilar (ou do olho) vai para o lado, longe da linha e da seta */
+      const tp = (R.pole ? 'pilar' : 'olho') + ' Ø ' + fmt(R.helix.rc * 2, 0) + ' · ' + fmt(R.helix.th, 1) + '° por degrau';
       if (comCortes) { const xA = cortesDe(R).A.P0[0]; s += cam('COTAS', sText(Math.min(0, xA) - fs, -R.helix.R - fs * 6, tp, fs * 0.85, C.muted, 'end')); }
       else s += cam('COTAS', sText(0, -R.helix.R - fs * 7.2, tp, fs * 0.85, C.muted, 'middle'));
     } else {
@@ -540,7 +541,7 @@ function corteSVG(R, o, C, qual, lado) {
   /* corrimãos em vista: os dois lados, pelo mesmo caminho do 3D (railLado: contorna os patamares na horizontal),
      só nos trechos além do plano, cortados exatamente no plano */
   if (typeof railLado === 'function') {
-    const listas = R.hel ? [railHel(R, 4).pts] : [].concat.apply([], (R.nm.acess ? [92, 70] : [92]).map(hR => [0, 1].map(lado => railLado(R, lado, hR))));
+    const listas = R.hel ? [railHel(R, 4).pts].concat(R.olho ? [railHel(R, 4, true).pts] : []) : [].concat.apply([], (R.nm.acess ? [92, 70] : [92]).map(hR => [0, 1].map(lado => railLado(R, lado, hR))));
     listas.forEach(pts => {
       let tr = [];
       const fecha = () => { if (tr.length > 1) s += cam('CORRIMAO', sPolyline(tr, C.ink, 1.2)); tr = []; };

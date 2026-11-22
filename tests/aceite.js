@@ -418,7 +418,7 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   const err=x=>{try{calc(x);return {};}catch(e){return e;}};
   const e1=err({H:2.8}); ok(e1.campo==='H' && e1.message==='O desnível é em centímetros: para 2,80 m digite 280.','desnível em metros: erro no campo H');
   const e2=err({L:20}); ok(e2.campo==='L' && /centímetros/.test(e2.message),'largura em metros: erro no campo L');
-  ok(err({nAuto:false,N:1}).campo==='N' && err({pAuto:false,p:5}).campo==='p' && err({tipo:'helicoidal',Dc:500}).campo==='Dc' && err({LpAuto:false,Lp:5}).campo==='Lp' && err({espLaje:-1}).campo==='espLaje' && err({norma:'custom',cEmin:0}).campo==='cEmin','erros de entrada trazem o campo (N, p, Dc, Lp, espLaje, limites personalizados)');
+  ok(err({nAuto:false,N:1}).campo==='N' && err({pAuto:false,p:5}).campo==='p' && err({tipo:'helicoidal',Dc:1200}).campo==='Dc' && err({tipo:'helicoidal',Dc:500}).campo==='Dc' && err({LpAuto:false,Lp:5}).campo==='Lp' && err({espLaje:-1}).campo==='espLaje' && err({norma:'custom',cEmin:0}).campo==='cEmin','erros de entrada trazem o campo (N, p, Dc, Lp, espLaje, limites personalizados)');
   ok(g(calc({nAuto:false,N:2,H:30}),'e').nota.indexOf('Diminua')<0,'com 2 espelhos não manda diminuir o número de espelhos');
   /* 8. contagem sem zero */
   const U=calc({tipo:'u-leque'}); const ur=semTag(explicacao(U,U.st,C)); ok(U.contagem==='15 degraus balanceados' && !/\b0 pisos/.test(ur),'contagem sem "0 pisos comuns"');
@@ -666,7 +666,8 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   const segCx=(A,B,b)=>{let t0=0,t1=1;const dx=B[0]-A[0],dy=B[1]-A[1],p=[-dx,dx,-dy,dy],q=[A[0]-b[0],b[2]-A[0],A[1]-b[1],b[3]-A[1]];for(let i=0;i<4;i++){if(Math.abs(p[i])<1e-12){if(q[i]<0)return false;continue;}const t=q[i]/p[i];if(p[i]<0)t0=Math.max(t0,t);else t1=Math.min(t1,t);if(t0>t1)return false;}return true;};
   const linhas=(svg,cor)=>[...svg.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)" stroke="([^"]+)" stroke-width="([\d.]+)"/g)].filter(m=>m[5]===cor).map(m=>({a:[+m[1],+m[2]],b:[+m[3],+m[4]],w:+m[6]}));
   const ruins=[], riscos=[], desce=[], legenda=[];
-  TIPOS.forEach(T=>{ const R=calc({tipo:T.id});
+  /* os 9 tipos e a caracol autoportante (centro vazio) */
+  TIPOS.map(T=>({id:T.id,st:{tipo:T.id}})).concat([{id:'helicoidal vazio',st:{tipo:'helicoidal',centro:'vazio',D:300,Dc:120}},{id:'helicoidal vazio Dc 240',st:{tipo:'helicoidal',centro:'vazio',D:400,Dc:240}}]).forEach(T=>{ const R=calc(T.st);
     [0,12.5,25].forEach(fs=>[false,true].forEach(semTitulo=>{
       const o=Object.assign(fs?{fs}:{},semTitulo?{semTitulo}:{}), tag=T.id+' fs '+(fs||'auto')+(semTitulo?' semTitulo':'');
       const vs={'planta inf':planSVG(R,Object.assign({modo:'inf'},o),C),'planta sup':planSVG(R,Object.assign({modo:'sup'},o),C),'corte A':corteSVG(R,o,C,'A'),'corte B':corteSVG(R,o,C,'B'),'elevação':corteSVG(R,o,C,'E'),'detalhe':detalheSVG(R,o,C)};
@@ -682,7 +683,7 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
       ['corte A','corte B'].forEach(k=>caixas(vs[k]).filter(c=>/tracejado laranja|sobre os degraus/.test(c.t)).forEach(c=>{ if(c.b[1]<=0) legenda.push(tag+' '+k); }));
     }));
   });
-  ok(!ruins.length,'nenhum texto sai do desenho: 9 tipos × planta inferior e superior, cortes A e B, elevação e detalhe × com e sem semTitulo × fs automático, 12,5 e 25'+(ruins.length?' ('+ruins.slice(0,6).join('; ')+(ruins.length>6?'; …':'')+')':''));
+  ok(!ruins.length,'nenhum texto sai do desenho: 9 tipos e a caracol autoportante × planta inferior e superior, cortes A e B, elevação e detalhe × com e sem semTitulo × fs automático, 12,5 e 25'+(ruins.length?' ('+ruins.slice(0,6).join('; ')+(ruins.length>6?'; …':'')+')':''));
   ok(!riscos.length,'planta: chamadas de corte sem riscar texto e rótulo da ponta em lugar livre'+(riscos.length?' ('+riscos.slice(0,6).join('; ')+')':''));
   ok(!desce.length,'planta: SOBE/DESCE não fica em cima do nível (escadas em L inclusive)'+(desce.length?' ('+desce.join('; ')+')':''));
   ok(!legenda.length,'cortes: legenda da altura livre embaixo do ±0,00'+(legenda.length?' ('+legenda.slice(0,4).join('; ')+')':''));
@@ -773,6 +774,80 @@ ok(bug===0,'varredura: '+n+' casos sem NaN nem erro de código');
   let fora=0; for(const t of ['reta','l-patamar','l-leque','u-patamar','u-leque','c-patamar','z-patamar','helicoidal']){const m=montarPrancha(calc({tipo:t}),C,{formato:'A3',escala:25}); if(m.escala!==25||m.omitidas.length) fora++;}
   ok(fora===0,'prancha A3 em 1:25 com todas as vistas em 8 dos 9 tipos (a reta com patamar pede A2)');
   const rp=montarPrancha(calc({tipo:'reta-patamar'}),C,{formato:'A3',escala:25}); ok(rp.omitidas.length>0 && /A2/.test(rp.aviso) && montarPrancha(calc({tipo:'reta-patamar'}),C,{formato:'A2',escala:25}).omitidas.length===0,'reta com patamar em 1:25: na A3 avisa e sugere A2; na A2 cabe');
+}
+
+/* caracol autoportante: centro 'pilar' ou 'vazio' (olho), diâmetro do centro sem teto próprio */
+{
+  const {calc,TIPOS,planSVG,corteSVG,elevacaoSVG,detalheSVG,buildFaces,explicacao,dxfDe,montarPrancha}=require('./carregar.js');
+  const fs=require('fs'), path=require('path');
+  const ui=fs.readFileSync(path.join(__dirname,'..','src','ui.js'),'utf8');
+  const err=s=>{try{calc(s);return null;}catch(e){return e;}};
+  /* diâmetro do centro acima de 200 cm: quem limita é a largura (raio externo − raio do centro ≥ 30 cm) */
+  const G=calc({tipo:'helicoidal',D:400,Dc:240});
+  ok(G.helix.rc===120 && G.L===80 && G.pole && G.pole.r===120,'pilar de Ø 240 cm aceito (D 400): largura útil de 80 cm');
+  const eL=err({tipo:'helicoidal',D:300,Dc:260});
+  ok(eL && eL.campo==='D' && /raio do pilar/.test(eL.message) && /olho/.test((err({tipo:'helicoidal',centro:'vazio',D:300,Dc:260})||{}).message||''),'largura abaixo de 30 cm: a mensagem fala em pilar ou em olho conforme o centro');
+  ok((err({tipo:'helicoidal',centro:'meio'})||{}).campo==='centro','centro inválido dá erro no campo "centro"');
+  /* geometria: sem pilar, com olho; laje, linha de caminhamento, degraus e altura livre iguais */
+  const P=calc({tipo:'helicoidal',D:300,Dc:120,estrutura:'laje'}), V=calc({tipo:'helicoidal',D:300,Dc:120,centro:'vazio'});
+  ok(!V.pole && V.olho && V.olho.r===60 && V.centro==='vazio' && P.pole && !P.olho && P.centro==='pilar','centro vazio: R.pole = null e R.olho = { r: 60 }');
+  ok(V.helix.rw===P.helix.rw && V.p===P.p && V.T===P.T && V.helix.clearance===P.helix.clearance && JSON.stringify(V.polys.map(q=>q.pts))===JSON.stringify(P.polys.map(q=>q.pts)) && V.thk===P.thk,'centro vazio: mesmos degraus, linha de caminhamento, laje e altura livre da caracol com pilar em laje');
+  /* estrutura: automático vira laje com o centro vazio; balanço explícito + vazio é erro no campo "centro" */
+  ok(V.estrutura==='laje' && !V.placas && calc({tipo:'helicoidal'}).estrutura==='balanco','estrutura automática: balanço com pilar, laje com o centro vazio');
+  const eB=err({tipo:'helicoidal',centro:'vazio',estrutura:'balanco'});
+  ok(eB && eB.patamar && eB.campo==='centro' && /Laje de concreto/.test(eB.message) && /"Pilar" em Centro/.test(eB.message),'balanço com centro vazio: erro claro no campo "centro" com as duas saídas');
+  ok(!err({tipo:'reta',centro:'vazio',estrutura:'balanco'}),'o centro só vale na helicoidal (nos outros tipos, balanço continua valendo)');
+  /* desenhos sem pilar */
+  const vs={inf:planSVG(V,{modo:'inf'},C),sup:planSVG(V,{modo:'sup'},C),A:corteSVG(V,{},C,'A'),B:corteSVG(V,{},C,'B'),E:corteSVG(V,{},C,'E'),Ed:elevacaoSVG(V,{},C,'direita')};
+  ok(Object.keys(vs).every(k=>!/data-camada="PILAR"/.test(vs[k])),'centro vazio: planta inferior e superior, cortes A e B e elevação sem pilar');
+  ok(/olho Ø 120/.test(vs.inf) && !/pilar Ø/.test(vs.inf) && /pilar Ø 120/.test(planSVG(P,{},C)),'planta: "olho Ø 120" no lugar de "pilar Ø 120"');
+  const fV=buildFaces(V,C), fP=buildFaces(P,C), cor=JSON.stringify([88,98,108]);
+  ok(!fV.some(f=>JSON.stringify(f.col)===cor) && fP.some(f=>JSON.stringify(f.col)===cor),'3D: sem o cilindro do pilar quando o centro é vazio');
+  const raios=fs2=>[].concat(...fs2.filter(f=>f.kind==='tubo').map(f=>[].concat(...f.tris).map(q=>Math.hypot(q[0],q[1]))));
+  const rv=raios(fV), rp=raios(fP);
+  ok(rv.some(r=>r<V.helix.rc+12) && !rp.some(r=>r<P.helix.rc+12) && rv.some(r=>r>V.helix.R-12),'3D: corrimão também do lado do olho (e o de fora continua)');
+  const nRail=sv=>(sv.match(/data-camada="CORRIMAO"/g)||[]).length;
+  ok(nRail(vs.E)>nRail(corteSVG(P,{},C,'E')),'elevação: corrimão do lado do olho aparece');
+  ok(/corrimão também do lado do olho/.test(detalheSVG(V,{},C)) && !/lado do olho/.test(detalheSVG(P,{},C)),'detalhe: nota do corrimão do lado do olho só no autoportante');
+  /* DXF sem a camada PILAR */
+  const dV=dxfDe(V,C,{vistas:['planta','plantaSup','corteA','corteB','elevacao','detalhe']}), dP=dxfDe(P,C,{vistas:['planta','corteA']});
+  ok(!/\r\nPILAR\r\n/.test(dV) && /\r\n8\r\nPILAR\r\n/.test(dP),'DXF: sem a camada PILAR quando o centro é vazio; com pilar, a camada tem entidades');
+  /* verificações */
+  const ck=(R,id)=>R.checks.find(c=>c.id===id)||{};
+  ok(ck(V,'olho').status==='info' && /9\.1\.4/.test(ck(V,'olho').nota) && /9\.1\.5/.test(ck(V,'olho').nota) && !ck(P,'olho').id,'verificação "olho" (info): lado aberto pede guarda-corpo e corrimão (NBR 9077:2025, 9.1.4 e 9.1.5)');
+  const Vm=calc({tipo:'helicoidal',D:300,Dc:120,centro:'vazio',norma:'mez'}), Vf=calc({tipo:'helicoidal',D:300,Dc:120,centro:'vazio',norma:'fuga'});
+  ok(/9\.5\.9\.1 d/.test(ck(Vm,'olho').nota) && /9\.5\.9\.1 e/.test(ck(Vm,'olho').nota) && /rota de fuga/.test(ck(Vf,'olho').nota) && !/9\.5\.9\.1/.test(ck(Vf,'olho').nota),'verificação "olho": 9.5.9.1 d e e no mezanino; 9.1.4 e 9.1.5 na rota de fuga');
+  ok(ck(V,'pilar').nome==='Piso junto ao olho (borda interna)' && ck(P,'pilar').nome==='Piso junto ao pilar (parte mais estreita)' && ck(V,'pilar').valor===ck(P,'pilar').valor,'verificação "pilar" vira "Piso junto ao olho (borda interna)", com a mesma conta');
+  ['res','fuga','mez','acess'].forEach(no=>{const a=calc({tipo:'helicoidal',Dc:20,norma:no}), b=calc({tipo:'helicoidal',Dc:20,norma:no,centro:'vazio'}); ok(ck(a,'pilar').status===ck(b,'pilar').status,'ponta junto ao olho com o mesmo status do pilar no perfil '+no+' ('+ck(b,'pilar').status+')');});
+  const Vp=calc({tipo:'helicoidal',D:220,Dc:20,centro:'vazio'}); Vp.resolver();
+  ok(/^Funciona com olho \(o vão no meio\) de Ø/.test(ck(Vp,'pilar').sol||'') && !/pilar/.test(ck(Vp,'pilar').sol),'Como resolver no autoportante: aumenta o olho, sem falar em pilar');
+  const Pp=calc({tipo:'helicoidal'}); Pp.resolver();
+  ok(/^Funciona com pilar de Ø/.test(ck(Pp,'pilar').sol||'') && /caracol autoportante/.test(ck(Pp,'pilar').sol) && !/vão central/.test(ck(Pp,'pilar').sol),'Como resolver com pilar: pilar maior ou a autoportante com olho');
+  /* textos sem "pilar" onde não cabe */
+  const tV=JSON.stringify(V.checks.filter(c=>c.id!=='olho')).replace(/"id":"pilar"/g,'')+V.memo.join(' ')+V.lances.join(' ')+Object.values(vs).join('');
+  ok(!/pilar/i.test(tV),'autoportante: verificações, memória e desenhos sem a palavra "pilar"');
+  const ex=explicacao(V,V.st,C), exP=explicacao(P,P.st,C);
+  ok(/Trace o círculo externo e o do olho/.test(ex) && /Trace o círculo externo e o pilar/.test(exP),'roteiro à mão: "trace o círculo externo e o do olho"');
+  ok(/caracol autoportante/.test(ex) && /se sustenta sozinha/.test(ex) && /piso de baixo e na laje de cima/.test(ex) && /engenheiro/.test(ex),'Explicação: o que é a caracol autoportante, e o cálculo estrutural é de um engenheiro');
+  ok(/No olho<\/th>/.test(ex) && !/No pilar/.test(ex) && /raio do olho × ângulo/.test(ex) && /O olho atual tem/.test(ex),'Explicação e Problemas comuns: colunas e contas falam em olho');
+  ok(/caracol autoportante, sem pilar e com um olho/.test(ex),'Problemas comuns: a autoportante com olho maior como saída da caracol de pilar fino');
+  ok(!/NaN|undefined|Infinity/.test(ex),'Explicação do autoportante sem NaN');
+  /* interface */
+  ok(/id="centro" role="group"/.test(ui) && /data-v="vazio">Vazio \(autoportante\)</.test(ui) && /Diâmetro do centro/.test(ui) && /id="DcHint"/.test(ui) && /Diâmetro do olho, o vão no meio/.test(ui) && /S\.centro = b\.dataset\.v/.test(ui),'interface: botões Centro (Pilar / Vazio) e "Diâmetro do centro" com dica que muda');
+  ok(/el\.classList\.contains\('seg'\)/.test(ui) && /R\.hel && R\.pole \? '; pilar fora da conta'/.test(ui),'interface: o erro marca o grupo de botões; "pilar fora da conta" só com pilar');
+  /* SVG da tela com pilar igual ao de antes da mudança (hashes da versão anterior, ids aleatórios normalizados) */
+  const nz=x=>String(x).replace(/cl[a-z0-9]{6}/g,'cl').replace(/h(ch|cc)\d+/g,'h').replace(/dtl\d+/g,'dtl');
+  const hs=x=>{let v=2166136261;for(let i=0;i<x.length;i++){v^=x.charCodeAt(i);v=Math.imul(v,16777619)>>>0}return v.toString(16)};
+  const hz=R=>[planSVG(R,{modo:'inf'},C),planSVG(R,{modo:'sup'},C),corteSVG(R,{},C,'A'),corteSVG(R,{},C,'B'),elevacaoSVG(R,{},C),detalheSVG(R,{},C),JSON.stringify(buildFaces(R,C))].map(x=>hs(nz(x)));
+  ok(JSON.stringify(hz(calc({tipo:'helicoidal'})))==='["824f9e41","a3c17fa8","ca8d9cf1","3a9bdf24","2f51d0f3","db0fc03e","347ba378"]' && JSON.stringify(hz(calc({tipo:'helicoidal',centro:'pilar',D:300,Dc:120})))==='["698723f5","69069b4","6d834d19","7e414528","d1f912a3","5026c1d7","183265e6"]','com pilar, planta, cortes, elevação, detalhe e 3D iguais aos de antes');
+  /* sem NaN: 9 tipos com centro vazio (só a helicoidal muda) e várias combinações de D e Dc */
+  let nan=0, n=0;
+  const tudo=R=>planSVG(R,{},C)+planSVG(R,{modo:'sup'},C)+corteSVG(R,{},C,'A')+corteSVG(R,{},C,'B')+corteSVG(R,{},C,'E')+detalheSVG(R,{},C)+JSON.stringify(buildFaces(R,C))+JSON.stringify(R.checks)+explicacao(R,R.st,C);
+  TIPOS.forEach(t=>{const R=calc({tipo:t.id,centro:'vazio'}); n++; if(/NaN|Infinity/.test(tudo(R))) nan++;});
+  [[160,60],[220,20],[300,120],[400,240],[600,500],[1000,900],[200,4]].forEach(([D,Dc])=>['pilar','vazio'].forEach(centro=>['esq','dir'].forEach(lado=>{const R=calc({tipo:'helicoidal',D,Dc,centro,lado,estrutura:centro==='vazio'?null:'laje'}); R.resolver(); n++; if(/NaN|Infinity/.test(tudo(R))) nan++;})));
+  ok(nan===0,'sem NaN: '+n+' casos (9 tipos com centro vazio; D e Dc de 160/60 a 1000/900, pilar e vazio, dois lados)');
+  /* prancha A3 do autoportante */
+  const Pr=montarPrancha(V,C,{formato:'A3'}); ok(!Pr.omitidas.length && !/data-camada="PILAR"/.test(Pr.folhas.map(f=>f.svg).join('')),'prancha A3 do autoportante: todas as vistas, sem pilar');
 }
 
 console.log(fail?fail+' falha(s)':'todos passaram');
